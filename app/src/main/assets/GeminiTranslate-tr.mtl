@@ -1,0 +1,242 @@
+# AI Translation Hub - Türkçe Dizeler
+
+# Eklenti Bilgileri
+plugin_name: AI Translation Hub
+plugin_description: Gemini, OpenAI ve Claude için birleşik yapay zeka çeviri merkezi (ÜCRETSİZ katmanlar mevcut)
+
+# Ayarlar Ekranı
+pref_header_quick_actions: ⚡ Hızlı İşlemler ⚡━━━━━━━━━━━━━━━━━━
+pref_action_test_provider: 🔍 Aktif Sağlayıcıyı Test Et
+pref_action_test_provider_summary: Seçili YZ motoru için hızlı bir durum kontrolü yap
+pref_action_view_logs: 📘 Eklenti Loglarını Görüntüle
+pref_action_view_logs_summary: Renkli emoji açıklamalar için MT Manager log görüntüleyicisini aç
+pref_quick_switch_engine: ⚡ Hızlı Motor Değiştir
+pref_quick_switch_engine_summary: AI sağlayıcısını anlık değiştir
+pref_quick_select_model: 🚀 Hızlı Model Seç
+pref_quick_select_model_summary: Gemini model seçeneklerine hızlı erişim
+pref_quick_toggle_debug: 🛠️ Debug Modunu Aç/Kapat
+pref_quick_toggle_debug_summary: Hata ayıklama kaydını hızlıca aç/kapat
+
+pref_header_main: 🌟 AI Translation Hub
+pref_plugin_name: Eklenti Adı
+pref_plugin_description: Gemini, OpenAI ve Claude ile gelişmiş yapay zeka çevirisi (Deneysel v0.1.9)
+pref_dashboard_card_title: 📊 Hızlı Panel
+pref_dashboard_card_summary: Mevcut durum ve aktif yapılandırmaları görüntülemek için dokun
+pref_active_provider_title: 🎯 Aktif Sağlayıcı
+
+pref_header_api_config: 🔑 API Yapılandırması 🔐━━━━━━━━━━━━━━
+pref_api_key_title: Gemini API Anahtarı
+pref_api_key_summary: ÜCRETSİZ API anahtarınızı aistudio.google.com/app/apikey adresinden alın
+pref_gemini_key_status_title: 📊 API Durumu
+pref_test_api_key: 🧪 API Anahtarını Test Et
+pref_test_api_key_summary: API anahtarınızın çalıştığını doğrulayın
+pref_get_api_key: 🎁 ÜCRETSİZ API Anahtarı Al
+pref_get_api_key_summary: Ücretsiz API anahtarı oluşturmak için Google AI Studio'yu açın
+pref_status_provider_gemini: 🌐 Gemini Anahtarı
+pref_status_provider_openai: 🤖 OpenAI Anahtarı
+pref_status_provider_claude: 🦾 Claude Anahtarı
+pref_status_missing: ❌ Yapılandırılmamış
+pref_status_invalid_format: ⚠️ Format geçersiz
+pref_status_ready: ✅ Hazır (format doğru)
+
+pref_header_ai_engine: 🤖 Varsayılan AI Motoru ⚙️━━━━━━━━━━━━━
+pref_default_ai_engine: Tercih Edilen YZ Sağlayıcı
+pref_default_ai_engine_summary: Çeviri motorunun varsayılan olarak hangi sağlayıcıyı kullanacağını seçin
+pref_ai_engine_gemini: 🌟 Gemini (Ücretsiz, hızlı)
+pref_ai_engine_openai: 🤖 OpenAI (GPT-4o ailesi)
+pref_ai_engine_claude: 🧠 Claude (Anthropic 3.5)
+pref_ai_engine_tip: 💡 Motor Seçimi
+pref_ai_engine_tip_summary: Sağlayıcıları dilediğiniz zaman değiştirebilirsiniz; ayarlar ayrı ayrı saklanır.
+
+pref_header_context: 📝 Ön-Çeviri Bağlamı 📋━━━━━━━━━━━━
+pref_context_description: 📦 Kalıcı Bağlam
+pref_context_description_summary: Yapay zekanın bağlamı bilmesi için uygulama bilgilerini girin. Bu alanlar her isteğe eklenir.
+pref_context_app_name: 🎯 Uygulama Adı
+pref_context_app_name_summary: Örn. "AnyAPK" veya proje kod adı
+pref_context_app_type: 🏷️ Uygulama Türü / Alanı
+pref_context_app_type_summary: Örn. "APK yükleme aracı" veya "Alışveriş"
+pref_context_audience: 👥 Hedef Kitle
+pref_context_audience_summary: Kullanıcıları tanımlayın (örn. "Genel Android kullanıcıları")
+pref_context_tone: 🎭 Ton ve Üslup
+pref_context_tone_summary: Tercih edilen yazı tonu (net, samimi, resmi vb.)
+pref_context_notes: 📋 Ek Notlar
+pref_context_notes_summary: Her çeviri için ekstra talimatlar veya meta veriler
+pref_context_presets: 🎮 Hızlı Şablonlar
+pref_context_presets_summary: Ön yapılandırılmış bağlam şablonlarını uygula
+preset_mobile_app: 📱 Mobil Uygulama
+preset_game: 🎮 Oyun
+preset_ebook: 📚 E-kitap
+preset_business: 💼 İş Uygulaması
+
+
+pref_header_debug: 🛠️ Hata Ayıklama & Loglar 🔧━━━━━━━━━━━
+pref_enable_debug: Hata ayıklama kayıtlarını aç
+pref_enable_debug_summary: Ayrıntılı/emoji kayıtlarını MT Manager günlüklerine yaz (normal kullanımda kapalı tut)
+
+pref_header_more_ai: 🌐 Daha Fazla AI Sağlayıcı 🤖━━━━━━━━━━━
+pref_openai_page_title: 🤖 OpenAI API Ayarları
+pref_openai_page_summary: OpenAI anahtarlarını, modelleri ve dokümanlarını yönetin
+pref_openai_status_title: OpenAI API Durumu
+pref_claude_page_title: 🧠 Claude API Ayarları
+pref_claude_page_summary: Anthropic Claude erişimini ve limitlerini yapılandırın
+pref_claude_status_title: Claude API Durumu
+
+pref_header_model: 🚀 Model Seçimi ⭐━━━━━━━━━━━━━━━━━━
+pref_model_name: Gemini Modeli
+pref_model_summary: YZ modelini seçin (2.5 Flash önerilir)
+model_flash: Gemini 2.5 Flash (En iyi denge) ⭐
+model_flash_lite: Gemini 2.5 Flash Lite (En hızlı)
+model_pro: Gemini 2.5 Pro (En yüksek kalite)
+model_legacy: Gemini 2.0 Flash (Yedek)
+pref_rate_limits: 🎁 Ücretsiz Katman Limitleri
+pref_rate_limits_summary: 1500 istek/gün (Flash/Lite/2.0) | 50 istek/gün (Pro) - Tamamen ÜCRETSİZ!
+
+pref_header_performance: ⚡ Performans Ayarları 💨━━━━━━━━━━━━
+pref_timeout: İstek Zaman Aşımı (ms)
+pref_timeout_summary: API yanıtı için maksimum bekleme süresi (5000-120000 ms)
+pref_max_retries: Maksimum Yeniden Deneme
+pref_max_retries_summary: Hatalarda yeniden deneme sayısı (0-5)
+
+pref_header_info: ℹ️ Bilgi & Yardım 📖━━━━━━━━━━━━━━━
+pref_version: 🏷️ Eklenti Sürümü
+pref_free_tier: 🎁 ÜCRETSİZ Katman Limitleri
+pref_free_tier_summary: 15 istek/dk, 1500 istek/gün, 1M token/gün (Gemini 1.5 Flash)
+pref_api_docs: 📖 API Dokümantasyonu
+pref_api_docs_summary: Gemini API dokümantasyonunu görüntüle
+pref_pricing: 💵 Fiyatlandırma Bilgisi
+pref_pricing_summary: Ücretsiz katman limitlerini ve ücretli fiyatlandırmayı kontrol et
+
+pref_header_developer: 👨‍💻 Geliştirici 👨‍🔬━━━━━━━━━━━━━━━━
+pref_developer_name: Ilker Binzet
+pref_developer_summary: Yapay zeka çeviri eklentisinin geliştiricisi ve bakımcısı
+pref_developer_github: 🐙 GitHub Profili
+pref_developer_github_summary: github.com/ilker-binzet
+pref_developer_linkedin: 🔗 LinkedIn Profili
+pref_developer_linkedin_summary: linkedin.com/in/binzet-me
+
+# OpenAI Ayar Sayfası
+pref_openai_title: OpenAI API Yapılandırması
+pref_openai_subtitle: GPT-4o modellerini MT Manager çevirilerine ekleyin
+pref_openai_header_overview: OpenAI Genel Bakış
+pref_openai_overview_title: Neden OpenAI eklenmeli?
+pref_openai_overview_summary: GPT-4o modelleri Gemini ile birlikte doğal dil kalitesi sağlar.
+pref_openai_limits: Ücretsiz Katman ve Kullanım
+pref_openai_limits_summary: Kullanım başına ödeme modelidir. Yeni hesaplara ilk 5$'lık kullanım ücretsizdir.
+pref_openai_header_api: API Erişimi
+pref_openai_api_key_title: OpenAI API Anahtarı
+pref_openai_api_key_summary: Anahtarlar sk- ile başlar ve platform.openai.com/api-keys adresinden yönetilir
+pref_openai_validate: Anahtar Formatını Doğrula
+pref_openai_validate_summary: Kaydedilen anahtarın OpenAI formatına uyup uymadığını kontrol et
+pref_openai_get_key: API Anahtarı Oluştur
+pref_openai_get_key_summary: OpenAI panelini açarak yeni anahtar oluştur
+pref_openai_header_model: Model ve Uç Nokta
+pref_openai_model_title: Varsayılan OpenAI Modeli
+pref_openai_model_summary: Çevirilerde kullanılacak GPT modelini seçin
+pref_openai_model_gpt4omini: GPT-4o mini (en hızlı ve ekonomik)
+pref_openai_model_gpt4o: GPT-4o (denge)
+pref_openai_model_o1mini: o1-mini (akıl yürütme odaklı)
+pref_openai_model_o1: o1 (derin akıl yürütme)
+pref_openai_endpoint_title: Özel Uç Nokta
+pref_openai_endpoint_summary: Proxy veya Azure OpenAI kullanıyorsanız uç noktayı değiştirin
+pref_openai_header_docs: Doküman ve Fiyat
+pref_openai_docs: OpenAI Dokümanları
+pref_openai_docs_summary: Model özelliklerini ve API referanslarını inceleyin
+pref_openai_pricing: OpenAI Fiyatlandırması
+pref_openai_pricing_summary: Büyük çeviri işleri öncesinde token maliyetini kontrol edin
+
+# Claude Ayar Sayfası
+pref_claude_title: Claude API Yapılandırması
+pref_claude_subtitle: Anthropic Claude 3.5 modellerini kullanın
+pref_claude_header_overview: Claude Genel Bakış
+pref_claude_overview_title: Neden Claude eklenmeli?
+pref_claude_overview_summary: Claude 3 modelleri bağlamı iyi yönetir ve Gemini/OpenAI'yi tamamlar.
+pref_claude_limits: Ücretsiz Katman ve Kullanım
+pref_claude_limits_summary: Claude kullanım başına ödemeli; varsayılan limitler 50 istek/dk, 50K giriş token/dk ve 10K çıkış token/dk (<=200K bağlam).
+pref_claude_header_api: API Erişimi
+pref_claude_api_key_title: Claude API Anahtarı
+pref_claude_api_key_summary: Anahtarlar sk-ant- ile başlar ve console.anthropic.com üzerinden yönetilir
+pref_claude_validate: Anahtar Formatını Doğrula
+pref_claude_validate_summary: Kaydedilen anahtarın Anthropic formatına uyup uymadığını kontrol et
+pref_claude_get_key: API Anahtarı Oluştur
+pref_claude_get_key_summary: Anthropic panelini açarak yeni anahtar oluştur
+pref_claude_header_model: Model ve Uç Nokta
+pref_claude_model_title: Varsayılan Claude Modeli
+pref_claude_model_summary: Varsayılan olarak çağrılacak Claude 3 modelini seçin
+pref_claude_model_sonnet35: Claude 3.5 Sonnet (Haz 2024, denge)
+pref_claude_model_haiku35: Claude 3.5 Haiku (Haz 2024, hızlı)
+pref_claude_model_sonnet3: Claude 3 Sonnet (stabil)
+pref_claude_model_haiku3: Claude 3 Haiku (hız odaklı)
+pref_claude_model_opus3: Claude 3 Opus (maksimum kalite)
+pref_claude_model_opus35: Claude 3.5 Opus (önizleme)
+pref_claude_model_fallback_note: İpucu: Hesabınızda seçtiğiniz model yoksa eklenti Anthropic'ten kullanılabilir modelleri sorgular ve ilk uygun olanı seçer.
+pref_claude_endpoint_title: Özel Uç Nokta
+pref_claude_endpoint_summary: Anthropic taban URL'sini ağ geçitleri için değiştirin
+pref_claude_header_docs: Doküman ve Fiyat
+pref_claude_docs: Claude Dokümanları
+pref_claude_docs_summary: Claude API kullanımını ve güvenlik yönergelerini inceleyin
+pref_claude_pricing: Claude Fiyatlandırması
+pref_claude_pricing_summary: Yüksek hacimli işler öncesi token maliyetini görün
+
+# Dil İsimleri
+lang_auto: Otomatik Algıla
+lang_en: İngilizce
+lang_tr: Türkçe
+lang_de: Almanca
+lang_fr: Fransızca
+lang_es: İspanyolca
+lang_it: İtalyanca
+lang_pt: Portekizce
+lang_ru: Rusça
+lang_ja: Japonca
+lang_ko: Korece
+lang_zh-CN: Çince (Basitleştirilmiş)
+lang_zh-TW: Çince (Geleneksel)
+lang_ar: Arapça
+lang_hi: Hintçe
+lang_nl: Hollandaca
+lang_sv: İsveççe
+lang_pl: Lehçe
+lang_uk: Ukraynaca
+lang_cs: Çekçe
+lang_el: Yunanca
+lang_he: İbranice
+lang_id: Endonezce
+lang_th: Tayca
+lang_vi: Vietnamca
+lang_ro: Rumence
+lang_hu: Macarca
+lang_da: Danca
+lang_fi: Fince
+lang_no: Norveççe
+lang_bg: Bulgarca
+lang_hr: Hırvatça
+lang_sr: Sırpça
+lang_sk: Slovakça
+lang_sl: Slovence
+lang_lt: Litvanca
+lang_lv: Letonca
+lang_et: Estonca
+
+# Hata Mesajları
+error_no_api_key: API anahtarı yapılandırılmamış. ÜCRETSİZ anahtarınızı aistudio.google.com/app/apikey adresinden alın
+error_invalid_api_key_format: Geçersiz API anahtarı formatı. "AIzaSy" ile başlamalı ve 39 karakter olmalı.
+error_api_key_invalid: API anahtarı doğrulaması başarısız. Lütfen anahtarınızı kontrol edin.
+error_api_test_failed: API anahtarı testi başarısız oldu
+error_api: API Hatası
+error_timeout_range: Zaman aşımı 5000 ile 120000 milisaniye arasında olmalıdır
+error_retries_range: Yeniden deneme sayısı 0 ile 5 arasında olmalıdır
+error_invalid_number: Lütfen geçerli bir sayı girin
+error_openai_no_api_key: OpenAI API anahtarı eksik. platform.openai.com/api-keys adresinden oluşturun
+error_openai_invalid_key_format: Geçersiz OpenAI anahtarı formatı. Anahtar "sk-" ile başlamalıdır.
+error_claude_no_api_key: Claude API anahtarı eksik. console.anthropic.com üzerinden oluşturun
+error_claude_invalid_key_format: Geçersiz Claude anahtarı formatı. Anahtar "sk-ant-" ile başlamalıdır.
+
+# Başarı Mesajları
+msg_api_key_valid: ✅ API anahtarı geçerli! Gemini AI çeviriye hazır.
+msg_openai_key_valid_format: ✅ OpenAI anahtarı doğru formatta, kullanıma hazır.
+msg_claude_key_valid_format: ✅ Claude anahtarı formatı geçerli.
+msg_fallback_gemini: ⚠️ Varsayılan Gemini YZ sağlayıcısına dönülüyor.
+msg_claude_model_auto_selected: ⚠️ Seçilen Claude modeli hesabınızda yok. Yeni model:
+
+# Dialog Butonları
+close: Kapat

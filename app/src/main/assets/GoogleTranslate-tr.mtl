@@ -1,0 +1,90 @@
+# Google Cloud Translation Plugin - Turkish Language Strings
+# Türkçe dil dosyası
+# Format: key: value
+
+# ==================== Eklenti Bilgileri ====================
+plugin_name: Google Cloud Çeviri
+plugin_description: Google Cloud Translation API ile profesyonel çeviri motoru
+
+# ==================== Ayarlar Ekranı ====================
+pref_header_main: Google Cloud Çeviri
+pref_plugin_name: Eklenti Adı
+pref_plugin_description: Google'ın Sinir Ağı Makine Çevirisi ile gelişmiş çeviri
+
+pref_header_api_config: API Yapılandırması
+pref_api_key_title: API Anahtarı
+pref_api_key_summary: Google Cloud Translation API anahtarınızı girin.\nconsole.cloud.google.com adresinden alabilirsiniz
+pref_test_api_key: API Anahtarını Test Et
+pref_test_api_key_summary: API anahtarınızın doğru çalıştığını doğrulayın
+pref_get_api_key: API Anahtarı Al
+pref_get_api_key_summary: API anahtarı oluşturmak için Google Cloud Console'u açın
+
+pref_header_translation_settings: Çeviri Ayarları
+pref_default_target_lang: Varsayılan Hedef Dil
+pref_default_target_lang_summary: Çeviriler için tercih edilen dil
+pref_use_advanced_model: Gelişmiş NMT Modeli Kullan
+pref_use_advanced_model_summary: Google'ın premium Sinir Ağı Çeviri modelini etkinleştir (daha yüksek maliyet oluşturabilir)
+
+pref_header_performance: Performans Ayarları
+pref_timeout: İstek Zaman Aşımı (ms)
+pref_timeout_summary: API yanıtı için maksimum bekleme süresi (5000-120000 ms)
+pref_max_retries: Maksimum Yeniden Deneme
+pref_max_retries_summary: Geçici hatalarda yeniden deneme sayısı (0-5)
+
+pref_header_advanced: Gelişmiş Özellikler
+pref_enable_cache: Çeviri Önbelleğini Etkinleştir
+pref_enable_cache_summary: API çağrılarını azaltmak ve hızı artırmak için çevirileri önbelleğe al
+pref_cache_expiration: Önbellek Süresi (dakika)
+pref_cache_expiration_summary: Çevirilerin önbellekte ne kadar süre tutulacağı
+pref_clear_cache: Önbelleği Temizle
+pref_clear_cache_summary: Tüm önbelleğe alınmış çevirileri kaldır
+
+pref_header_statistics: İstatistikler
+pref_stats_cache_hits: Önbellek İsabeti
+pref_stats_cache_misses: Önbellek Kaybı
+pref_stats_value: %d
+pref_reset_stats: İstatistikleri Sıfırla
+pref_reset_stats_summary: Tüm kullanım istatistiklerini temizle
+
+pref_header_info: Bilgi ve Yardım
+pref_version: Eklenti Sürümü
+pref_api_docs: API Dokümantasyonu
+pref_api_docs_summary: Google Cloud Translation API dokümantasyonunu görüntüle
+pref_pricing: Fiyatlandırma Bilgisi
+pref_pricing_summary: Çeviri maliyetlerini ve ücretsiz katman limitlerini kontrol et
+pref_github: GitHub Deposu
+pref_github_summary: Kaynak kodunu görüntüle ve sorun bildir
+
+# ==================== Dil İsimleri ====================
+lang_auto: Otomatik Algıla
+lang_en: İngilizce
+lang_zh-CN: Çince (Basitleştirilmiş)
+lang_zh-TW: Çince (Geleneksel)
+lang_tr: Türkçe
+lang_de: Almanca
+lang_fr: Fransızca
+lang_es: İspanyolca
+lang_ja: Japonca
+lang_ko: Korece
+
+# ==================== Hata Mesajları ====================
+error_no_api_key: API anahtarı yapılandırılmamış. Lütfen ayarlardan API anahtarınızı girin.
+error_invalid_api_key_format: Geçersiz API anahtarı formatı. Google API anahtarları "AIzaSy" ile başlamalı ve 39 karakter uzunluğunda olmalıdır.
+error_api_key_invalid: API anahtarı doğrulaması başarısız. Lütfen anahtarınızı kontrol edip tekrar deneyin.
+error_api_test_failed: API anahtarı testi başarısız oldu
+error_text_too_long: Metin 5000 karakter sınırını aşıyor. Lütfen daha küçük parçalara bölün.
+error_api: API Hatası
+error_timeout_range: Zaman aşımı 5000 ile 120000 milisaniye arasında olmalıdır
+error_retries_range: Yeniden deneme sayısı 0 ile 5 arasında olmalıdır
+error_invalid_number: Lütfen geçerli bir sayı girin
+
+# ==================== Başarı Mesajları ====================
+msg_api_key_valid: API anahtarı geçerli ve doğru çalışıyor!
+msg_cache_cleared: Çeviri önbelleği temizlendi
+msg_stats_reset: İstatistikler sıfırlandı
+
+# ==================== Çeviri Durumu ====================
+status_translating: Çevriliyor...
+status_retrying: Çeviri yeniden deneniyor (deneme %d)...
+status_cached: Önbellekteki çeviri kullanılıyor
+status_complete: Çeviri tamamlandı

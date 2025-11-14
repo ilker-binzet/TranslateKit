@@ -1,0 +1,242 @@
+# AI Translation Hub - English Strings
+
+# Plugin Information
+plugin_name: AI Translation Hub
+plugin_description: Unified AI translation hub for Gemini, OpenAI, and Claude (FREE tiers available)
+
+# Preference Screen
+pref_header_quick_actions: ⚡ Quick Actions ⚡━━━━━━━━━━━━━━━━━━
+pref_action_test_provider: 🔍 Test Active Provider
+pref_action_test_provider_summary: Tap to run a quick status check for the selected AI engine
+pref_action_view_logs: 📘 View Plugin Logs
+pref_action_view_logs_summary: Open the MT Manager log viewer for colorful emoji-rich debug entries
+pref_quick_switch_engine: ⚡ Quick Switch Engine
+pref_quick_switch_engine_summary: Tap to change AI provider instantly
+pref_quick_select_model: 🚀 Quick Model Select
+pref_quick_select_model_summary: Fast access to Gemini model options
+pref_quick_toggle_debug: 🛠️ Toggle Debug Mode
+pref_quick_toggle_debug_summary: Enable/disable debug logging quickly
+
+pref_header_main: 🌟 AI Translation Hub
+pref_plugin_name: Plugin Name
+pref_plugin_description: Multi-provider AI translation powered by Gemini, OpenAI, and Claude (Experimental v0.1.9)
+pref_dashboard_card_title: 📊 Quick Dashboard
+pref_dashboard_card_summary: Tap to view current status and active configurations
+pref_active_provider_title: 🎯 Active Provider
+
+pref_header_api_config: 🔑 API Configuration 🔐━━━━━━━━━━━━━━
+pref_api_key_title: Gemini API Key
+pref_api_key_summary: Get your FREE API key at aistudio.google.com/app/apikey
+pref_gemini_key_status_title: 📊 API Status
+pref_test_api_key: 🧪 Test API Key
+pref_test_api_key_summary: Verify your API key is working
+pref_get_api_key: 🎁 Get FREE API Key
+pref_get_api_key_summary: Open Google AI Studio to create a free API key
+pref_status_provider_gemini: 🌐 Gemini Key
+pref_status_provider_openai: 🤖 OpenAI Key
+pref_status_provider_claude: 🦾 Claude Key
+pref_status_missing: ❌ Not configured
+pref_status_invalid_format: ⚠️ Invalid format
+pref_status_ready: ✅ Ready (format valid)
+
+pref_header_ai_engine: 🤖 Default AI Engine ⚙️━━━━━━━━━━━━━━
+pref_default_ai_engine: Preferred AI Provider
+pref_default_ai_engine_summary: Choose which provider the translation engine should use by default
+pref_ai_engine_gemini: 🌟 Gemini (Free, fast)
+pref_ai_engine_openai: 🤖 OpenAI (GPT-4o family)
+pref_ai_engine_claude: 🧠 Claude (Anthropic 3.5)
+pref_ai_engine_tip: 💡 Choosing an Engine
+pref_ai_engine_tip_summary: Switch providers anytime—each API configuration is saved separately.
+
+pref_header_context: 📝 Pre-Translation Context 📋━━━━━━━━━
+pref_context_description: 📦 Persistent Context
+pref_context_description_summary: Provide app metadata so AI translations stay domain-aware. Fields below are injected into every prompt.
+pref_context_app_name: 🎯 App Name
+pref_context_app_name_summary: E.g., "AnyAPK" or your project codename
+pref_context_app_type: 🏷️ App Type / Domain
+pref_context_app_type_summary: E.g., "APK installation utility" or "Shopping"
+pref_context_audience: 👥 Target Audience
+pref_context_audience_summary: Describe the end users (e.g., "General Android users")
+pref_context_tone: 🎭 Tone & Voice
+pref_context_tone_summary: Preferred writing tone (clear, playful, formal, etc.)
+pref_context_notes: 📋 Additional Notes
+pref_context_notes_summary: Extra instructions or metadata for every translation
+pref_context_presets: 🎮 Quick Presets
+pref_context_presets_summary: Apply pre-configured context templates
+preset_mobile_app: 📱 Mobile App
+preset_game: 🎮 Game
+preset_ebook: 📚 E-book
+preset_business: 💼 Business App
+
+
+pref_header_debug: 🛠️ Debugging & Logs 🔧━━━━━━━━━━━━━━━
+pref_enable_debug: Enable Debug Logging
+pref_enable_debug_summary: Record detailed emoji-rich request info to MT Manager logs (disable during normal use)
+
+pref_header_more_ai: 🌐 More AI Providers 🤖━━━━━━━━━━━━
+pref_openai_page_title: 🤖 OpenAI API Settings
+pref_openai_page_summary: Manage OpenAI keys, preferred models, and docs
+pref_openai_status_title: OpenAI API Status
+pref_claude_page_title: 🧠 Claude API Settings
+pref_claude_page_summary: Configure Anthropic Claude access, limits, and docs
+pref_claude_status_title: Claude API Status
+
+pref_header_model: 🚀 Model Selection ⭐━━━━━━━━━━━━━━━
+pref_model_name: Gemini Model
+pref_model_summary: Choose AI model (2.5 Flash recommended)
+model_flash: Gemini 2.5 Flash (Best balance) ⭐
+model_flash_lite: Gemini 2.5 Flash Lite (Fastest)
+model_pro: Gemini 2.5 Pro (Highest quality)
+model_legacy: Gemini 2.0 Flash (Fallback)
+pref_rate_limits: 🎁 Free Tier Limits
+pref_rate_limits_summary: 1500 requests/day (Flash/Lite/2.0) | 50 requests/day (Pro) - Completely FREE!
+
+pref_header_performance: ⚡ Performance Settings 💨━━━━━━━━━━━
+pref_timeout: Request Timeout (ms)
+pref_timeout_summary: Maximum wait time for API response (5000-120000 ms)
+pref_max_retries: Max Retry Attempts
+pref_max_retries_summary: Number of retry attempts on failures (0-5)
+
+pref_header_info: ℹ️ Information & Help 📖━━━━━━━━━━━━
+pref_version: 🏷️ Plugin Version
+pref_free_tier: 🎁 FREE Tier Limits
+pref_free_tier_summary: 15 requests/min, 1500 requests/day, 1M tokens/day (Gemini 1.5 Flash)
+pref_api_docs: 📖 API Documentation
+pref_api_docs_summary: View Gemini API documentation
+pref_pricing: 💵 Pricing Information
+pref_pricing_summary: Check free tier limits and paid pricing
+
+pref_header_developer: 👨‍💻 Developer 👨‍🔬━━━━━━━━━━━━━━━━━
+pref_developer_name: Ilker Binzet
+pref_developer_summary: Lead developer & maintainer of the AI translation plugin
+pref_developer_github: 🐙 GitHub Profile
+pref_developer_github_summary: github.com/ilker-binzet
+pref_developer_linkedin: 🔗 LinkedIn Profile
+pref_developer_linkedin_summary: linkedin.com/in/binzet-me
+
+# OpenAI Preference Page
+pref_openai_title: OpenAI API Configuration
+pref_openai_subtitle: Bring GPT-4o models into MT Manager translations
+pref_openai_header_overview: OpenAI Overview
+pref_openai_overview_title: Why add OpenAI?
+pref_openai_overview_summary: Use GPT-4o models for natural language quality alongside Gemini.
+pref_openai_limits: Free Tier & Usage
+pref_openai_limits_summary: Pay-as-you-go. First $5 in usage is free for new accounts. Monitor usage in the OpenAI dashboard.
+pref_openai_header_api: API Access
+pref_openai_api_key_title: OpenAI API Key
+pref_openai_api_key_summary: Keys start with sk- and can be managed at platform.openai.com/api-keys
+pref_openai_validate: Validate Key Format
+pref_openai_validate_summary: Quickly check if the stored key matches OpenAI formatting
+pref_openai_get_key: Create API Key
+pref_openai_get_key_summary: Open OpenAI dashboard to generate a key
+pref_openai_header_model: Model & Endpoint
+pref_openai_model_title: Default OpenAI Model
+pref_openai_model_summary: Pick the GPT model used by upcoming translations
+pref_openai_model_gpt4omini: GPT-4o mini (fastest + cheapest)
+pref_openai_model_gpt4o: GPT-4o (balanced quality & speed)
+pref_openai_model_o1mini: o1-mini (reasoning focused)
+pref_openai_model_o1: o1 (deep reasoning)
+pref_openai_endpoint_title: Custom Endpoint
+pref_openai_endpoint_summary: Override the OpenAI endpoint if you're using a proxy or Azure OpenAI
+pref_openai_header_docs: Docs & Pricing
+pref_openai_docs: OpenAI Docs
+pref_openai_docs_summary: Read model capabilities, limits, and API references
+pref_openai_pricing: OpenAI Pricing
+pref_openai_pricing_summary: Review token costs before running large batches
+
+# Claude Preference Page
+pref_claude_title: Claude API Configuration
+pref_claude_subtitle: Use Anthropic's Claude 3.5 models for translation
+pref_claude_header_overview: Claude Overview
+pref_claude_overview_title: Why add Claude?
+pref_claude_overview_summary: Claude 3 models are precise, handle context well, and complement Gemini/OpenAI.
+pref_claude_limits: Free Tier & Usage
+pref_claude_limits_summary: Pay-as-you-go with default limits: 50 req/min, 50K input tokens/min, 10K output tokens/min (<=200K context).
+pref_claude_header_api: API Access
+pref_claude_api_key_title: Claude API Key
+pref_claude_api_key_summary: Keys start with sk-ant- and are managed inside console.anthropic.com
+pref_claude_validate: Validate Key Format
+pref_claude_validate_summary: Check if the stored key matches Anthropic formatting rules
+pref_claude_get_key: Create API Key
+pref_claude_get_key_summary: Open Anthropic console to generate a key
+pref_claude_header_model: Model & Endpoint
+pref_claude_model_title: Default Claude Model
+pref_claude_model_summary: Choose which Claude 3 model to call by default
+pref_claude_model_sonnet35: Claude 3.5 Sonnet (Jun 2024, best balance)
+pref_claude_model_haiku35: Claude 3.5 Haiku (Jun 2024, fast + affordable)
+pref_claude_model_sonnet3: Claude 3 Sonnet (stable)
+pref_claude_model_haiku3: Claude 3 Haiku (speed focus)
+pref_claude_model_opus3: Claude 3 Opus (maximum quality)
+pref_claude_model_opus35: Claude 3.5 Opus (preview)
+pref_claude_model_fallback_note: Tip: If a chosen model isn't available in your workspace, the plugin automatically queries Anthropic for accessible models and switches to the first viable option.
+pref_claude_endpoint_title: Custom Endpoint
+pref_claude_endpoint_summary: Override the Anthropic base URL for gateways or regional proxies
+pref_claude_header_docs: Docs & Pricing
+pref_claude_docs: Claude Docs
+pref_claude_docs_summary: Learn about Claude API usage and safety guidelines
+pref_claude_pricing: Claude Pricing
+pref_claude_pricing_summary: Review token costs before sending high-volume jobs
+
+# Language Names
+lang_auto: Auto Detect
+lang_en: English
+lang_tr: Turkish
+lang_de: German
+lang_fr: French
+lang_es: Spanish
+lang_it: Italian
+lang_pt: Portuguese
+lang_ru: Russian
+lang_ja: Japanese
+lang_ko: Korean
+lang_zh-CN: Chinese (Simplified)
+lang_zh-TW: Chinese (Traditional)
+lang_ar: Arabic
+lang_hi: Hindi
+lang_nl: Dutch
+lang_sv: Swedish
+lang_pl: Polish
+lang_uk: Ukrainian
+lang_cs: Czech
+lang_el: Greek
+lang_he: Hebrew
+lang_id: Indonesian
+lang_th: Thai
+lang_vi: Vietnamese
+lang_ro: Romanian
+lang_hu: Hungarian
+lang_da: Danish
+lang_fi: Finnish
+lang_no: Norwegian
+lang_bg: Bulgarian
+lang_hr: Croatian
+lang_sr: Serbian
+lang_sk: Slovak
+lang_sl: Slovenian
+lang_lt: Lithuanian
+lang_lv: Latvian
+lang_et: Estonian
+
+# Error Messages
+error_no_api_key: API key not configured. Get your FREE key at aistudio.google.com/app/apikey
+error_invalid_api_key_format: Invalid API key format. Should start with "AIzaSy" and be 39 characters.
+error_api_key_invalid: API key validation failed. Please check your key.
+error_api_test_failed: API key test failed
+error_api: API Error
+error_timeout_range: Timeout must be between 5000 and 120000 milliseconds
+error_retries_range: Retry count must be between 0 and 5
+error_invalid_number: Please enter a valid number
+error_openai_no_api_key: OpenAI API key is missing. Create one at platform.openai.com/api-keys
+error_openai_invalid_key_format: Invalid OpenAI key format. Keys should start with "sk-" and contain only letters and numbers.
+error_claude_no_api_key: Claude API key is missing. Generate one at console.anthropic.com
+error_claude_invalid_key_format: Invalid Claude key format. Keys should start with "sk-ant-".
+
+# Success Messages
+msg_api_key_valid: ✅ API key is valid! Gemini AI is ready to translate.
+msg_openai_key_valid_format: ✅ OpenAI key looks good. You're ready to start testing requests.
+msg_claude_key_valid_format: ✅ Claude key format is valid and ready for use.
+msg_fallback_gemini: ⚠️ Falling back to Gemini AI (default provider).
+msg_claude_model_auto_selected: ⚠️ Selected Claude model isn't available for your account. Switched to:
+
+# Dialog Buttons
+close: Close

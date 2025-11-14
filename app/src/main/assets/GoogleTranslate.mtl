@@ -1,0 +1,92 @@
+# Google Cloud Translation Plugin - Language Strings
+# Default language: English
+# Format: key: value
+# Escape sequences: \n (newline), \r (return), \t (tab), \\ (backslash), \uXXXX (unicode)
+# Line continuation: Use \ at end of line
+
+# ==================== Plugin Information ====================
+plugin_name: Google Cloud Translate
+plugin_description: Professional translation engine powered by Google Cloud Translation API
+
+# ==================== Preference Screen ====================
+pref_header_main: Google Cloud Translation
+pref_plugin_name: Plugin Name
+pref_plugin_description: Advanced translation using Google's Neural Machine Translation
+
+pref_header_api_config: API Configuration
+pref_api_key_title: API Key
+pref_api_key_summary: Enter your Google Cloud Translation API key.\nGet one at console.cloud.google.com
+pref_test_api_key: Test API Key
+pref_test_api_key_summary: Verify your API key is working correctly
+pref_get_api_key: Get API Key
+pref_get_api_key_summary: Open Google Cloud Console to create an API key
+
+pref_header_translation_settings: Translation Settings
+pref_default_target_lang: Default Target Language
+pref_default_target_lang_summary: Preferred language for translations
+pref_use_advanced_model: Use Advanced NMT Model
+pref_use_advanced_model_summary: Enable Google's premium Neural Machine Translation model (may incur higher costs)
+
+pref_header_performance: Performance Settings
+pref_timeout: Request Timeout (ms)
+pref_timeout_summary: Maximum time to wait for API response (5000-120000 ms)
+pref_max_retries: Max Retry Attempts
+pref_max_retries_summary: Number of retry attempts on transient failures (0-5)
+
+pref_header_advanced: Advanced Features
+pref_enable_cache: Enable Translation Cache
+pref_enable_cache_summary: Cache translated texts to reduce API calls and improve speed
+pref_cache_expiration: Cache Expiration (minutes)
+pref_cache_expiration_summary: How long to keep translations in cache
+pref_clear_cache: Clear Cache
+pref_clear_cache_summary: Remove all cached translations
+
+pref_header_statistics: Statistics
+pref_stats_cache_hits: Cache Hits
+pref_stats_cache_misses: Cache Misses
+pref_stats_value: %d
+pref_reset_stats: Reset Statistics
+pref_reset_stats_summary: Clear all usage statistics
+
+pref_header_info: Information & Help
+pref_version: Plugin Version
+pref_api_docs: API Documentation
+pref_api_docs_summary: View Google Cloud Translation API documentation
+pref_pricing: Pricing Information
+pref_pricing_summary: Check translation costs and free tier limits
+pref_github: GitHub Repository
+pref_github_summary: View source code and report issues
+
+# ==================== Language Names ====================
+lang_auto: Auto Detect
+lang_en: English
+lang_zh-CN: Chinese (Simplified)
+lang_zh-TW: Chinese (Traditional)
+lang_tr: Turkish
+lang_de: German
+lang_fr: French
+lang_es: Spanish
+lang_ja: Japanese
+lang_ko: Korean
+
+# ==================== Error Messages ====================
+error_no_api_key: API key is not configured. Please enter your API key in settings.
+error_invalid_api_key_format: Invalid API key format. Google API keys should start with "AIzaSy" and be 39 characters long.
+error_api_key_invalid: API key validation failed. Please check your key and try again.
+error_api_test_failed: API key test failed
+error_text_too_long: Text exceeds 5000 character limit. Please split into smaller chunks.
+error_api: API Error
+error_timeout_range: Timeout must be between 5000 and 120000 milliseconds
+error_retries_range: Retry count must be between 0 and 5
+error_invalid_number: Please enter a valid number
+
+# ==================== Success Messages ====================
+msg_api_key_valid: API key is valid and working correctly!
+msg_cache_cleared: Translation cache has been cleared
+msg_stats_reset: Statistics have been reset
+
+# ==================== Translation Status ====================
+status_translating: Translating...
+status_retrying: Retrying translation (attempt %d)...
+status_cached: Using cached translation
+status_complete: Translation complete

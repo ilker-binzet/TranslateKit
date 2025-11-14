@@ -1,0 +1,38 @@
+name: Release MT Plugin
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Build MT plugin
+        run: ./gradlew app:packageReleaseMtp
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mt-plugin
+          path: app/build/outputs/mt-plugin/mt.plugin.ai.hub.mtp
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/mt-plugin/mt.plugin.ai.hub.mtp
