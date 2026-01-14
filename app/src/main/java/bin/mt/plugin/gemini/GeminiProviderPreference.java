@@ -64,18 +64,19 @@ public class GeminiProviderPreference implements PluginPreference {
         builder.addHeader("✨ Model Selection");
 
         var geminiModelList = builder.addList("Gemini Model", GeminiConstants.PREF_MODEL_NAME)
-            .defaultValue(GeminiConstants.DEFAULT_MODEL)
-            .summary("Choose AI model (2.5 Flash recommended)");
+                .defaultValue(GeminiConstants.DEFAULT_MODEL)
+                .summary("Choose AI model (Gemini 3 Flash recommended)");
 
         boolean disableCache = preferences.getBoolean(GeminiConstants.PREF_DEBUG_DISABLE_MODEL_CACHE, false);
         java.util.List<ModelCatalogManager.ModelInfo> cachedGeminiModels = disableCache
-            ? Collections.emptyList()
-            : ModelCatalogManager.loadModelCache(preferences, GeminiConstants.PREF_CACHE_GEMINI_MODELS);
+                ? Collections.emptyList()
+                : ModelCatalogManager.loadModelCache(preferences, GeminiConstants.PREF_CACHE_GEMINI_MODELS);
         if (cachedGeminiModels == null || cachedGeminiModels.isEmpty()) {
-            geminiModelList.addItem("Gemini 2.5 Flash (Recommended)", GeminiConstants.MODEL_GEMINI_25_FLASH)
-                .addItem("Gemini 2.5 Flash Lite (Fastest)", GeminiConstants.MODEL_GEMINI_25_FLASH_LITE)
-                .addItem("Gemini 2.5 Pro (Highest Quality)", GeminiConstants.MODEL_GEMINI_25_PRO)
-                .addItem("Gemini 2.0 Flash (Legacy)", GeminiConstants.MODEL_GEMINI_20_FLASH);
+            geminiModelList.addItem("Gemini 3 Flash (Recommended)", GeminiConstants.MODEL_GEMINI_3_FLASH)
+                    .addItem("Gemini 3 Pro (Highest Quality)", GeminiConstants.MODEL_GEMINI_3_PRO)
+                    .addItem("Gemini 2.5 Flash (Stable Fallback)", GeminiConstants.MODEL_GEMINI_25_FLASH)
+                    .addItem("Gemini 2.5 Pro (Previous Gen)", GeminiConstants.MODEL_GEMINI_25_PRO)
+                    .addItem("Gemini 2.0 Flash (Legacy)", GeminiConstants.MODEL_GEMINI_20_FLASH);
         } else {
             for (ModelCatalogManager.ModelInfo info : cachedGeminiModels) {
                 geminiModelList.addItem(formatModelLabel(info), info.id);
@@ -83,14 +84,14 @@ public class GeminiProviderPreference implements PluginPreference {
         }
 
         builder.addText("Refresh Model List")
-            .summary("Fetch the latest Gemini models from Google API")
-            .onClick((pluginUI, item) -> refreshGeminiModels(pluginUI));
+                .summary("Fetch the latest Gemini models from Google API")
+                .onClick((pluginUI, item) -> refreshGeminiModels(pluginUI));
 
         // ==================== Usage & Limits ====================
         builder.addHeader("📊 Usage & Limits");
 
         builder.addText("Free Tier Limits")
-                .summary("1500 requests/day (Flash/Lite/2.0) | 50 requests/day (Pro) - Completely FREE!");
+                .summary("2000 requests/day (Flash) | 100 requests/day (Pro) - Completely FREE!");
 
         builder.addText("API Documentation")
                 .summary("View Gemini API documentation and pricing")
@@ -110,7 +111,7 @@ public class GeminiProviderPreference implements PluginPreference {
 
     private String getKeyStatus() {
         String apiKey = preferences.getString(GeminiConstants.PREF_API_KEY, "");
-        
+
         if (apiKey.isEmpty()) {
             return "⚪ Not Configured - Click 'Get FREE API Key' above";
         } else if (!java.util.regex.Pattern.matches(GeminiConstants.API_KEY_PATTERN, apiKey)) {
@@ -135,17 +136,17 @@ public class GeminiProviderPreference implements PluginPreference {
         }
 
         // Show progress dialog
-        bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog = 
-            new bin.mt.plugin.api.ui.dialog.LoadingDialog(pluginUI)
+        bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog = new bin.mt.plugin.api.ui.dialog.LoadingDialog(
+                pluginUI)
                 .setMessage("Translating...")
                 .setSecondaryMessage("Testing: 'Hello' → Turkish")
                 .show();
-        
+
         new Thread(() -> {
             try {
                 String text = "Hello";
                 String prompt = "Translate this text to Turkish: " + text;
-                
+
                 org.json.JSONObject request = new org.json.JSONObject();
                 org.json.JSONArray contents = new org.json.JSONArray();
                 org.json.JSONObject part = new org.json.JSONObject();
@@ -155,7 +156,8 @@ public class GeminiProviderPreference implements PluginPreference {
                 contents.put(content);
                 request.put("contents", contents);
 
-                String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+                String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model
+                        + ":generateContent?key=" + apiKey;
                 GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(url);
                 httpRequest.setTimeout(10000);
                 httpRequest.jsonBody(request);
@@ -165,11 +167,11 @@ public class GeminiProviderPreference implements PluginPreference {
 
                 if (response.has("candidates")) {
                     String result = response.getJSONArray("candidates")
-                        .getJSONObject(0)
-                        .getJSONObject("content")
-                        .getJSONArray("parts")
-                        .getJSONObject(0)
-                        .getString("text").trim();
+                            .getJSONObject(0)
+                            .getJSONObject("content")
+                            .getJSONArray("parts")
+                            .getJSONObject(0)
+                            .getString("text").trim();
 
                     runOnMainThread(() -> pluginUI.buildDialog()
                             .setTitle("✅ Translation Successful")
@@ -209,8 +211,8 @@ public class GeminiProviderPreference implements PluginPreference {
         }
 
         // Show progress dialog
-        bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog = 
-            new bin.mt.plugin.api.ui.dialog.LoadingDialog(pluginUI)
+        bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog = new bin.mt.plugin.api.ui.dialog.LoadingDialog(
+                pluginUI)
                 .setMessage("Testing API Connection...")
                 .setSecondaryMessage("Please wait while we verify your API key")
                 .show();
@@ -231,7 +233,7 @@ public class GeminiProviderPreference implements PluginPreference {
 
                 // Test API
                 String apiUrl = String.format("%s/%s:generateContent?key=%s",
-                    GeminiConstants.API_BASE_URL, model, apiKey);
+                        GeminiConstants.API_BASE_URL, model, apiKey);
 
                 GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(apiUrl);
                 httpRequest.setTimeout(10000);
@@ -259,7 +261,8 @@ public class GeminiProviderPreference implements PluginPreference {
                 } else {
                     runOnMainThread(() -> pluginUI.buildDialog()
                             .setTitle("❌ Invalid API Key")
-                            .setMessage("Your API key appears to be invalid.\n\nPlease check your key at:\naistudio.google.com/app/apikey")
+                            .setMessage(
+                                    "Your API key appears to be invalid.\n\nPlease check your key at:\naistudio.google.com/app/apikey")
                             .setPositiveButton("{ok}", null)
                             .show());
                 }
@@ -276,11 +279,11 @@ public class GeminiProviderPreference implements PluginPreference {
     }
 
     private void refreshGeminiModels(bin.mt.plugin.api.ui.PluginUI pluginUI) {
-        bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog =
-                new bin.mt.plugin.api.ui.dialog.LoadingDialog(pluginUI)
-                        .setMessage("Refreshing Gemini models...")
-                        .setSecondaryMessage("Contacting Google AI Studio")
-                        .show();
+        bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog = new bin.mt.plugin.api.ui.dialog.LoadingDialog(
+                pluginUI)
+                .setMessage("Refreshing Gemini models...")
+                .setSecondaryMessage("Contacting Google AI Studio")
+                .show();
 
         String apiKey = preferences.getString(GeminiConstants.PREF_API_KEY, "");
         new Thread(() -> {
@@ -292,7 +295,8 @@ public class GeminiProviderPreference implements PluginPreference {
                     if (models == null || models.isEmpty()) {
                         pluginUI.buildDialog()
                                 .setTitle("⚠️ No Models Found")
-                                .setMessage("Google API did not return any eligible Gemini models. Please try again later.")
+                                .setMessage(
+                                        "Google API did not return any eligible Gemini models. Please try again later.")
                                 .setPositiveButton("{ok}", null)
                                 .show();
                     } else {
@@ -314,10 +318,10 @@ public class GeminiProviderPreference implements PluginPreference {
     }
 
     private void showModelSelectionDialog(bin.mt.plugin.api.ui.PluginUI pluginUI,
-                                          String title,
-                                          java.util.List<ModelCatalogManager.ModelInfo> models,
-                                          String prefKey,
-                                          String defaultValue) {
+            String title,
+            java.util.List<ModelCatalogManager.ModelInfo> models,
+            String prefKey,
+            String defaultValue) {
         CharSequence[] labels = new CharSequence[models.size()];
         for (int i = 0; i < models.size(); i++) {
             labels[i] = formatModelLabel(models.get(i));

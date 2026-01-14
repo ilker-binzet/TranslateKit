@@ -19,7 +19,7 @@ pref_quick_toggle_debug_summary: Enable/disable debug logging quickly
 
 pref_header_main: 🌟 AI Translation Hub
 pref_plugin_name: Plugin Name
-pref_plugin_description: Multi-provider AI translation powered by Gemini, OpenAI, and Claude (Experimental v0.1.9)
+pref_plugin_description: Multi-provider AI translation powered by Gemini 3, GPT-5, and Claude 4.5 (v0.2.0 - January 2026)
 pref_dashboard_card_title: 📊 Quick Dashboard
 pref_dashboard_card_summary: Tap to view current status and active configurations
 pref_active_provider_title: 🎯 Active Provider
@@ -43,8 +43,8 @@ pref_header_ai_engine: 🤖 Default AI Engine ⚙️━━━━━━━━━�
 pref_default_ai_engine: Preferred AI Provider
 pref_default_ai_engine_summary: Choose which provider the translation engine should use by default
 pref_ai_engine_gemini: 🌟 Gemini (Free, fast)
-pref_ai_engine_openai: 🤖 OpenAI (GPT-4o family)
-pref_ai_engine_claude: 🧠 Claude (Anthropic 3.5)
+pref_ai_engine_openai: 🤖 OpenAI (GPT-5 / o3 family)
+pref_ai_engine_claude: 🧠 Claude (Anthropic 4.5)
 pref_ai_engine_tip: 💡 Choosing an Engine
 pref_ai_engine_tip_summary: Switch providers anytime—each API configuration is saved separately.
 
@@ -83,13 +83,14 @@ pref_claude_status_title: Claude API Status
 
 pref_header_model: 🚀 Model Selection ⭐━━━━━━━━━━━━━━━
 pref_model_name: Gemini Model
-pref_model_summary: Choose AI model (2.5 Flash recommended)
-model_flash: Gemini 2.5 Flash (Best balance) ⭐
-model_flash_lite: Gemini 2.5 Flash Lite (Fastest)
-model_pro: Gemini 2.5 Pro (Highest quality)
-model_legacy: Gemini 2.0 Flash (Fallback)
+pref_model_summary: Choose AI model (Gemini 3 Flash recommended)
+model_gemini3_flash: Gemini 3 Flash (Best balance) ⭐
+model_gemini3_pro: Gemini 3 Pro (Highest quality)
+model_flash: Gemini 2.5 Flash (Stable fallback)
+model_pro: Gemini 2.5 Pro (Previous gen)
+model_legacy: Gemini 2.0 Flash (Legacy)
 pref_rate_limits: 🎁 Free Tier Limits
-pref_rate_limits_summary: 1500 requests/day (Flash/Lite/2.0) | 50 requests/day (Pro) - Completely FREE!
+pref_rate_limits_summary: 2000 requests/day (Flash) | 100 requests/day (Pro) - Completely FREE!
 
 pref_header_performance: ⚡ Performance Settings 💨━━━━━━━━━━━
 pref_timeout: Request Timeout (ms)
@@ -100,7 +101,7 @@ pref_max_retries_summary: Number of retry attempts on failures (0-5)
 pref_header_info: ℹ️ Information & Help 📖━━━━━━━━━━━━
 pref_version: 🏷️ Plugin Version
 pref_free_tier: 🎁 FREE Tier Limits
-pref_free_tier_summary: 15 requests/min, 1500 requests/day, 1M tokens/day (Gemini 1.5 Flash)
+pref_free_tier_summary: 30 requests/min, 2000 requests/day, 2M tokens/day (Gemini 3 Flash)
 pref_api_docs: 📖 API Documentation
 pref_api_docs_summary: View Gemini API documentation
 pref_pricing: 💵 Pricing Information
@@ -116,12 +117,12 @@ pref_developer_linkedin_summary: linkedin.com/in/binzet-me
 
 # OpenAI Preference Page
 pref_openai_title: OpenAI API Configuration
-pref_openai_subtitle: Bring GPT-4o models into MT Manager translations
+pref_openai_subtitle: Bring GPT-5 and o3 models into MT Manager translations
 pref_openai_header_overview: OpenAI Overview
 pref_openai_overview_title: Why add OpenAI?
-pref_openai_overview_summary: Use GPT-4o models for natural language quality alongside Gemini.
+pref_openai_overview_summary: Use GPT-5 and o3 reasoning models for superior translation quality.
 pref_openai_limits: Free Tier & Usage
-pref_openai_limits_summary: Pay-as-you-go. First $5 in usage is free for new accounts. Monitor usage in the OpenAI dashboard.
+pref_openai_limits_summary: Pay-as-you-go. Monitor usage in the OpenAI dashboard.
 pref_openai_header_api: API Access
 pref_openai_api_key_title: OpenAI API Key
 pref_openai_api_key_summary: Keys start with sk- and can be managed at platform.openai.com/api-keys
@@ -131,11 +132,13 @@ pref_openai_get_key: Create API Key
 pref_openai_get_key_summary: Open OpenAI dashboard to generate a key
 pref_openai_header_model: Model & Endpoint
 pref_openai_model_title: Default OpenAI Model
-pref_openai_model_summary: Pick the GPT model used by upcoming translations
-pref_openai_model_gpt4omini: GPT-4o mini (fastest + cheapest)
-pref_openai_model_gpt4o: GPT-4o (balanced quality & speed)
-pref_openai_model_o1mini: o1-mini (reasoning focused)
-pref_openai_model_o1: o1 (deep reasoning)
+pref_openai_model_summary: Pick the GPT/o-series model used by upcoming translations
+pref_openai_model_gpt5mini: GPT-5 mini (fastest + cheapest) ⭐
+pref_openai_model_gpt5: GPT-5 (flagship model)
+pref_openai_model_o3mini: o3-mini (fast reasoning)
+pref_openai_model_o3: o3 (deep reasoning)
+pref_openai_model_o4mini: o4-mini (visual reasoning)
+pref_openai_model_gpt4o: GPT-4o (legacy fallback)
 pref_openai_endpoint_title: Custom Endpoint
 pref_openai_endpoint_summary: Override the OpenAI endpoint if you're using a proxy or Azure OpenAI
 pref_openai_header_docs: Docs & Pricing
@@ -146,12 +149,12 @@ pref_openai_pricing_summary: Review token costs before running large batches
 
 # Claude Preference Page
 pref_claude_title: Claude API Configuration
-pref_claude_subtitle: Use Anthropic's Claude 3.5 models for translation
+pref_claude_subtitle: Use Anthropic's Claude 4.5 models for translation
 pref_claude_header_overview: Claude Overview
 pref_claude_overview_title: Why add Claude?
-pref_claude_overview_summary: Claude 3 models are precise, handle context well, and complement Gemini/OpenAI.
+pref_claude_overview_summary: Claude 4.5 models offer superior reasoning, coding, and context handling.
 pref_claude_limits: Free Tier & Usage
-pref_claude_limits_summary: Pay-as-you-go with default limits: 50 req/min, 50K input tokens/min, 10K output tokens/min (<=200K context).
+pref_claude_limits_summary: Pay-as-you-go with default limits: 50 req/min, 50K input tokens/min, 10K output tokens/min.
 pref_claude_header_api: API Access
 pref_claude_api_key_title: Claude API Key
 pref_claude_api_key_summary: Keys start with sk-ant- and are managed inside console.anthropic.com
@@ -161,13 +164,12 @@ pref_claude_get_key: Create API Key
 pref_claude_get_key_summary: Open Anthropic console to generate a key
 pref_claude_header_model: Model & Endpoint
 pref_claude_model_title: Default Claude Model
-pref_claude_model_summary: Choose which Claude 3 model to call by default
-pref_claude_model_sonnet35: Claude 3.5 Sonnet (Jun 2024, best balance)
-pref_claude_model_haiku35: Claude 3.5 Haiku (Jun 2024, fast + affordable)
-pref_claude_model_sonnet3: Claude 3 Sonnet (stable)
-pref_claude_model_haiku3: Claude 3 Haiku (speed focus)
-pref_claude_model_opus3: Claude 3 Opus (maximum quality)
-pref_claude_model_opus35: Claude 3.5 Opus (preview)
+pref_claude_model_summary: Choose which Claude model to call by default
+pref_claude_model_sonnet45: Claude 4.5 Sonnet (best balance) ⭐
+pref_claude_model_opus45: Claude 4.5 Opus (maximum quality)
+pref_claude_model_haiku45: Claude 4.5 Haiku (fast + affordable)
+pref_claude_model_sonnet4: Claude 4 Sonnet (stable fallback)
+pref_claude_model_opus4: Claude 4 Opus (previous gen)
 pref_claude_model_fallback_note: Tip: If a chosen model isn't available in your workspace, the plugin automatically queries Anthropic for accessible models and switches to the first viable option.
 pref_claude_endpoint_title: Custom Endpoint
 pref_claude_endpoint_summary: Override the Anthropic base URL for gateways or regional proxies

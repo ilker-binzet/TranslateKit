@@ -2,10 +2,10 @@
 
 **Multi-provider translation plugin for MT Manager**
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-`AI Translation Hub` exposes Google Gemini, OpenAI GPT-4o, and Anthropic Claude engines to MT Manager through a single plugin. It is also the first publicly available MT Manager plugin built on top of the new **SDK 3** toolchain, showcasing what the refreshed platform can do.
+`AI Translation Hub` exposes Google Gemini 3, OpenAI GPT-5/o3, and Anthropic Claude 4.5 engines to MT Manager through a single plugin. It is also the first publicly available MT Manager plugin built on top of the new **SDK 3** toolchain, showcasing what the refreshed platform can do.
 
 ---
 
@@ -32,7 +32,7 @@
 ### Option A – Download the release asset
 1. Grab the latest `.mtp` from [Releases](https://github.com/ilker-binzet/AI-Translation-Hub/releases).
 2. In MT Manager, open **Plugins → Install Plugin** or select the downloaded file, and open the file with MT Manager then install it.
-3. The installer expects the file to be named `mt.plugin.ai.hub.mtp`; renaming to `AITranslationHub_v0.1.0.mtp` is optional.
+3. The installer expects the file to be named `mt.plugin.ai.hub.mtp`; renaming to `AITranslationHub_v0.2.0.mtp` is optional.
 
 ### Option B – Build it yourself
 

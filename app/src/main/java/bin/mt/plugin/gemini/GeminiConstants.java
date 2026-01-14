@@ -4,7 +4,8 @@ package bin.mt.plugin.gemini;
  * Constants for Gemini AI Translation Plugin
  *
  * @author MT Manager Plugin Developer
- * @version 0.1.0
+ * @version 0.2.0
+ * @updated January 2026 - Latest AI models
  */
 public class GeminiConstants {
 
@@ -14,36 +15,43 @@ public class GeminiConstants {
      */
     public static final String API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
-    // ==================== Model Names ====================
+    // ==================== Model Names (Updated January 2026) ====================
 
     /**
-     * Gemini 2.5 Flash - Fast and efficient (RECOMMENDED for translation)
-     * Latest stable model with best speed/quality balance
+     * Gemini 3 Flash - Latest fast model (RECOMMENDED for translation)
+     * Released December 2025 - Best speed/quality balance with enhanced visual
+     * reasoning
+     */
+    public static final String MODEL_GEMINI_3_FLASH = "gemini-3-flash-preview";
+
+    /**
+     * Gemini 3 Pro - Most powerful reasoning model
+     * Released November 2025 - State-of-the-art for complex translations
+     */
+    public static final String MODEL_GEMINI_3_PRO = "gemini-3-pro-preview";
+
+    /**
+     * Gemini 2.5 Flash - Previous stable version (fallback)
+     * Good balance of speed and quality
      */
     public static final String MODEL_GEMINI_25_FLASH = "gemini-2.5-flash";
 
     /**
-     * Gemini 2.5 Flash Lite - Even faster, good for simple translations
-     * Most efficient for high-volume translation
-     */
-    public static final String MODEL_GEMINI_25_FLASH_LITE = "gemini-2.5-flash-lite";
-
-    /**
-     * Gemini 2.5 Pro - Highest quality (slower, more strict rate limits)
-     * Best for complex or nuanced translations
+     * Gemini 2.5 Pro - Previous pro version (fallback)
+     * High quality translations
      */
     public static final String MODEL_GEMINI_25_PRO = "gemini-2.5-pro";
 
     /**
-     * Gemini 2.0 Flash - Previous stable version
+     * Gemini 2.0 Flash - Legacy stable version
      * Good fallback option
      */
     public static final String MODEL_GEMINI_20_FLASH = "gemini-2.0-flash";
 
     /**
-     * Default model for translation - best balance
+     * Default model for translation - best balance (Gemini 3 Flash)
      */
-    public static final String DEFAULT_MODEL = MODEL_GEMINI_25_FLASH;
+    public static final String DEFAULT_MODEL = MODEL_GEMINI_3_FLASH;
 
     // ==================== Preference Keys ====================
 
@@ -70,7 +78,7 @@ public class GeminiConstants {
     public static final String PREF_CLAUDE_API_KEY = "claude_api_key";
     public static final String PREF_CLAUDE_MODEL = "claude_model_name";
     public static final String PREF_CLAUDE_ENDPOINT = "claude_api_endpoint";
-    
+
     // Cached model catalogs
     public static final String PREF_CACHE_OPENAI_MODELS = "cache_openai_models";
     public static final String PREF_CACHE_CLAUDE_MODELS = "cache_claude_models";
@@ -90,13 +98,29 @@ public class GeminiConstants {
     public static final float DEFAULT_TEMPERATURE = 0.1f; // Low for consistent translation
     public static final String DEFAULT_ENGINE = "gemini";
     public static final boolean DEFAULT_ENABLE_DEBUG = false;
-    public static final String CLAUDE_MODEL_FALLBACK = "claude-3-sonnet-20240229";
+    public static final String CLAUDE_MODEL_FALLBACK = "claude-sonnet-4";
     public static final String DEFAULT_CONTEXT_TONE = "Clear and instructional";
 
-    public static final String DEFAULT_OPENAI_MODEL = "gpt-4o";
+    // OpenAI Models (Updated January 2026)
+    // GPT-5 family: gpt-5, gpt-5-mini, gpt-5-nano
+    // O-series reasoning: o3, o3-mini, o4-mini
+    public static final String DEFAULT_OPENAI_MODEL = "gpt-5-mini";
+    public static final String OPENAI_MODEL_GPT5 = "gpt-5";
+    public static final String OPENAI_MODEL_GPT5_MINI = "gpt-5-mini";
+    public static final String OPENAI_MODEL_O3 = "o3";
+    public static final String OPENAI_MODEL_O3_MINI = "o3-mini";
+    public static final String OPENAI_MODEL_O4_MINI = "o4-mini";
+    public static final String OPENAI_MODEL_GPT4O = "gpt-4o"; // Legacy fallback
     public static final String DEFAULT_OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 
-    public static final String DEFAULT_CLAUDE_MODEL = "claude-3-5-sonnet-20241022";
+    // Claude Models (Updated January 2026)
+    // Claude 4.5 family: claude-opus-4.5, claude-sonnet-4.5, claude-haiku-4.5
+    public static final String DEFAULT_CLAUDE_MODEL = "claude-sonnet-4.5-20250101";
+    public static final String CLAUDE_MODEL_OPUS_45 = "claude-opus-4.5-20250101";
+    public static final String CLAUDE_MODEL_SONNET_45 = "claude-sonnet-4.5-20250101";
+    public static final String CLAUDE_MODEL_HAIKU_45 = "claude-haiku-4.5-20250101";
+    public static final String CLAUDE_MODEL_OPUS_4 = "claude-opus-4-20250514"; // Legacy fallback
+    public static final String CLAUDE_MODEL_SONNET_4 = "claude-sonnet-4-20250514"; // Legacy fallback
     public static final String DEFAULT_CLAUDE_ENDPOINT = "https://api.anthropic.com/v1/messages";
 
     // ==================== Engine Identifiers ====================
@@ -105,20 +129,21 @@ public class GeminiConstants {
     public static final String ENGINE_OPENAI = "openai";
     public static final String ENGINE_CLAUDE = "claude";
 
-    // ==================== Rate Limits (Free Tier) ====================
+    // ==================== Rate Limits (Free Tier - Updated 2026)
+    // ====================
 
     /**
-     * Gemini 1.5 Flash / Gemini 1.0 Pro limits
+     * Gemini 3 Flash limits (free tier)
      */
-    public static final int RATE_LIMIT_RPM_FLASH = 15; // Requests per minute
-    public static final int RATE_LIMIT_RPD_FLASH = 1500; // Requests per day
-    public static final int RATE_LIMIT_TPD_FLASH = 1_000_000; // Tokens per day
+    public static final int RATE_LIMIT_RPM_FLASH = 30; // Requests per minute
+    public static final int RATE_LIMIT_RPD_FLASH = 2000; // Requests per day
+    public static final int RATE_LIMIT_TPD_FLASH = 2_000_000; // Tokens per day
 
     /**
-     * Gemini 1.5 Pro limits (more restrictive)
+     * Gemini 3 Pro limits (more restrictive)
      */
-    public static final int RATE_LIMIT_RPM_PRO = 2;
-    public static final int RATE_LIMIT_RPD_PRO = 50;
+    public static final int RATE_LIMIT_RPM_PRO = 5;
+    public static final int RATE_LIMIT_RPD_PRO = 100;
 
     // ==================== URLs ====================
 
@@ -138,8 +163,8 @@ public class GeminiConstants {
     // ==================== Plugin Metadata ====================
 
     public static final String PLUGIN_ID = "mt.plugin.ai.hub";
-    public static final int PLUGIN_VERSION_CODE = 100;
-    public static final String PLUGIN_VERSION_NAME = "0.1.0";
+    public static final int PLUGIN_VERSION_CODE = 200;
+    public static final String PLUGIN_VERSION_NAME = "0.2.0";
 
     // ==================== API Key Pattern ====================
 
