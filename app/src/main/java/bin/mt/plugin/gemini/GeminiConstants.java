@@ -18,33 +18,39 @@ public class GeminiConstants {
     // ==================== Model Names (Updated January 2026) ====================
 
     /**
-     * Gemini 2.0 Flash - Latest fast model (RECOMMENDED for translation)
+     * Gemini 2.5 Pro - Most powerful model (January 2026)
+     * State-of-the-art for complex translations
+     */
+    public static final String MODEL_GEMINI_25_PRO = "gemini-2.5-pro";
+
+    /**
+     * Gemini 2.5 Flash - Latest fast model (RECOMMENDED for translation)
      * Best speed/quality balance for everyday tasks
+     */
+    public static final String MODEL_GEMINI_25_FLASH = "gemini-2.5-flash";
+
+    /**
+     * Gemini 2.0 Flash Thinking - Advanced reasoning model
+     * For complex reasoning tasks
+     */
+    public static final String MODEL_GEMINI_20_FLASH_THINKING = "gemini-2.0-flash-thinking";
+
+    /**
+     * Gemini 2.0 Flash - Stable fast version
+     * Good balance of speed and quality
      */
     public static final String MODEL_GEMINI_20_FLASH = "gemini-2.0-flash";
 
     /**
-     * Gemini 2.0 Pro - Most powerful reasoning model
-     * State-of-the-art for complex translations
+     * Gemini 2.0 Pro - Stable pro version
+     * High quality translations
      */
     public static final String MODEL_GEMINI_20_PRO = "gemini-2.0-pro";
 
     /**
-     * Gemini 1.5 Flash - Previous stable fast version
-     * Good balance of speed and quality
+     * Default model for translation - best balance (Gemini 2.5 Flash)
      */
-    public static final String MODEL_GEMINI_15_FLASH = "gemini-1.5-flash";
-
-    /**
-     * Gemini 1.5 Pro - Previous pro version
-     * High quality translations
-     */
-    public static final String MODEL_GEMINI_15_PRO = "gemini-1.5-pro";
-
-    /**
-     * Default model for translation - best balance (Gemini 2.0 Flash)
-     */
-    public static final String DEFAULT_MODEL = MODEL_GEMINI_20_FLASH;
+    public static final String DEFAULT_MODEL = MODEL_GEMINI_25_FLASH;
 
     // ==================== Preference Keys ====================
 
@@ -91,27 +97,32 @@ public class GeminiConstants {
     public static final float DEFAULT_TEMPERATURE = 0.1f; // Low for consistent translation
     public static final String DEFAULT_ENGINE = "gemini";
     public static final boolean DEFAULT_ENABLE_DEBUG = false;
-    public static final String CLAUDE_MODEL_FALLBACK = "claude-sonnet-4-5-20250514";
+    public static final String CLAUDE_MODEL_FALLBACK = "claude-4-sonnet";
     public static final String DEFAULT_CONTEXT_TONE = "Clear and instructional";
 
     // OpenAI Models (Updated January 2026)
+    // GPT-5 family: gpt-5, gpt-5-mini
     // GPT-4o family: gpt-4o, gpt-4o-mini
-    // O-series reasoning: o1, o1-mini
-    public static final String DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+    // O-series reasoning: o3, o3-mini, o1
+    public static final String DEFAULT_OPENAI_MODEL = "gpt-5-mini";
+    public static final String OPENAI_MODEL_GPT5 = "gpt-5";
+    public static final String OPENAI_MODEL_GPT5_MINI = "gpt-5-mini";
     public static final String OPENAI_MODEL_GPT4O = "gpt-4o";
     public static final String OPENAI_MODEL_GPT4O_MINI = "gpt-4o-mini";
-    public static final String OPENAI_MODEL_GPT4_TURBO = "gpt-4-turbo";
+    public static final String OPENAI_MODEL_O3 = "o3";
+    public static final String OPENAI_MODEL_O3_MINI = "o3-mini";
     public static final String OPENAI_MODEL_O1 = "o1";
-    public static final String OPENAI_MODEL_O1_MINI = "o1-mini";
     public static final String DEFAULT_OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 
     // Claude Models (Updated January 2026)
-    // Claude Sonnet 4.5 and Claude 3.5 family
-    public static final String DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-5-20250514";
-    public static final String CLAUDE_MODEL_SONNET_45 = "claude-sonnet-4-5-20250514";
-    public static final String CLAUDE_MODEL_SONNET_35 = "claude-3-5-sonnet-20241022";
-    public static final String CLAUDE_MODEL_HAIKU_35 = "claude-3-5-haiku-20241022";
-    public static final String CLAUDE_MODEL_OPUS_3 = "claude-3-opus-20240229";
+    // Claude 4 family: claude-4-opus, claude-4-sonnet, claude-4-haiku
+    // Claude 3.5 family: claude-3.5-sonnet-v2, claude-3.5-haiku
+    public static final String DEFAULT_CLAUDE_MODEL = "claude-4-sonnet";
+    public static final String CLAUDE_MODEL_OPUS_4 = "claude-4-opus";
+    public static final String CLAUDE_MODEL_SONNET_4 = "claude-4-sonnet";
+    public static final String CLAUDE_MODEL_HAIKU_4 = "claude-4-haiku";
+    public static final String CLAUDE_MODEL_SONNET_35_V2 = "claude-3.5-sonnet-v2";
+    public static final String CLAUDE_MODEL_HAIKU_35 = "claude-3.5-haiku";
     public static final String DEFAULT_CLAUDE_ENDPOINT = "https://api.anthropic.com/v1/messages";
 
     // ==================== Engine Identifiers ====================

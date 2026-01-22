@@ -65,17 +65,18 @@ public class GeminiProviderPreference implements PluginPreference {
 
         var geminiModelList = builder.addList("Gemini Model", GeminiConstants.PREF_MODEL_NAME)
                 .defaultValue(GeminiConstants.DEFAULT_MODEL)
-                .summary("Choose AI model (Gemini 2.0 Flash recommended)");
+                .summary("Choose AI model (Gemini 2.5 Flash recommended)");
 
         boolean disableCache = preferences.getBoolean(GeminiConstants.PREF_DEBUG_DISABLE_MODEL_CACHE, false);
         java.util.List<ModelCatalogManager.ModelInfo> cachedGeminiModels = disableCache
                 ? Collections.emptyList()
                 : ModelCatalogManager.loadModelCache(preferences, GeminiConstants.PREF_CACHE_GEMINI_MODELS);
         if (cachedGeminiModels == null || cachedGeminiModels.isEmpty()) {
-            geminiModelList.addItem("Gemini 2.0 Flash (Recommended)", GeminiConstants.MODEL_GEMINI_20_FLASH)
-                    .addItem("Gemini 2.0 Pro (Highest Quality)", GeminiConstants.MODEL_GEMINI_20_PRO)
-                    .addItem("Gemini 1.5 Flash (Stable)", GeminiConstants.MODEL_GEMINI_15_FLASH)
-                    .addItem("Gemini 1.5 Pro (Previous Gen)", GeminiConstants.MODEL_GEMINI_15_PRO);
+            geminiModelList.addItem("Gemini 2.5 Flash (Recommended)", GeminiConstants.MODEL_GEMINI_25_FLASH)
+                    .addItem("Gemini 2.5 Pro (Most Powerful)", GeminiConstants.MODEL_GEMINI_25_PRO)
+                    .addItem("Gemini 2.0 Flash Thinking (Reasoning)", GeminiConstants.MODEL_GEMINI_20_FLASH_THINKING)
+                    .addItem("Gemini 2.0 Flash (Stable)", GeminiConstants.MODEL_GEMINI_20_FLASH)
+                    .addItem("Gemini 2.0 Pro (Stable Pro)", GeminiConstants.MODEL_GEMINI_20_PRO);
         } else {
             for (ModelCatalogManager.ModelInfo info : cachedGeminiModels) {
                 geminiModelList.addItem(formatModelLabel(info), info.id);

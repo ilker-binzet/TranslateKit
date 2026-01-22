@@ -65,17 +65,18 @@ public class ClaudeProviderPreference implements PluginPreference {
 
         var claudeModelList = builder.addList("Claude Model", GeminiConstants.PREF_CLAUDE_MODEL)
             .defaultValue(GeminiConstants.DEFAULT_CLAUDE_MODEL)
-            .summary("Choose Claude model (3.5 Sonnet recommended)");
+            .summary("Choose Claude model (Claude 4 Sonnet recommended)");
 
         boolean disableCache = preferences.getBoolean(GeminiConstants.PREF_DEBUG_DISABLE_MODEL_CACHE, false);
         java.util.List<ModelCatalogManager.ModelInfo> cachedClaudeModels = disableCache
             ? Collections.emptyList()
             : ModelCatalogManager.loadModelCache(preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS);
         if (cachedClaudeModels == null || cachedClaudeModels.isEmpty()) {
-            claudeModelList.addItem("Claude Sonnet 4.5 (Latest, Recommended)", "claude-sonnet-4-5-20250514")
-                    .addItem("Claude 3.5 Sonnet", "claude-3-5-sonnet-20241022")
-                    .addItem("Claude 3.5 Haiku (Faster)", "claude-3-5-haiku-20241022")
-                    .addItem("Claude 3 Opus (Highest Quality)", "claude-3-opus-20240229");
+            claudeModelList.addItem("Claude 4 Opus (Most Powerful)", "claude-4-opus")
+                    .addItem("Claude 4 Sonnet (Balanced, Recommended)", "claude-4-sonnet")
+                    .addItem("Claude 4 Haiku (Fast, Economical)", "claude-4-haiku")
+                    .addItem("Claude 3.5 Sonnet v2 (Previous Gen)", "claude-3.5-sonnet-v2")
+                    .addItem("Claude 3.5 Haiku (Previous Gen)", "claude-3.5-haiku");
         } else {
             for (ModelCatalogManager.ModelInfo info : cachedClaudeModels) {
                 claudeModelList.addItem(formatModelLabel(info), info.id);

@@ -65,18 +65,20 @@ public class OpenAIProviderPreference implements PluginPreference {
 
         var openAiModelList = builder.addList("GPT Model", GeminiConstants.PREF_OPENAI_MODEL)
             .defaultValue(GeminiConstants.DEFAULT_OPENAI_MODEL)
-            .summary("Choose GPT model (GPT-4o recommended)");
+            .summary("Choose GPT model (GPT-5 Mini recommended)");
 
         boolean disableCache = preferences.getBoolean(GeminiConstants.PREF_DEBUG_DISABLE_MODEL_CACHE, false);
         java.util.List<ModelCatalogManager.ModelInfo> cachedOpenAiModels = disableCache
             ? Collections.emptyList()
             : ModelCatalogManager.loadModelCache(preferences, GeminiConstants.PREF_CACHE_OPENAI_MODELS);
         if (cachedOpenAiModels == null || cachedOpenAiModels.isEmpty()) {
-            openAiModelList.addItem("GPT-4o (Omni, Multimodal)", "gpt-4o")
-                    .addItem("GPT-4o Mini (Fast, Recommended)", "gpt-4o-mini")
-                    .addItem("GPT-4 Turbo", "gpt-4-turbo")
-                    .addItem("o1 (Reasoning)", "o1")
-                    .addItem("o1-mini (Reasoning, Fast)", "o1-mini");
+            openAiModelList.addItem("GPT-5 (Most Powerful)", "gpt-5")
+                    .addItem("GPT-5 Mini (Fast, Recommended)", "gpt-5-mini")
+                    .addItem("GPT-4o (Omni, Multimodal)", "gpt-4o")
+                    .addItem("GPT-4o Mini (Economical)", "gpt-4o-mini")
+                    .addItem("o3 (Advanced Reasoning)", "o3")
+                    .addItem("o3-mini (Reasoning, Fast)", "o3-mini")
+                    .addItem("o1 (Reasoning)", "o1");
         } else {
             for (ModelCatalogManager.ModelInfo info : cachedOpenAiModels) {
                 openAiModelList.addItem(formatModelLabel(info), info.id);
