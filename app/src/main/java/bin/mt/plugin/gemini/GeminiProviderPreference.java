@@ -135,12 +135,8 @@ public class GeminiProviderPreference implements PluginPreference {
             return;
         }
 
-        // Show progress dialog
-        bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog = new bin.mt.plugin.api.ui.dialog.LoadingDialog(
-                pluginUI)
-                .setMessage("Translating...")
-                .setSecondaryMessage("Testing: 'Hello' → Turkish")
-                .show();
+        // Show toast instead of LoadingDialog to avoid SDK compatibility issues
+        context.showToast("🔄 Translating...");
 
         new Thread(() -> {
             try {
@@ -163,8 +159,6 @@ public class GeminiProviderPreference implements PluginPreference {
                 httpRequest.jsonBody(request);
                 org.json.JSONObject response = httpRequest.executeToJson();
 
-                runOnMainThread(loadingDialog::dismiss);
-
                 if (response.has("candidates")) {
                     String result = response.getJSONArray("candidates")
                             .getJSONObject(0)
@@ -186,7 +180,6 @@ public class GeminiProviderPreference implements PluginPreference {
                             .show());
                 }
             } catch (Exception e) {
-                runOnMainThread(loadingDialog::dismiss);
                 runOnMainThread(() -> pluginUI.buildDialog()
                         .setTitle("❌ Test Failed")
                         .setMessage("Error: " + e.getMessage())
@@ -210,12 +203,8 @@ public class GeminiProviderPreference implements PluginPreference {
             return;
         }
 
-        // Show progress dialog
-        bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog = new bin.mt.plugin.api.ui.dialog.LoadingDialog(
-                pluginUI)
-                .setMessage("Testing API Connection...")
-                .setSecondaryMessage("Please wait while we verify your API key")
-                .show();
+        // Show toast instead of LoadingDialog to avoid SDK compatibility issues
+        context.showToast("🔄 Testing API Connection...");
 
         new Thread(() -> {
             try {
@@ -240,8 +229,6 @@ public class GeminiProviderPreference implements PluginPreference {
                 httpRequest.jsonBody(request);
 
                 org.json.JSONObject response = httpRequest.executeToJson();
-
-                runOnMainThread(loadingDialog::dismiss);
 
                 if (response.has("candidates")) {
                     runOnMainThread(() -> pluginUI.buildDialog()
@@ -268,7 +255,6 @@ public class GeminiProviderPreference implements PluginPreference {
                 }
 
             } catch (Exception e) {
-                runOnMainThread(loadingDialog::dismiss);
                 runOnMainThread(() -> pluginUI.buildDialog()
                         .setTitle("❌ Test Failed")
                         .setMessage("Error: " + e.getMessage())
@@ -279,11 +265,8 @@ public class GeminiProviderPreference implements PluginPreference {
     }
 
     private void refreshGeminiModels(bin.mt.plugin.api.ui.PluginUI pluginUI) {
-        bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog = new bin.mt.plugin.api.ui.dialog.LoadingDialog(
-                pluginUI)
-                .setMessage("Refreshing Gemini models...")
-                .setSecondaryMessage("Contacting Google AI Studio")
-                .show();
+        // Show toast instead of LoadingDialog to avoid SDK compatibility issues
+        context.showToast("🔄 Refreshing Gemini models...");
 
         String apiKey = preferences.getString(GeminiConstants.PREF_API_KEY, "");
         new Thread(() -> {
@@ -291,7 +274,6 @@ public class GeminiProviderPreference implements PluginPreference {
                 java.util.List<ModelCatalogManager.ModelInfo> models = ModelCatalogManager.fetchGeminiModels(apiKey);
                 ModelCatalogManager.saveModelCache(preferences, GeminiConstants.PREF_CACHE_GEMINI_MODELS, models);
                 runOnMainThread(() -> {
-                    loadingDialog.dismiss();
                     if (models == null || models.isEmpty()) {
                         pluginUI.buildDialog()
                                 .setTitle("⚠️ No Models Found")
@@ -300,13 +282,13 @@ public class GeminiProviderPreference implements PluginPreference {
                                 .setPositiveButton("{ok}", null)
                                 .show();
                     } else {
+                        context.showToast("✅ Found " + models.size() + " models");
                         showModelSelectionDialog(pluginUI, "Select Gemini Model", models,
                                 GeminiConstants.PREF_MODEL_NAME, GeminiConstants.DEFAULT_MODEL);
                     }
                 });
             } catch (IOException e) {
                 runOnMainThread(() -> {
-                    loadingDialog.dismiss();
                     pluginUI.buildDialog()
                             .setTitle("❌ Refresh Failed")
                             .setMessage("Could not fetch Gemini models:\n" + e.getMessage())
