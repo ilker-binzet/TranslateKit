@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 
 import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.PluginContext;
+import bin.mt.plugin.api.drawable.MaterialIcons;
 import bin.mt.plugin.api.preference.PluginPreference;
 
 /**
@@ -337,6 +338,45 @@ public class GeminiTranslatePreference implements PluginPreference {
         builder.addText("Developer")
                 .summary("Ilker Binzet")
                 .url(GeminiConstants.DEVELOPER_GITHUB);
+
+        // ==================== SDK Beta2: Preference Callbacks ====================
+        // onPreferenceChange: React to preference changes in real-time
+        builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
+            String key = preferenceItem.getKey();
+            if (key == null) return;
+            
+            switch (key) {
+                case GeminiConstants.PREF_DEFAULT_ENGINE -> {
+                    // Invalidate provider status cache when engine changes
+                    synchronized (providerStatusCache) {
+                        providerStatusCache.clear();
+                    }
+                    String engineName = getEngineDisplayName((String) newValue);
+                    pluginUI.showToast("Switched to " + engineName);
+                }
+                case GeminiConstants.PREF_ENABLE_DEBUG -> {
+                    boolean enabled = (boolean) newValue;
+                    pluginUI.showToast(enabled ? "Debug logging enabled" : "Debug logging disabled");
+                }
+            }
+        });
+
+        // onCreated: Initialize UI state when preference screen is created
+        builder.onCreated((pluginUI, preferenceScreen) -> {
+            // Preference screen initialized - ready for user interaction
+        });
+    }
+
+    /**
+     * Get display name for engine constant
+     */
+    private String getEngineDisplayName(String engine) {
+        if (engine == null) return "Unknown";
+        switch (engine) {
+            case GeminiConstants.ENGINE_OPENAI: return "OpenAI GPT-4o";
+            case GeminiConstants.ENGINE_CLAUDE: return "Claude 3.5";
+            default: return "Gemini AI";
+        }
     }
 
     private void handlePluginVersionTap(bin.mt.plugin.api.ui.PluginUI pluginUI) {

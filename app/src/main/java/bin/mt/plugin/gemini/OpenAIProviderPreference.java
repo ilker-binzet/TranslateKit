@@ -106,6 +106,21 @@ public class OpenAIProviderPreference implements PluginPreference {
         builder.addText("View Logs")
                 .summary("Open MT Manager log viewer")
                 .onClick((pluginUI, item) -> context.openLogViewer());
+
+        // ==================== SDK Beta2: Preference Callbacks ====================
+        // onPreferenceChange: React to model changes in real-time
+        builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
+            String key = preferenceItem.getKey();
+            if (GeminiConstants.PREF_OPENAI_MODEL.equals(key)) {
+                String modelName = (String) newValue;
+                pluginUI.showToast("OpenAI model: " + modelName);
+            }
+        });
+
+        // onCreated: Log screen initialization for debugging
+        builder.onCreated((pluginUI, preferenceScreen) -> {
+            // Provider preference screen initialized
+        });
     }
 
     private String getKeyStatus() {
