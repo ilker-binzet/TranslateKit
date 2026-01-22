@@ -67,6 +67,7 @@ public class GeminiConstants {
     public static final String PREF_CONTEXT_AUDIENCE = "ai_context_target_audience";
     public static final String PREF_CONTEXT_TONE = "ai_context_tone";
     public static final String PREF_CONTEXT_NOTES = "ai_context_custom_notes";
+    public static final String PREF_DEFAULT_TARGET_LANG = "ai_default_target_lang";
 
     // OpenAI preference keys
     public static final String PREF_OPENAI_API_KEY = "openai_api_key";

@@ -107,6 +107,8 @@ mtPlugin {
     interfaces = [
             "bin.mt.plugin.gemini.GeminiTranslationEngine",
             "bin.mt.plugin.google.GoogleCloudTranslationEngine",
+            "bin.mt.plugin.gemini.AITranslateFloatingMenu",
+            "bin.mt.plugin.gemini.AITranslateToolMenu",
     ]
 }
 
