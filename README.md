@@ -2,10 +2,10 @@
 
 **Multi-provider translation plugin for MT Manager**
 
-![Version](https://img.shields.io/badge/version-0.2.0-blue)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-`AI Translation Hub` exposes Google Gemini 3, OpenAI GPT-5/o3, and Anthropic Claude 4.5 engines to MT Manager through a single plugin. It is also the first publicly available MT Manager plugin built on top of the new **SDK 3** toolchain, showcasing what the refreshed platform can do.
+`AI Translation Hub` exposes Google Gemini 3, OpenAI GPT-5/o3, Anthropic Claude 4.5, and Google Cloud Translation engines to MT Manager through a single plugin. It is also the first publicly available MT Manager plugin built on top of the new **SDK 3** toolchain, showcasing what the refreshed platform can do.
 
 ---
 

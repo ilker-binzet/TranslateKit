@@ -79,12 +79,12 @@ mtPlugin {
     /**
      * 插件版本号，低版本插件无法覆盖安装高版本插件
      */
-    versionCode = 200
+    versionCode = 300
 
     /**
      * 插件版本名称
      */
-    versionName = "v0.2.0"
+    versionName = "1.0.0"
 
     /**
      * 插件名称
@@ -106,10 +106,7 @@ mtPlugin {
      */
     interfaces = [
             "bin.mt.plugin.gemini.GeminiTranslationEngine",
-            // Optional: Keep demo interfaces for testing
-            // "bin.mt.plugin.demo.TranslationEngineDemo",
-            // "bin.mt.plugin.demo.TextEditorFunctionDemo",
-            // "bin.mt.plugin.demo.TextEditorFloatingMenuDemo",
+            "bin.mt.plugin.google.GoogleCloudTranslationEngine",
     ]
 }
 
