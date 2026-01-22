@@ -72,10 +72,10 @@ public class ClaudeProviderPreference implements PluginPreference {
             ? Collections.emptyList()
             : ModelCatalogManager.loadModelCache(preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS);
         if (cachedClaudeModels == null || cachedClaudeModels.isEmpty()) {
-            claudeModelList.addItem("Claude 3.5 Sonnet (Recommended)", "claude-3-5-sonnet-20241022")
+            claudeModelList.addItem("Claude Sonnet 4.5 (Latest, Recommended)", "claude-sonnet-4-5-20250514")
+                    .addItem("Claude 3.5 Sonnet", "claude-3-5-sonnet-20241022")
                     .addItem("Claude 3.5 Haiku (Faster)", "claude-3-5-haiku-20241022")
-                    .addItem("Claude 3 Opus (Highest Quality)", "claude-3-opus-20240229")
-                    .addItem("Claude 3 Sonnet (Legacy)", "claude-3-sonnet-20240229");
+                    .addItem("Claude 3 Opus (Highest Quality)", "claude-3-opus-20240229");
         } else {
             for (ModelCatalogManager.ModelInfo info : cachedClaudeModels) {
                 claudeModelList.addItem(formatModelLabel(info), info.id);
