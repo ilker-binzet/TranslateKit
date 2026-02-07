@@ -1,40 +1,60 @@
+# ==================================
 # Gradle & Android build artifacts
+# ==================================
 /.gradle/
 /build/
 /app/build/
+*.mtp
 /app/proguard-rules-dump.pro
-/app/build/outputs/mt-plugin/*.mtp
 
-# IDE metadata
+# ==================================
+# IDE / editor metadata
+# ==================================
 /.idea/
 /.vscode/
 *.iml
 
+# ==================================
 # Environment-specific configs
+# ==================================
 /local.properties
 **/local.properties
 
-# Demo project extras
-/mt-plugin-v3-demo-main/.gradle/
-/mt-plugin-v3-demo-main/build/
-/mt-plugin-v3-demo-main/app/build/
-/mt-plugin-v3-demo-main/local.properties
-/mt-plugin-v3-demo-main/.idea/
-
-# OS cruft
-.DS_Store
-Thumbs.db
-
-# Keystores / secrets (placeholder names)
-*.keystore
-*.jks
-
-# AI tool configs (Claude, Kilo Code, etc.)
+# ==================================
+# AI tool configs (local-only)
+# ==================================
 .claude/
 .kilocode/
 CLAUDE.md
 
-# Misc temporary files
+# ==================================
+# Internal / private documents
+# ==================================
+/plans/
+
+# ==================================
+# Temporary build & packaging dirs
+# ==================================
+/temp_mtp/
+/temp_mt_plugin_jar/
+
+# ==================================
+# Build logs & debug output
+# ==================================
+build_output.txt
+packmtp.txt
 *.log
-*.tmp
+
+# ==================================
+# OS junk files
+# ==================================
+.DS_Store
+Thumbs.db
 nul
+*.tmp
+
+# ==================================
+# Keystores / secrets
+# ==================================
+*.keystore
+*.jks
