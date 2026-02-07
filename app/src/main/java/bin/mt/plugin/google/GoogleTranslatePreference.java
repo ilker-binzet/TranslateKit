@@ -47,13 +47,13 @@ public class GoogleTranslatePreference implements PluginPreference {
         builder.setLocalString(localString);
 
         // ==================== Header Section ====================
-        builder.addHeader("{pref_header_main}");
+        builder.addText("{pref_header_main}").summary("");
 
         builder.addText("{pref_plugin_name}")
                 .summary("{pref_plugin_description}");
 
         // ==================== API Configuration Section ====================
-        builder.addHeader("{pref_header_api_config}");
+        builder.addText("{pref_header_api_config}").summary("");
 
         // API Key input
         builder.addInput("{pref_api_key_title}", GoogleConstants.PREF_API_KEY)
@@ -79,11 +79,10 @@ public class GoogleTranslatePreference implements PluginPreference {
                 .url(GoogleConstants.URL_GOOGLE_CONSOLE);
 
         // ==================== Translation Settings Section ====================
-        builder.addHeader("{pref_header_translation_settings}");
+        builder.addText("{pref_header_translation_settings}").summary("");
 
         // Default target language
         builder.addList("{pref_default_target_lang}", GoogleConstants.PREF_DEFAULT_TARGET_LANG)
-                .defaultValue(GoogleConstants.DEFAULT_TARGET_LANG)
                 .summary("{pref_default_target_lang_summary}")
                 .addItem("{lang_en}", "en")
                 .addItem("{lang_zh-CN}", "zh-CN")
@@ -100,7 +99,7 @@ public class GoogleTranslatePreference implements PluginPreference {
                 .summary("{pref_use_advanced_model_summary}");
 
         // ==================== Performance Section ====================
-        builder.addHeader("{pref_header_performance}");
+        builder.addText("{pref_header_performance}").summary("");
 
         // Request timeout
         builder.addInput("{pref_timeout}", GoogleConstants.PREF_TIMEOUT)
@@ -118,7 +117,7 @@ public class GoogleTranslatePreference implements PluginPreference {
 
         // ==================== Advanced Features Section ====================
         if (GoogleConstants.FEATURE_CACHE) {
-            builder.addHeader("{pref_header_advanced}");
+            builder.addText("{pref_header_advanced}").summary("");
 
             // Enable caching
             builder.addSwitch("{pref_enable_cache}", GoogleConstants.PREF_ENABLE_CACHE)
@@ -140,7 +139,7 @@ public class GoogleTranslatePreference implements PluginPreference {
 
         // ==================== Statistics Section ====================
         if (GoogleConstants.FEATURE_STATISTICS) {
-            builder.addHeader("{pref_header_statistics}");
+            builder.addText("{pref_header_statistics}").summary("");
 
             SharedPreferences prefs = context.getPreferences();
             int cacheHits = prefs.getInt(GoogleConstants.PREF_CACHE_HITS, 0);
@@ -159,7 +158,7 @@ public class GoogleTranslatePreference implements PluginPreference {
         }
 
         // ==================== Information Section ====================
-        builder.addHeader("{pref_header_info}");
+        builder.addText("{pref_header_info}").summary("");
 
         // Plugin version
         builder.addText("{pref_version}")

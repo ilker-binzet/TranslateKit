@@ -242,3 +242,21 @@ msg_claude_model_auto_selected: ⚠️ Seçilen Claude modeli hesabınızda yok.
 
 # Dialog Butonları
 close: Kapat
+
+# Metin Düzenleyici Kayan Menü ve Araç Menüsü
+floating_menu_translate: AI Çevir
+tool_menu_ai_translate: AI Çevir
+source_text: Kaynak Metin
+translated_text: Çevrilmiş Metin
+from: Kaynak:
+to: Hedef:
+engine: Motor:
+translate: Çevir
+replace_original: Orijinali Değiştir
+text_replaced: Metin değiştirildi
+translating: Çevriliyor
+translating_with: Çevriliyor:
+translation_complete: Çeviri tamamlandı
+error_no_text_selected: Metin seçilmedi
+error_no_text: Lütfen çevrilecek metin girin
+error_translation_failed: Çeviri başarısız

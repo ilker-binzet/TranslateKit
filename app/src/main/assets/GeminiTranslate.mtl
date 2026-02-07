@@ -242,3 +242,21 @@ msg_claude_model_auto_selected: ⚠️ Selected Claude model isn't available for
 
 # Dialog Buttons
 close: Close
+
+# Text Editor Floating Menu & Tool Menu
+floating_menu_translate: AI Translate
+tool_menu_ai_translate: AI Translate
+source_text: Source Text
+translated_text: Translated Text
+from: From:
+to: To:
+engine: Engine:
+translate: Translate
+replace_original: Replace Original
+text_replaced: Text replaced
+translating: Translating
+translating_with: Translating with
+translation_complete: Translation complete
+error_no_text_selected: No text selected
+error_no_text: Please enter text to translate
+error_translation_failed: Translation failed

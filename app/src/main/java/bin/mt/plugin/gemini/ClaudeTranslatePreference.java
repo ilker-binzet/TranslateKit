@@ -31,7 +31,7 @@ public class ClaudeTranslatePreference implements PluginPreference {
                 .subtitle(localString.get("pref_claude_subtitle"));
 
         // Overview
-        builder.addHeader("{pref_claude_header_overview}");
+        builder.addText("{pref_claude_header_overview}").summary("");
         builder.addText("{pref_claude_overview_title}")
                 .summary("{pref_claude_overview_summary}");
         builder.addText("{pref_claude_limits}")
@@ -60,14 +60,13 @@ public class ClaudeTranslatePreference implements PluginPreference {
         // Model & endpoint selection
         builder.addHeader("{pref_claude_header_model}");
         builder.addList("{pref_claude_model_title}", GeminiConstants.PREF_CLAUDE_MODEL)
-                .defaultValue(GeminiConstants.DEFAULT_CLAUDE_MODEL)
                 .summary("{pref_claude_model_summary}")
-                .addItem("{pref_claude_model_sonnet35}", "claude-3-5-sonnet-20240620")
-                .addItem("{pref_claude_model_haiku35}", "claude-3-5-haiku-20240620")
-                .addItem("{pref_claude_model_sonnet3}", "claude-3-sonnet-20240229")
-                .addItem("{pref_claude_model_haiku3}", "claude-3-haiku-20240307")
-                .addItem("{pref_claude_model_opus3}", "claude-3-opus-20240229")
-                .addItem("{pref_claude_model_opus35}", "claude-3-5-opus-20240229");
+                .addItem("⭐ Sonnet 4.5 (Recommended)", GeminiConstants.CLAUDE_MODEL_SONNET_45)
+                .addItem("Opus 4.6 (Newest)", GeminiConstants.CLAUDE_MODEL_OPUS_46)
+                .addItem("Haiku 4.5 (Fast)", GeminiConstants.CLAUDE_MODEL_HAIKU_45)
+                .addItem("Opus 4.5", GeminiConstants.CLAUDE_MODEL_OPUS_45)
+                .addItem("Sonnet 4", GeminiConstants.CLAUDE_MODEL_SONNET_4)
+                .addItem("Opus 4", GeminiConstants.CLAUDE_MODEL_OPUS_4);
 
         builder.addText("{pref_claude_model_fallback_note}")
                 .summary("{pref_claude_model_fallback_note}");

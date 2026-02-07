@@ -39,7 +39,8 @@ public class ClaudeProviderPreference implements PluginPreference {
         builder.setLocalString(localString);
 
         // ==================== API Configuration ====================
-        builder.addHeader("🔑 API Configuration");
+        builder.addText("🔑 API Configuration")
+                .summary("");
 
         builder.addInput("API Key", GeminiConstants.PREF_CLAUDE_API_KEY)
                 .defaultValue(GeminiConstants.DEFAULT_API_KEY)
@@ -61,21 +62,22 @@ public class ClaudeProviderPreference implements PluginPreference {
                 .url("https://console.anthropic.com/settings/keys");
 
         // ==================== Model Selection ====================
-        builder.addHeader("🤖 Model Selection");
+        builder.addText("🤖 Model Selection").summary("");
 
         var claudeModelList = builder.addList("Claude Model", GeminiConstants.PREF_CLAUDE_MODEL)
-            .defaultValue(GeminiConstants.DEFAULT_CLAUDE_MODEL)
-            .summary("Choose Claude model (3.5 Sonnet recommended)");
+            .summary("Choose Claude model (Sonnet 4.5 recommended)");
 
         boolean disableCache = preferences.getBoolean(GeminiConstants.PREF_DEBUG_DISABLE_MODEL_CACHE, false);
         java.util.List<ModelCatalogManager.ModelInfo> cachedClaudeModels = disableCache
             ? Collections.emptyList()
             : ModelCatalogManager.loadModelCache(preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS);
         if (cachedClaudeModels == null || cachedClaudeModels.isEmpty()) {
-            claudeModelList.addItem("Claude 3.5 Sonnet (Recommended)", "claude-3-5-sonnet-20241022")
-                    .addItem("Claude 3.5 Haiku (Faster)", "claude-3-5-haiku-20241022")
-                    .addItem("Claude 3 Opus (Highest Quality)", "claude-3-opus-20240229")
-                    .addItem("Claude 3 Sonnet (Legacy)", "claude-3-sonnet-20240229");
+            claudeModelList.addItem("Claude Sonnet 4.5 ⭐ (Balanced, Recommended)", "claude-sonnet-4-5-latest")
+                    .addItem("Claude Opus 4.6 (Most Powerful, Feb 2026)", "claude-opus-4-6")
+                    .addItem("Claude Haiku 4.5 (Fast, Economical)", "claude-haiku-4-5-latest")
+                    .addItem("Claude Opus 4.5 (Previous Powerful)", "claude-opus-4-5-latest")
+                    .addItem("Claude Sonnet 4 (Previous Balanced)", "claude-sonnet-4-latest")
+                    .addItem("Claude Opus 4 (Legacy)", "claude-opus-4-latest");
         } else {
             for (ModelCatalogManager.ModelInfo info : cachedClaudeModels) {
                 claudeModelList.addItem(formatModelLabel(info), info.id);
@@ -87,7 +89,8 @@ public class ClaudeProviderPreference implements PluginPreference {
             .onClick((pluginUI, item) -> refreshClaudeModels(pluginUI));
 
         // ==================== Usage & Limits ====================
-        builder.addHeader("📊 Usage & Limits");
+        builder.addText("📊 Usage & Limits")
+                .summary("");
 
         builder.addText("Pricing Information")
                 .summary("Sonnet: $3/1M input tokens | Haiku: $0.25/1M tokens - Pay as you go");
@@ -97,7 +100,8 @@ public class ClaudeProviderPreference implements PluginPreference {
                 .url("https://docs.anthropic.com/");
 
         // ==================== Test & Debug ====================
-        builder.addHeader("🔧 Test & Debug");
+        builder.addText("🔧 Test & Debug")
+                .summary("");
 
         builder.addText("Quick Test")
                 .summary("Test translation with a simple phrase")
@@ -106,6 +110,14 @@ public class ClaudeProviderPreference implements PluginPreference {
         builder.addText("View Logs")
                 .summary("Open MT Manager log viewer")
                 .onClick((pluginUI, item) -> context.openLogViewer());
+
+        // SDK Beta2+ callbacks enabled (minMTVersion >= 26020300)
+        builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
+            String key = preferenceItem.getKey();
+            if (GeminiConstants.PREF_CLAUDE_API_KEY.equals(key)) {
+                context.showToast("API key updated. Re-open settings to refresh status.");
+            }
+        });
     }
 
     private String getKeyStatus() {
