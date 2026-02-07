@@ -29,6 +29,11 @@ Thumbs.db
 *.keystore
 *.jks
 
+# AI tool configs (Claude, Kilo Code, etc.)
+.claude/
+.kilocode/
+CLAUDE.md
+
 # Misc temporary files
 *.log
 *.tmp
