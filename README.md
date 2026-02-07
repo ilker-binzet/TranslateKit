@@ -1,11 +1,11 @@
-# AI Translation Hub
+# TranslateKit
 
 **Multi-provider translation plugin for MT Manager**
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-0.1.0--dev-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-`AI Translation Hub` exposes Google Gemini 3, OpenAI GPT-5/o3, Anthropic Claude 4.5, and Google Cloud Translation engines to MT Manager through a single plugin. It is also the first publicly available MT Manager plugin built on top of the new **SDK 3** toolchain, showcasing what the refreshed platform can do.
+`TranslateKit` exposes Google Gemini 3, OpenAI GPT-5/o3, Anthropic Claude 4.5, and Google Cloud Translation engines to MT Manager through a single plugin. Built on top of the new **SDK 3** toolchain.
 
 ---
 
@@ -15,7 +15,7 @@
 - Auto language detection with 38+ targets
 - Context presets and tone controls for concise translations
 - Built-in API key validation, retry logic, and structured logging
-- Ships as a single `mt.plugin.ai.hub.mtp` artifact (same name as `pluginID`)
+- Ships as a single `mt.plugin.translatekit.mtp` artifact
 
 ---
 
@@ -30,19 +30,18 @@
 ## Installation
 
 ### Option A – Download the release asset
-1. Grab the latest `.mtp` from [Releases](https://github.com/ilker-binzet/AI-Translation-Hub/releases).
+1. Grab the latest `.mtp` from [Releases](https://github.com/ilker-binzet/TranslateKit/releases).
 2. In MT Manager, open **Plugins → Install Plugin** or select the downloaded file, and open the file with MT Manager then install it.
-3. The installer expects the file to be named `mt.plugin.ai.hub.mtp`; renaming to `AITranslationHub_v0.2.0.mtp` is optional.
 
 ### Option B – Build it yourself
 
 ```powershell
-git clone https://github.com/ilker-binzet/AI-Translation-Hub.git
-cd ai-translation-hub
+git clone https://github.com/ilker-binzet/TranslateKit.git
+cd TranslateKit
 .\gradlew.bat app:packageReleaseMtp
 ```
 
-The generated file lives at `app\build\outputs\mt-plugin\mt.plugin.ai.hub.mtp`. `build-plugin.bat` runs the same command plus a clean step on Windows.
+The generated file lives at `app\build\outputs\mt-plugin\mt.plugin.translatekit.mtp`. `build-plugin.bat` runs the same command plus a clean step on Windows.
 
 ---
 
@@ -58,27 +57,8 @@ The generated file lives at `app\build\outputs\mt-plugin\mt.plugin.ai.hub.mtp`. 
 
 1. Update `versionCode` / `versionName` in `app/build.gradle` and `GeminiConstants`.
 2. Run `gradlew app:packageReleaseMtp` (or `build-plugin.bat`).
-3. Upload `app/build/outputs/mt-plugin/mt.plugin.ai.hub.mtp` to a GitHub Release.
+3. Upload `app/build/outputs/mt-plugin/mt.plugin.translatekit.mtp` to a GitHub Release.
 4. Tag the commit with the semantic version (e.g., `v0.1.0`).
-
-The GitHub Actions workflow (`release.yml`) builds the same artifact on every push to `main` and attaches it to releases, ensuring the published file always matches the tagged source.
-
-### Fresh repository setup
-
-If you are starting from a clean working tree, the following sequence creates the initial history and pushes the `v0.1.0` tag:
-
-```powershell
-git init
-git add .
-git commit -m "chore: bootstrap v0.1.0"
-git branch -M main
-git remote add origin <your-repo-url>
-git tag v0.1.0
-git push -u origin main
-git push origin v0.1.0
-```
-
-Adjust the remote URL or tag name when preparing future releases.
 
 ---
 
@@ -99,4 +79,4 @@ This project is available under the [MIT License](LICENSE).
 
 ## Support
 
-Please use [GitHub Issues](https://github.com/ilker-binzet/AI-Translation-Hub/issues) for bugs or feature requests.
+Please use [GitHub Issues](https://github.com/ilker-binzet/TranslateKit/issues) for bugs or feature requests.

@@ -5,6 +5,8 @@
 /build/
 /app/build/
 *.mtp
+*.apk
+*.aab
 /app/proguard-rules-dump.pro
 
 # ==================================
@@ -13,6 +15,8 @@
 /.idea/
 /.vscode/
 *.iml
+*.swp
+*~
 
 # ==================================
 # Environment-specific configs
@@ -21,22 +25,11 @@
 **/local.properties
 
 # ==================================
-# AI tool configs (local-only)
-# ==================================
-.claude/
-.kilocode/
-CLAUDE.md
-
-# ==================================
-# Internal / private documents
-# ==================================
-/plans/
-
-# ==================================
 # Temporary build & packaging dirs
 # ==================================
 /temp_mtp/
 /temp_mt_plugin_jar/
+/temp*/
 
 # ==================================
 # Build logs & debug output
@@ -44,17 +37,35 @@ CLAUDE.md
 build_output.txt
 packmtp.txt
 *.log
+*.stacktrace
 
 # ==================================
-# OS junk files
+# OS files
 # ==================================
 .DS_Store
 Thumbs.db
 nul
 *.tmp
+Desktop.ini
 
 # ==================================
-# Keystores / secrets
+# Secrets & keystores
 # ==================================
 *.keystore
 *.jks
+*.env
+.env.*
+
+# ==================================
+# Internal documents
+# ==================================
+/plans/
+/docs/internal/
+/notes/
+*.draft.md
+
+# ==================================
+# SDK reference (local only)
+# ==================================
+/mt-plugin-v3-demo/
+/sdk-reference/

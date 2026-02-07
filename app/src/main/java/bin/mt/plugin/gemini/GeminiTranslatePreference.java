@@ -15,7 +15,7 @@ import bin.mt.plugin.api.drawable.MaterialIcons;
 import bin.mt.plugin.api.preference.PluginPreference;
 
 /**
- * Main preference screen for AI Translation Hub
+ * Main preference screen for TranslateKit
  * Clean, modern design with minimal emojis and icon-based navigation
  * 
  * @author Ilker Binzet

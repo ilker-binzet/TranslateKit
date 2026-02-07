@@ -1,8 +1,8 @@
-# AI Translation Hub - Türkçe Dizeler
+# TranslateKit - Türkçe Dizeler
 
 # Eklenti Bilgileri
-plugin_name: AI Translation Hub
-plugin_description: Gemini, OpenAI ve Claude için birleşik yapay zeka çeviri merkezi (ÜCRETSİZ katmanlar mevcut)
+plugin_name: TranslateKit
+plugin_description: Gemini, OpenAI ve Claude için çoklu çeviri eklentisi (ÜCRETSiZ katmanlar mevcut)
 
 # Ayarlar Ekranı
 pref_header_quick_actions: ⚡ Hızlı İşlemler ⚡━━━━━━━━━━━━━━━━━━
@@ -17,9 +17,9 @@ pref_quick_select_model_summary: Gemini model seçeneklerine hızlı erişim
 pref_quick_toggle_debug: 🛠️ Debug Modunu Aç/Kapat
 pref_quick_toggle_debug_summary: Hata ayıklama kaydını hızlıca aç/kapat
 
-pref_header_main: 🌟 AI Translation Hub
+pref_header_main: TranslateKit
 pref_plugin_name: Eklenti Adı
-pref_plugin_description: Gemini 3, GPT-5 ve Claude 4.5 ile gelişmiş yapay zeka çevirisi (v0.2.0 - Ocak 2026)
+pref_plugin_description: Gemini 3, GPT-5 ve Claude 4.5 ile gelişmiş çoklu çeviri eklentisi
 pref_dashboard_card_title: 📊 Hızlı Panel
 pref_dashboard_card_summary: Mevcut durum ve aktif yapılandırmaları görüntülemek için dokun
 pref_active_provider_title: 🎯 Aktif Sağlayıcı
