@@ -89,7 +89,7 @@ public class GeminiTranslationEngine extends BaseTranslationEngine {
     @NonNull
     @Override
     public String name() {
-        return localString != null ? localString.get("plugin_name") : "AI Translation Hub";
+        return localString != null ? localString.get("plugin_name") : "TranslateKit";
     }
 
     /**
@@ -807,7 +807,7 @@ public class GeminiTranslationEngine extends BaseTranslationEngine {
             debugLogger.logLine(emoji, message);
             return;
         }
-        String entry = (emoji != null ? emoji + " " : "") + "[AI Translation Hub] " + message;
+        String entry = (emoji != null ? emoji + " " : "") + "[TranslateKit] " + message;
         PluginContext pluginContext = getContext();
         if (pluginContext != null) {
             pluginContext.log(entry);

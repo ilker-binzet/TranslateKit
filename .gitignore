@@ -1,40 +1,71 @@
+# ==================================
 # Gradle & Android build artifacts
+# ==================================
 /.gradle/
 /build/
 /app/build/
+*.mtp
+*.apk
+*.aab
 /app/proguard-rules-dump.pro
-/app/build/outputs/mt-plugin/*.mtp
 
-# IDE metadata
+# ==================================
+# IDE / editor metadata
+# ==================================
 /.idea/
 /.vscode/
 *.iml
+*.swp
+*~
 
+# ==================================
 # Environment-specific configs
+# ==================================
 /local.properties
 **/local.properties
 
-# Demo project extras
-/mt-plugin-v3-demo-main/.gradle/
-/mt-plugin-v3-demo-main/build/
-/mt-plugin-v3-demo-main/app/build/
-/mt-plugin-v3-demo-main/local.properties
-/mt-plugin-v3-demo-main/.idea/
+# ==================================
+# Temporary build & packaging dirs
+# ==================================
+/temp_mtp/
+/temp_mt_plugin_jar/
+/temp*/
 
-# OS cruft
+# ==================================
+# Build logs & debug output
+# ==================================
+build_output.txt
+packmtp.txt
+*.log
+*.stacktrace
+
+# ==================================
+# OS files
+# ==================================
 .DS_Store
 Thumbs.db
+nul
+*.tmp
+Desktop.ini
 
-# Keystores / secrets (placeholder names)
+# ==================================
+# Secrets & keystores
+# ==================================
 *.keystore
 *.jks
+*.env
+.env.*
 
-# AI tool configs (Claude, Kilo Code, etc.)
-.claude/
-.kilocode/
-CLAUDE.md
+# ==================================
+# Internal documents
+# ==================================
+/plans/
+/docs/internal/
+/notes/
+*.draft.md
 
-# Misc temporary files
-*.log
-*.tmp
-nul
+# ==================================
+# SDK reference (local only)
+# ==================================
+/mt-plugin-v3-demo/
+/sdk-reference/

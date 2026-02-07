@@ -74,27 +74,27 @@ mtPlugin {
      * 插件ID，插件的唯一标识，类似于packageName
      * 只能由字母、数字、下划线和点组成
      */
-    pluginID = "mt.plugin.ai.hub"
+    pluginID = "mt.plugin.translatekit"
 
     /**
      * 插件版本号，低版本插件无法覆盖安装高版本插件
      */
-    versionCode = 400
+    versionCode = 1
 
     /**
      * 插件版本名称
      */
-    versionName = "2.0.0"
+    versionName = "0.1.0"
 
     /**
      * 插件名称
      */
-    name = "AI Translation Hub"
+    name = "TranslateKit"
 
     /**
      * 插件描述
      */
-    description = "Multi-provider AI translation hub for Gemini, OpenAI, Claude, and Google Cloud Translation"
+    description = "Multi-provider translation plugin for MT Manager — Gemini, OpenAI, Claude, and Google Cloud Translation"
 
     /**
      * 主设置界面，可不填

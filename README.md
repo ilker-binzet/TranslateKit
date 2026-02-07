@@ -1,102 +1,166 @@
-# AI Translation Hub
+<div align="center">
 
-**Multi-provider translation plugin for MT Manager**
+<img src="img/icon.png" width="120" alt="TranslateKit Logo">
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+# TranslateKit
 
-`AI Translation Hub` exposes Google Gemini 3, OpenAI GPT-5/o3, Anthropic Claude 4.5, and Google Cloud Translation engines to MT Manager through a single plugin. It is also the first publicly available MT Manager plugin built on top of the new **SDK 3** toolchain, showcasing what the refreshed platform can do.
+**Multi-provider AI translation plugin for [MT Manager](https://mt2.cn)**
 
----
+[![Version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](https://github.com/ilker-binzet/TranslateKit/releases)
+[![SDK](https://img.shields.io/badge/MT%20Plugin%20SDK-v3%20beta3-purple?style=flat-square)](https://gitee.com/AntlersMa/mt-plugin-sdk)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square)](#)
 
-## Highlights
+*Translate Android string resources using Gemini, OpenAI, or Claude — all from a single plugin.*
 
-- One plugin, three AI providers (Gemini, OpenAI, Claude)
-- Auto language detection with 38+ targets
-- Context presets and tone controls for concise translations
-- Built-in API key validation, retry logic, and structured logging
-- Ships as a single `mt.plugin.ai.hub.mtp` artifact (same name as `pluginID`)
+</div>
 
 ---
 
-## Requirements
+## Overview
 
-- MT Manager [(latest release)](https://mt2.cn/download/)
-- API keys for the providers you intend to use
-- JDK 17, and the Gradle wrapper bundled in this repo
+TranslateKit brings the power of modern AI translation directly into MT Manager. Instead of switching between multiple tools or browser tabs, you configure your API keys once and translate strings with a tap.
+
+The plugin supports three AI providers and Google Cloud Translation, with built-in context presets, tone controls, and retry logic — making it suitable for everything from casual app localization to production-grade translation workflows.
 
 ---
 
-## Installation
+## Features
 
-### Option A – Download the release asset
-1. Grab the latest `.mtp` from [Releases](https://github.com/ilker-binzet/AI-Translation-Hub/releases).
-2. In MT Manager, open **Plugins → Install Plugin** or select the downloaded file, and open the file with MT Manager then install it.
-3. The installer expects the file to be named `mt.plugin.ai.hub.mtp`; renaming to `AITranslationHub_v0.2.0.mtp` is optional.
+### Multi-Provider Architecture
+| Provider | Models | Free Tier |
+|----------|--------|-----------|
+| **Google Gemini** | Gemini 3 Pro/Flash, 2.5 Flash/Pro, 2.5 Flash-Lite | 2000 req/day (Flash) |
+| **OpenAI** | GPT-4o, GPT-4o Mini, o3 Mini | Pay-as-you-go |
+| **Anthropic Claude** | Claude 4.5 Sonnet, 4 Opus/Sonnet, 3.5 Sonnet/Haiku | Pay-as-you-go |
+| **Google Cloud** | Neural Machine Translation | 500K chars/month free |
 
-### Option B – Build it yourself
+> Dynamic model catalog — the plugin fetches the latest available models from each provider's API automatically.
+
+### Context-Aware Translation
+- **8 ready-made context presets** — Mobile App, Gaming, E-commerce, Developer Docs, and more
+- **6 tone presets** — Friendly, Marketing, Legal, Support, Technical, Playful
+- **Custom context fields** — App description, target audience, extra rules
+- Translations adapt to your app's domain and user base
+
+### Clean Settings UI
+Organized into 5 navigable categories instead of a flat list:
+
+```
+TranslateKit Settings
+├── AI Providers          → Configure Gemini / OpenAI / Claude
+├── Translation Settings  → Default engine, timeout, retries
+├── Context & Tone        → Presets, tone, audience, notes
+├── Tools & Diagnostics   → Provider health, tests, logs
+└── About
+```
+
+### Developer Tools
+- **Provider Dashboard** — See all API key statuses at a glance
+- **Interactive Provider Test** — Validate API key format instantly
+- **Debug Logging** — Detailed request/response logs in MT Manager
+- **Hidden Debug Menu** — Model cache diagnostics (5-tap easter egg)
+
+---
+
+## Quick Start
+
+### 1. Download
+Grab the latest `mt.plugin.translatekit.mtp` from [Releases](https://github.com/ilker-binzet/TranslateKit/releases).
+
+### 2. Install
+Open the `.mtp` file with MT Manager → tap **Install**.
+
+### 3. Configure
+Open the plugin settings → **AI Providers** → add your API key for at least one provider.
+
+> **Tip:** Gemini offers a generous free tier. Get your key at [aistudio.google.com](https://aistudio.google.com/apikey).
+
+### 4. Translate
+Open any `strings.xml` in MT Manager → use the translation function → TranslateKit handles the rest.
+
+---
+
+## Build from Source
 
 ```powershell
-git clone https://github.com/ilker-binzet/AI-Translation-Hub.git
-cd ai-translation-hub
+# Clone
+git clone https://github.com/ilker-binzet/TranslateKit.git
+cd TranslateKit
+
+# Build
 .\gradlew.bat app:packageReleaseMtp
+
+# Output
+# app/build/outputs/mt-plugin/mt.plugin.translatekit.mtp
 ```
 
-The generated file lives at `app\build\outputs\mt-plugin\mt.plugin.ai.hub.mtp`. `build-plugin.bat` runs the same command plus a clean step on Windows.
+**Requirements:** JDK 17+, Android SDK (set path in `local.properties`)
 
 ---
 
-## Building & Testing
+## Project Structure
 
-1. Configure `local.properties` with your Android SDK path if needed.
-2. Run the Gradle wrapper (`./gradlew` on Linux/macOS) so that the correct version is used everywhere.
-3. Load the resulting `.mtp` into MT Manager for a manual smoke test. The settings screen exposes Gemini/OpenAI/Claude cards, connection checks, and debug logging toggles.
-
----
-
-## Release Checklist
-
-1. Update `versionCode` / `versionName` in `app/build.gradle` and `GeminiConstants`.
-2. Run `gradlew app:packageReleaseMtp` (or `build-plugin.bat`).
-3. Upload `app/build/outputs/mt-plugin/mt.plugin.ai.hub.mtp` to a GitHub Release.
-4. Tag the commit with the semantic version (e.g., `v0.1.0`).
-
-The GitHub Actions workflow (`release.yml`) builds the same artifact on every push to `main` and attaches it to releases, ensuring the published file always matches the tagged source.
-
-### Fresh repository setup
-
-If you are starting from a clean working tree, the following sequence creates the initial history and pushes the `v0.1.0` tag:
-
-```powershell
-git init
-git add .
-git commit -m "chore: bootstrap v0.1.0"
-git branch -M main
-git remote add origin <your-repo-url>
-git tag v0.1.0
-git push -u origin main
-git push origin v0.1.0
+```
+app/src/main/java/bin/mt/plugin/
+├── gemini/
+│   ├── GeminiTranslatePreference.java    # Main settings (5-category nav)
+│   ├── TranslationSubPreference.java     # Engine, timeout, retries
+│   ├── ContextToneSubPreference.java     # Presets, tone, audience
+│   ├── ToolsSubPreference.java           # Dashboard, tests, debug
+│   ├── GeminiProviderPreference.java     # Gemini provider settings
+│   ├── OpenAIProviderPreference.java     # OpenAI provider settings
+│   ├── ClaudeProviderPreference.java     # Claude provider settings
+│   ├── GeminiTranslationEngine.java      # Core translation engine
+│   ├── GeminiConstants.java              # All constants & model names
+│   ├── GeminiColorTokens.java            # Theme-aware UI colors
+│   ├── ModelCatalogManager.java          # Dynamic model fetching & cache
+│   └── TranslationDebugLogger.java       # Structured debug logging
+└── google/
+    └── GoogleCloudTranslationEngine.java # Google Cloud NMT fallback
 ```
 
-Adjust the remote URL or tag name when preparing future releases.
+---
+
+## Configuration Reference
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Default AI Engine | Gemini | Which provider handles translations |
+| Request Timeout | 30000 ms | Max wait time per API call |
+| Max Retries | 2 | Retry attempts on failure |
+| Tone & Voice | *(empty)* | Writing style guidance for AI |
+| App Description | *(empty)* | App name and type context |
+| Target Audience | *(empty)* | Who uses your app |
+| Debug Logging | Off | Verbose request/response logs |
 
 ---
 
-## Development Notes
+## Supported Languages
 
-- Main sources live under `app/src/main/java/bin/mt/plugin/gemini`.
-- `GeminiTranslationEngine` coordinates provider selection, retries, and logging.
-- Provider preference screens (`GeminiTranslatePreference`, `OpenAITranslatePreference`, etc.) are standard MT Manager UI classes.
-- Language strings sit in `app/src/main/assets/*.mtl` files; add entries there before referencing new text in code.
+Arabic, Chinese (Simplified/Traditional), Czech, Danish, Dutch, English, Finnish, French, German, Greek, Hebrew, Hindi, Hungarian, Indonesian, Italian, Japanese, Korean, Malay, Norwegian, Persian, Polish, Portuguese (BR/PT), Romanian, Russian, Slovak, Spanish, Swedish, Thai, Turkish, Ukrainian, Vietnamese, and more.
+
+---
+
+## Contributing
+
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes
+4. Push and open a Pull Request
 
 ---
 
 ## License
 
-This project is available under the [MIT License](LICENSE).
+[MIT License](LICENSE) — Copyright (c) 2025 Ilker Binzet
 
 ---
 
-## Support
+<div align="center">
 
-Please use [GitHub Issues](https://github.com/ilker-binzet/AI-Translation-Hub/issues) for bugs or feature requests.
+**[Report a Bug](https://github.com/ilker-binzet/TranslateKit/issues) · [Request a Feature](https://github.com/ilker-binzet/TranslateKit/issues)**
+
+Made with care for the MT Manager community.
+
+</div>
