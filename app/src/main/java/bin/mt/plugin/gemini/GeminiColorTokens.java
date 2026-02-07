@@ -3,7 +3,7 @@ package bin.mt.plugin.gemini;
 import bin.mt.plugin.api.ui.PluginUI;
 
 /**
- * Theme-aware color token system for AI Translation Hub.
+ * Theme-aware color token system for TranslateKit.
  * Provides consistent colors across light and dark themes.
  */
 public class GeminiColorTokens {

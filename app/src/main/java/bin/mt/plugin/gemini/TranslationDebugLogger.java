@@ -48,7 +48,7 @@ public class TranslationDebugLogger {
         if (!enabled || message == null || message.isEmpty()) {
             return;
         }
-        emit((emoji != null ? emoji + " " : "") + "[AI Translation Hub] " + message);
+        emit((emoji != null ? emoji + " " : "") + "[TranslateKit] " + message);
     }
 
     private void emit(String line) {
@@ -131,7 +131,7 @@ public class TranslationDebugLogger {
                 return;
             }
             parent.emit(String.format(Locale.US,
-                    "🔍 [AI Translation Hub] translate_start engine=%s model=%s src=%s tgt=%s attempt=%d/%d chars_in=%d preview=\"%s\"",
+                    "🔍 [TranslateKit] translate_start engine=%s model=%s src=%s tgt=%s attempt=%d/%d chars_in=%d preview=\"%s\"",
                     engine, model, sourceLanguage, targetLanguage,
                     attempt, totalAttempts, inputChars,
                     inputPreview == null ? "" : inputPreview));
@@ -143,7 +143,7 @@ public class TranslationDebugLogger {
             }
             long latency = System.currentTimeMillis() - startedAt;
             parent.emit(String.format(Locale.US,
-                    "✅ [AI Translation Hub] translate_success engine=%s model=%s latency=%dms chars_out=%d attempt=%d/%d",
+                    "✅ [TranslateKit] translate_success engine=%s model=%s latency=%dms chars_out=%d attempt=%d/%d",
                     engine, model, latency, outputChars, attempt, totalAttempts));
         }
 
@@ -153,7 +153,7 @@ public class TranslationDebugLogger {
             }
             long latency = System.currentTimeMillis() - startedAt;
             parent.emit(String.format(Locale.US,
-                    "❌ [AI Translation Hub] translate_error engine=%s model=%s latency=%dms attempt=%d/%d retry=%s error=\"%s\"",
+                    "❌ [TranslateKit] translate_error engine=%s model=%s latency=%dms attempt=%d/%d retry=%s error=\"%s\"",
                     engine, model, latency, attempt, totalAttempts,
                     willRetry ? "yes" : "no",
                     errorMessage == null ? "" : errorMessage.replace('\n', ' ')));
