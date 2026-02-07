@@ -1,82 +1,166 @@
+<div align="center">
+
+<img src="img/icon.png" width="120" alt="TranslateKit Logo">
+
 # TranslateKit
 
-**Multi-provider translation plugin for MT Manager**
+**Multi-provider AI translation plugin for [MT Manager](https://mt2.cn)**
 
-![Version](https://img.shields.io/badge/version-0.1.0--dev-orange)
-![License](https://img.shields.io/badge/license-MIT-green)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](https://github.com/ilker-binzet/TranslateKit/releases)
+[![SDK](https://img.shields.io/badge/MT%20Plugin%20SDK-v3%20beta3-purple?style=flat-square)](https://gitee.com/AntlersMa/mt-plugin-sdk)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square)](#)
 
-`TranslateKit` exposes Google Gemini 3, OpenAI GPT-5/o3, Anthropic Claude 4.5, and Google Cloud Translation engines to MT Manager through a single plugin. Built on top of the new **SDK 3** toolchain.
+*Translate Android string resources using Gemini, OpenAI, or Claude — all from a single plugin.*
 
----
-
-## Highlights
-
-- One plugin, three AI providers (Gemini, OpenAI, Claude)
-- Auto language detection with 38+ targets
-- Context presets and tone controls for concise translations
-- Built-in API key validation, retry logic, and structured logging
-- Ships as a single `mt.plugin.translatekit.mtp` artifact
+</div>
 
 ---
 
-## Requirements
+## Overview
 
-- MT Manager [(latest release)](https://mt2.cn/download/)
-- API keys for the providers you intend to use
-- JDK 17, and the Gradle wrapper bundled in this repo
+TranslateKit brings the power of modern AI translation directly into MT Manager. Instead of switching between multiple tools or browser tabs, you configure your API keys once and translate strings with a tap.
+
+The plugin supports three AI providers and Google Cloud Translation, with built-in context presets, tone controls, and retry logic — making it suitable for everything from casual app localization to production-grade translation workflows.
 
 ---
 
-## Installation
+## Features
 
-### Option A – Download the release asset
-1. Grab the latest `.mtp` from [Releases](https://github.com/ilker-binzet/TranslateKit/releases).
-2. In MT Manager, open **Plugins → Install Plugin** or select the downloaded file, and open the file with MT Manager then install it.
+### Multi-Provider Architecture
+| Provider | Models | Free Tier |
+|----------|--------|-----------|
+| **Google Gemini** | Gemini 3 Pro/Flash, 2.5 Flash/Pro, 2.5 Flash-Lite | 2000 req/day (Flash) |
+| **OpenAI** | GPT-4o, GPT-4o Mini, o3 Mini | Pay-as-you-go |
+| **Anthropic Claude** | Claude 4.5 Sonnet, 4 Opus/Sonnet, 3.5 Sonnet/Haiku | Pay-as-you-go |
+| **Google Cloud** | Neural Machine Translation | 500K chars/month free |
 
-### Option B – Build it yourself
+> Dynamic model catalog — the plugin fetches the latest available models from each provider's API automatically.
 
-```powershell
-git clone https://github.com/ilker-binzet/TranslateKit.git
-cd TranslateKit
-.\gradlew.bat app:packageReleaseMtp
+### Context-Aware Translation
+- **8 ready-made context presets** — Mobile App, Gaming, E-commerce, Developer Docs, and more
+- **6 tone presets** — Friendly, Marketing, Legal, Support, Technical, Playful
+- **Custom context fields** — App description, target audience, extra rules
+- Translations adapt to your app's domain and user base
+
+### Clean Settings UI
+Organized into 5 navigable categories instead of a flat list:
+
+```
+TranslateKit Settings
+├── AI Providers          → Configure Gemini / OpenAI / Claude
+├── Translation Settings  → Default engine, timeout, retries
+├── Context & Tone        → Presets, tone, audience, notes
+├── Tools & Diagnostics   → Provider health, tests, logs
+└── About
 ```
 
-The generated file lives at `app\build\outputs\mt-plugin\mt.plugin.translatekit.mtp`. `build-plugin.bat` runs the same command plus a clean step on Windows.
+### Developer Tools
+- **Provider Dashboard** — See all API key statuses at a glance
+- **Interactive Provider Test** — Validate API key format instantly
+- **Debug Logging** — Detailed request/response logs in MT Manager
+- **Hidden Debug Menu** — Model cache diagnostics (5-tap easter egg)
 
 ---
 
-## Building & Testing
+## Quick Start
 
-1. Configure `local.properties` with your Android SDK path if needed.
-2. Run the Gradle wrapper (`./gradlew` on Linux/macOS) so that the correct version is used everywhere.
-3. Load the resulting `.mtp` into MT Manager for a manual smoke test. The settings screen exposes Gemini/OpenAI/Claude cards, connection checks, and debug logging toggles.
+### 1. Download
+Grab the latest `mt.plugin.translatekit.mtp` from [Releases](https://github.com/ilker-binzet/TranslateKit/releases).
+
+### 2. Install
+Open the `.mtp` file with MT Manager → tap **Install**.
+
+### 3. Configure
+Open the plugin settings → **AI Providers** → add your API key for at least one provider.
+
+> **Tip:** Gemini offers a generous free tier. Get your key at [aistudio.google.com](https://aistudio.google.com/apikey).
+
+### 4. Translate
+Open any `strings.xml` in MT Manager → use the translation function → TranslateKit handles the rest.
 
 ---
 
-## Release Checklist
+## Build from Source
 
-1. Update `versionCode` / `versionName` in `app/build.gradle` and `GeminiConstants`.
-2. Run `gradlew app:packageReleaseMtp` (or `build-plugin.bat`).
-3. Upload `app/build/outputs/mt-plugin/mt.plugin.translatekit.mtp` to a GitHub Release.
-4. Tag the commit with the semantic version (e.g., `v0.1.0`).
+```powershell
+# Clone
+git clone https://github.com/ilker-binzet/TranslateKit.git
+cd TranslateKit
+
+# Build
+.\gradlew.bat app:packageReleaseMtp
+
+# Output
+# app/build/outputs/mt-plugin/mt.plugin.translatekit.mtp
+```
+
+**Requirements:** JDK 17+, Android SDK (set path in `local.properties`)
 
 ---
 
-## Development Notes
+## Project Structure
 
-- Main sources live under `app/src/main/java/bin/mt/plugin/gemini`.
-- `GeminiTranslationEngine` coordinates provider selection, retries, and logging.
-- Provider preference screens (`GeminiTranslatePreference`, `OpenAITranslatePreference`, etc.) are standard MT Manager UI classes.
-- Language strings sit in `app/src/main/assets/*.mtl` files; add entries there before referencing new text in code.
+```
+app/src/main/java/bin/mt/plugin/
+├── gemini/
+│   ├── GeminiTranslatePreference.java    # Main settings (5-category nav)
+│   ├── TranslationSubPreference.java     # Engine, timeout, retries
+│   ├── ContextToneSubPreference.java     # Presets, tone, audience
+│   ├── ToolsSubPreference.java           # Dashboard, tests, debug
+│   ├── GeminiProviderPreference.java     # Gemini provider settings
+│   ├── OpenAIProviderPreference.java     # OpenAI provider settings
+│   ├── ClaudeProviderPreference.java     # Claude provider settings
+│   ├── GeminiTranslationEngine.java      # Core translation engine
+│   ├── GeminiConstants.java              # All constants & model names
+│   ├── GeminiColorTokens.java            # Theme-aware UI colors
+│   ├── ModelCatalogManager.java          # Dynamic model fetching & cache
+│   └── TranslationDebugLogger.java       # Structured debug logging
+└── google/
+    └── GoogleCloudTranslationEngine.java # Google Cloud NMT fallback
+```
+
+---
+
+## Configuration Reference
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Default AI Engine | Gemini | Which provider handles translations |
+| Request Timeout | 30000 ms | Max wait time per API call |
+| Max Retries | 2 | Retry attempts on failure |
+| Tone & Voice | *(empty)* | Writing style guidance for AI |
+| App Description | *(empty)* | App name and type context |
+| Target Audience | *(empty)* | Who uses your app |
+| Debug Logging | Off | Verbose request/response logs |
+
+---
+
+## Supported Languages
+
+Arabic, Chinese (Simplified/Traditional), Czech, Danish, Dutch, English, Finnish, French, German, Greek, Hebrew, Hindi, Hungarian, Indonesian, Italian, Japanese, Korean, Malay, Norwegian, Persian, Polish, Portuguese (BR/PT), Romanian, Russian, Slovak, Spanish, Swedish, Thai, Turkish, Ukrainian, Vietnamese, and more.
+
+---
+
+## Contributing
+
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes
+4. Push and open a Pull Request
 
 ---
 
 ## License
 
-This project is available under the [MIT License](LICENSE).
+[MIT License](LICENSE) — Copyright (c) 2025 Ilker Binzet
 
 ---
 
-## Support
+<div align="center">
 
-Please use [GitHub Issues](https://github.com/ilker-binzet/TranslateKit/issues) for bugs or feature requests.
+**[Report a Bug](https://github.com/ilker-binzet/TranslateKit/issues) · [Request a Feature](https://github.com/ilker-binzet/TranslateKit/issues)**
+
+Made with care for the MT Manager community.
+
+</div>
