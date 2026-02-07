@@ -37,14 +37,7 @@ public class GeminiTranslatePreference implements PluginPreference {
         }
     };
 
-    private static final int COLOR_STATUS_NEUTRAL = 0xFFECEFF1;
-    private static final int COLOR_STATUS_WARNING = 0xFFFFF8E1;
-    private static final int COLOR_STATUS_ERROR = 0xFFFFEBEE;
-    private static final int COLOR_STATUS_READY = 0xFFE8F5E9;
-    private static final int COLOR_ACTIVE_CARD = 0xFFE3F2FD;
-    private static final int COLOR_BRAND_GEMINI = 0xFF1A73E8;
-    private static final int COLOR_BRAND_OPENAI = 0xFF0B8F6A;
-    private static final int COLOR_BRAND_CLAUDE = 0xFFB55F3B;
+    // Color constants removed - now using GeminiColorTokens for theme-aware colors
     private static final Pattern PATTERN_GEMINI_API_KEY = Pattern.compile(GeminiConstants.API_KEY_PATTERN);
     private static final Pattern PATTERN_OPENAI_API_KEY = Pattern.compile(GeminiConstants.OPENAI_API_KEY_PATTERN);
     private static final Pattern PATTERN_CLAUDE_API_KEY = Pattern.compile(GeminiConstants.CLAUDE_API_KEY_PATTERN);
@@ -59,18 +52,25 @@ public class GeminiTranslatePreference implements PluginPreference {
         final String icon;
         final String title;
         final String detail;
-        final int backgroundColor;
-        final int accentColor;
+        final String statusType; // "not_configured", "error", "ready"
 
         ProviderStatus(String providerKey, String displayName, String icon, String title,
-                       String detail, int backgroundColor, int accentColor) {
+                       String detail, String statusType) {
             this.providerKey = providerKey;
             this.displayName = displayName;
             this.icon = icon;
             this.title = title;
             this.detail = detail;
-            this.backgroundColor = backgroundColor;
-            this.accentColor = accentColor;
+            this.statusType = statusType;
+        }
+
+        // Helper methods for theme-aware colors (requires PluginUI)
+        int getBackgroundColor(bin.mt.plugin.api.ui.PluginUI pluginUI) {
+            return GeminiColorTokens.getStatusColor(pluginUI, statusType);
+        }
+
+        int getAccentColor(bin.mt.plugin.api.ui.PluginUI pluginUI) {
+            return GeminiColorTokens.getProviderBrandColor(pluginUI, providerKey);
         }
     }
 
@@ -230,48 +230,31 @@ public class GeminiTranslatePreference implements PluginPreference {
 
         builder.setLocalString(localString);
 
-        // ==================== Quick Dashboard ====================
-        builder.addHeader("📊 Dashboard");
-        
-        builder.addText("Quick Status")
-                .summary("View all providers health and active configuration")
-                .onClick((pluginUI, item) -> showDashboardCard(pluginUI));
-
-        // ==================== Quick Actions ====================
-        builder.addHeader("⚡ Quick Actions");
-
-        builder.addText("Test Active Provider")
-                .summary("Run a quick status check for " + getActiveProviderName())
-                .onClick((pluginUI, item) -> showInteractiveProviderTest(pluginUI));
-
-        builder.addText("View Plugin Logs")
-                .summary("Open MT Manager log viewer")
-                .onClick((pluginUI, item) -> context.openLogViewer());
-
         // ==================== AI Providers ====================
-        builder.addHeader("🤖 AI Providers");
+        builder.addText("AI Providers")
+                .summary("Configure your translation engines");
 
-        builder.addText("✨ Gemini AI")
+        builder.addText("Gemini AI")
                 .summary(getProviderStatusSummary("gemini"))
                 .onClick((pluginUI, item) -> context.openPreference(GeminiProviderPreference.class));
 
-        builder.addText("🧠 OpenAI GPT")
+        builder.addText("OpenAI GPT")
                 .summary(getProviderStatusSummary("openai"))
                 .onClick((pluginUI, item) -> context.openPreference(OpenAIProviderPreference.class));
 
-        builder.addText("🎭 Claude AI")
+        builder.addText("Claude AI")
                 .summary(getProviderStatusSummary("claude"))
                 .onClick((pluginUI, item) -> context.openPreference(ClaudeProviderPreference.class));
 
         // ==================== Translation Settings ====================
-        builder.addHeader("⚙️ Translation Settings");
+        builder.addText("Translation")
+                .summary("Engine, timeout and retry settings");
 
         builder.addList("Default AI Engine", GeminiConstants.PREF_DEFAULT_ENGINE)
-                .defaultValue(GeminiConstants.DEFAULT_ENGINE)
                 .summary("Choose which AI provider to use by default")
                 .addItem("Gemini (Fast & Free)", GeminiConstants.ENGINE_GEMINI)
-                .addItem("OpenAI GPT-4o", GeminiConstants.ENGINE_OPENAI)
-                .addItem("Claude 3.5", GeminiConstants.ENGINE_CLAUDE);
+                .addItem("OpenAI GPT (Powerful)", GeminiConstants.ENGINE_OPENAI)
+                .addItem("Claude (Balanced)", GeminiConstants.ENGINE_CLAUDE);
 
         builder.addInput("Request Timeout (ms)", GeminiConstants.PREF_TIMEOUT)
                 .defaultValue(String.valueOf(GeminiConstants.DEFAULT_TIMEOUT))
@@ -285,50 +268,57 @@ public class GeminiTranslatePreference implements PluginPreference {
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_NUMBER);
 
-        // ==================== Context & Tone ====================
-        builder.addHeader("🎨 Context & Tone");
+        // ==================== Context & Tone (Simplified) ====================
+        builder.addText("Context & Tone")
+                .summary("Help AI understand your app for better translations");
 
-        builder.addText("Context Playbooks")
-            .summary("Apply curated presets for apps, docs, support, marketing and more")
-            .onClick((pluginUI, item) -> showContextPresetsDialog(pluginUI));
-
-        builder.addText("Tone Presets")
-            .summary("Pick a consistent voice (friendly, legal, marketing, support, technical)")
-            .onClick((pluginUI, item) -> showTonePresetsDialog(pluginUI));
-
-        builder.addInput("App Name", GeminiConstants.PREF_CONTEXT_APP_NAME)
-                .summary("Your application or project name")
-                .valueAsSummary();
-
-        builder.addInput("App Type", GeminiConstants.PREF_CONTEXT_APP_TYPE)
-                .summary("Domain or category (e.g., Shopping, Game)")
-                .valueAsSummary();
-
-        builder.addInput("Target Audience", GeminiConstants.PREF_CONTEXT_AUDIENCE)
-                .summary("Who will use your app")
-                .valueAsSummary();
+        builder.addText("Quick Presets")
+            .summary("Apply ready-made context + tone combinations")
+            .onClick((pluginUI, item) -> showCombinedPresetsDialog(pluginUI));
 
         builder.addInput("Tone & Voice", GeminiConstants.PREF_CONTEXT_TONE)
-            .summary("Writing style (clear, playful, formal). Use tone presets for inspiration.")
+            .summary("Writing style: friendly, formal, playful, technical...")
                 .defaultValue(GeminiConstants.DEFAULT_CONTEXT_TONE)
                 .valueAsSummary();
 
-        builder.addInput("Custom Notes", GeminiConstants.PREF_CONTEXT_NOTES)
-            .summary("Keywords, locale rules, formatting hints for translators")
+        builder.addInput("App Description", GeminiConstants.PREF_CONTEXT_APP_NAME)
+                .summary("App name and type (e.g. 'MyApp - Shopping')")
+                .valueAsSummary();
+
+        builder.addInput("Target Audience", GeminiConstants.PREF_CONTEXT_AUDIENCE)
+                .summary("Who uses your app (e.g. 'teenagers', 'developers')")
+                .valueAsSummary();
+
+        builder.addInput("Extra Notes", GeminiConstants.PREF_CONTEXT_NOTES)
+            .summary("Special rules: locale format, forbidden words, etc.")
             .valueAsSummary();
 
-        // ==================== Debug & Advanced ====================
-        builder.addHeader("🔧 Debug & Advanced");
+        // ==================== Tools ====================
+        builder.addText("Tools")
+                .summary("Diagnostics and debugging");
 
-        builder.addSwitch("Enable Debug Logging", GeminiConstants.PREF_ENABLE_DEBUG)
+        builder.addText("Provider Status")
+                .summary("View all providers health at a glance")
+                .onClick((pluginUI, item) -> showDashboardCard(pluginUI));
+
+        builder.addText("Test Active Provider")
+                .summary("Quick test: " + getActiveProviderName())
+                .onClick((pluginUI, item) -> showInteractiveProviderTest(pluginUI));
+
+        builder.addText("View Logs")
+                .summary("Open MT Manager log viewer")
+                .onClick((pluginUI, item) -> context.openLogViewer());
+
+        builder.addSwitch("Debug Logging", GeminiConstants.PREF_ENABLE_DEBUG)
                 .defaultValue(GeminiConstants.DEFAULT_ENABLE_DEBUG)
                 .summary("Record detailed request info to MT Manager logs");
 
         // ==================== About ====================
-        builder.addHeader("ℹ️ About");
+        builder.addText("About")
+                .summary("");
 
         builder.addText("Plugin Version")
-            .summary(GeminiConstants.PLUGIN_VERSION_NAME)
+            .summary("v" + GeminiConstants.PLUGIN_VERSION_NAME)
             .onClick((pluginUI, item) -> handlePluginVersionTap(pluginUI));
 
         builder.addText("API Documentation")
@@ -339,31 +329,20 @@ public class GeminiTranslatePreference implements PluginPreference {
                 .summary("Ilker Binzet")
                 .url(GeminiConstants.DEVELOPER_GITHUB);
 
-        // ==================== SDK Beta2: Preference Callbacks ====================
-        // onPreferenceChange: React to preference changes in real-time
+        // ==================== Preference Callbacks (SDK 3 Beta2+) ====================
+        // Restore callbacks for dynamic UI control
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
-            String key = preferenceItem.getKey();
-            if (key == null) return;
-            
-            switch (key) {
-                case GeminiConstants.PREF_DEFAULT_ENGINE -> {
-                    // Invalidate provider status cache when engine changes
-                    synchronized (providerStatusCache) {
-                        providerStatusCache.clear();
-                    }
-                    String engineName = getEngineDisplayName((String) newValue);
-                    pluginUI.showToast("Switched to " + engineName);
-                }
-                case GeminiConstants.PREF_ENABLE_DEBUG -> {
-                    boolean enabled = (boolean) newValue;
-                    pluginUI.showToast(enabled ? "Debug logging enabled" : "Debug logging disabled");
+            if (preferenceItem.getKey().equals(GeminiConstants.PREF_ENABLE_DEBUG)) {
+                boolean debugEnabled = (boolean) newValue;
+                if (debugEnabled) {
+                    context.showToast("Debug logging enabled - Check MT Manager logs for details");
                 }
             }
         });
 
-        // onCreated: Initialize UI state when preference screen is created
         builder.onCreated((pluginUI, preferenceScreen) -> {
-            // Preference screen initialized - ready for user interaction
+            // Future: Can add dynamic visibility/enabled state management here
+            // Example: Disable quick test if no providers configured
         });
     }
 
@@ -373,9 +352,9 @@ public class GeminiTranslatePreference implements PluginPreference {
     private String getEngineDisplayName(String engine) {
         if (engine == null) return "Unknown";
         switch (engine) {
-            case GeminiConstants.ENGINE_OPENAI: return "OpenAI GPT-4o";
-            case GeminiConstants.ENGINE_CLAUDE: return "Claude 3.5";
-            default: return "Gemini AI";
+            case GeminiConstants.ENGINE_OPENAI: return "OpenAI GPT";
+            case GeminiConstants.ENGINE_CLAUDE: return "Claude";
+            default: return "Gemini";
         }
     }
 
@@ -418,10 +397,9 @@ public class GeminiTranslatePreference implements PluginPreference {
         ModelCatalogManager.CacheDiagnostics claudeDiagnostics =
                 ModelCatalogManager.inspectCache(preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS);
 
-        boolean darkTheme = pluginUI.isDarkTheme();
-        int primaryTextColor = darkTheme ? Color.WHITE : pluginUI.colorText();
-        int secondaryTextColor = resolveDashboardSecondaryColor(pluginUI, primaryTextColor, darkTheme);
-        int cardColor = adaptCardBackground(COLOR_STATUS_NEUTRAL, darkTheme);
+        int primaryTextColor = GeminiColorTokens.getPrimaryTextColor(pluginUI);
+        int secondaryTextColor = GeminiColorTokens.getSecondaryTextColor(pluginUI);
+        int cardColor = GeminiColorTokens.getCardBackgroundColor(pluginUI);
         String ttlSummary = "Entries expire after " + formatDuration(GeminiConstants.MODEL_CACHE_TTL_MS);
 
         bin.mt.plugin.api.ui.PluginView view = pluginUI
@@ -430,19 +408,19 @@ public class GeminiTranslatePreference implements PluginPreference {
             .addTextView().text("Inspect cached model catalogs, TTL status and cache-bypass controls.")
                 .paddingTopDp(4).textColor(secondaryTextColor)
             .addTextView().text(ttlSummary).paddingTopDp(2).textColor(secondaryTextColor)
-            .addTextView().height(1).widthMatchParent().backgroundColor(pluginUI.colorDivider()).marginVerticalDp(12)
+            .addTextView().height(1).widthMatchParent().backgroundColor(GeminiColorTokens.getDividerColor(pluginUI)).marginVerticalDp(12)
             .addTextView().text("Catalog Diagnostics").bold().textSize(16).textColor(primaryTextColor)
             .addVerticalLayout().paddingTopDp(8).children(column -> column
                 .addVerticalLayout().paddingDp(12).marginBottomDp(10).backgroundColor(cardColor).children(section -> section
-                    .addTextView().text("Gemini Catalog").bold().textColor(COLOR_BRAND_GEMINI)
+                    .addTextView().text("Gemini Catalog").bold().textColor(GeminiColorTokens.getProviderBrandColor(pluginUI, "gemini"))
                     .addTextView().text(formatCacheDiagnostics(geminiDiagnostics)).paddingTopDp(4).textColor(secondaryTextColor)
                 )
                 .addVerticalLayout().paddingDp(12).marginBottomDp(10).backgroundColor(cardColor).children(section -> section
-                    .addTextView().text("OpenAI Catalog").bold().textColor(COLOR_BRAND_OPENAI)
+                    .addTextView().text("OpenAI Catalog").bold().textColor(GeminiColorTokens.getProviderBrandColor(pluginUI, "openai"))
                     .addTextView().text(formatCacheDiagnostics(openAiDiagnostics)).paddingTopDp(4).textColor(secondaryTextColor)
                 )
                 .addVerticalLayout().paddingDp(12).marginBottomDp(10).backgroundColor(cardColor).children(section -> section
-                    .addTextView().text("Claude Catalog").bold().textColor(COLOR_BRAND_CLAUDE)
+                    .addTextView().text("Claude Catalog").bold().textColor(GeminiColorTokens.getProviderBrandColor(pluginUI, "claude"))
                     .addTextView().text(formatCacheDiagnostics(claudeDiagnostics)).paddingTopDp(4).textColor(secondaryTextColor)
                 )
             )
@@ -570,13 +548,12 @@ public class GeminiTranslatePreference implements PluginPreference {
         ProviderStatus activeStatus = getActiveProviderStatus();
         String activeModel = getActiveModelName();
 
-        boolean isDarkTheme = pluginUI.isDarkTheme();
-        int primaryTextColor = isDarkTheme ? Color.WHITE : pluginUI.colorText();
-        int secondaryTextColor = resolveDashboardSecondaryColor(pluginUI, primaryTextColor, isDarkTheme);
-        int activeCardBackground = adaptCardBackground(COLOR_ACTIVE_CARD, isDarkTheme);
-        int geminiCardBackground = adaptCardBackground(geminiStatus.backgroundColor, isDarkTheme);
-        int openAiCardBackground = adaptCardBackground(openaiStatus.backgroundColor, isDarkTheme);
-        int claudeCardBackground = adaptCardBackground(claudeStatus.backgroundColor, isDarkTheme);
+        int primaryTextColor = GeminiColorTokens.getPrimaryTextColor(pluginUI);
+        int secondaryTextColor = GeminiColorTokens.getSecondaryTextColor(pluginUI);
+        int activeCardBackground = GeminiColorTokens.getCardBackgroundEmphasizedColor(pluginUI);
+        int geminiCardBackground = GeminiColorTokens.getCardBackgroundColor(pluginUI);
+        int openAiCardBackground = GeminiColorTokens.getCardBackgroundColor(pluginUI);
+        int claudeCardBackground = GeminiColorTokens.getCardBackgroundColor(pluginUI);
 
         bin.mt.plugin.api.ui.PluginView view = pluginUI
             .buildVerticalLayout()
@@ -584,7 +561,7 @@ public class GeminiTranslatePreference implements PluginPreference {
 
             // Active provider card
             .addVerticalLayout().paddingDp(16).backgroundColor(activeCardBackground).children(subBuilder -> subBuilder
-                .addTextView().text("Active Provider").bold().textColor(activeStatus.accentColor)
+                .addTextView().text("Active Provider").bold().textColor(activeStatus.getAccentColor(pluginUI))
                 .addTextView().text(activeStatus.icon + " " + activeStatus.displayName).paddingTopDp(6).textSize(18).textColor(primaryTextColor)
                 .addTextView().text(activeStatus.title).paddingTopDp(4).textColor(primaryTextColor)
                 .addTextView().text(activeStatus.detail).paddingTopDp(2).textColor(secondaryTextColor)
@@ -599,7 +576,7 @@ public class GeminiTranslatePreference implements PluginPreference {
                     .children(row -> row
                         .addTextView().text(geminiStatus.icon).textSize(28).paddingRightDp(12)
                         .addVerticalLayout().children(col -> col
-                            .addTextView().text(geminiStatus.displayName).bold().textColor(geminiStatus.accentColor)
+                            .addTextView().text(geminiStatus.displayName).bold().textColor(geminiStatus.getAccentColor(pluginUI))
                             .addTextView().text(geminiStatus.title).paddingTopDp(2).textColor(primaryTextColor)
                             .addTextView().text(geminiStatus.detail).paddingTopDp(2).textColor(secondaryTextColor)
                         )
@@ -609,7 +586,7 @@ public class GeminiTranslatePreference implements PluginPreference {
                     .children(row -> row
                         .addTextView().text(openaiStatus.icon).textSize(28).paddingRightDp(12)
                         .addVerticalLayout().children(col -> col
-                            .addTextView().text(openaiStatus.displayName).bold().textColor(openaiStatus.accentColor)
+                            .addTextView().text(openaiStatus.displayName).bold().textColor(openaiStatus.getAccentColor(pluginUI))
                             .addTextView().text(openaiStatus.title).paddingTopDp(2).textColor(primaryTextColor)
                             .addTextView().text(openaiStatus.detail).paddingTopDp(2).textColor(secondaryTextColor)
                         )
@@ -619,7 +596,7 @@ public class GeminiTranslatePreference implements PluginPreference {
                     .children(row -> row
                         .addTextView().text(claudeStatus.icon).textSize(28).paddingRightDp(12)
                         .addVerticalLayout().children(col -> col
-                            .addTextView().text(claudeStatus.displayName).bold().textColor(claudeStatus.accentColor)
+                            .addTextView().text(claudeStatus.displayName).bold().textColor(claudeStatus.getAccentColor(pluginUI))
                             .addTextView().text(claudeStatus.title).paddingTopDp(2).textColor(primaryTextColor)
                             .addTextView().text(claudeStatus.detail).paddingTopDp(2).textColor(secondaryTextColor)
                         )
@@ -692,6 +669,45 @@ public class GeminiTranslatePreference implements PluginPreference {
             .show();
     }
 
+    private void showCombinedPresetsDialog(bin.mt.plugin.api.ui.PluginUI pluginUI) {
+        // Build combined list: context presets + separator + tone presets
+        int totalItems = CONTEXT_PRESETS.length + 1 + TONE_PRESETS.length;
+        CharSequence[] labels = new CharSequence[totalItems];
+        
+        // Context presets section
+        for (int i = 0; i < CONTEXT_PRESETS.length; i++) {
+            ContextPreset p = CONTEXT_PRESETS[i];
+            labels[i] = "\uD83D\uDCCB " + p.title + "\n" + p.subtitle;
+        }
+        // Separator
+        labels[CONTEXT_PRESETS.length] = "── Tone Only ──";
+        // Tone presets
+        for (int i = 0; i < TONE_PRESETS.length; i++) {
+            TonePreset t = TONE_PRESETS[i];
+            labels[CONTEXT_PRESETS.length + 1 + i] = "\uD83C\uDFA8 " + t.name + "\n" + t.description;
+        }
+
+        pluginUI.buildDialog()
+                .setTitle("Quick Presets")
+                .setItems(labels, (dialog, which) -> {
+                    if (which < CONTEXT_PRESETS.length) {
+                        // Apply full context preset (sets all fields)
+                        applyContextPreset(CONTEXT_PRESETS[which]);
+                        context.showToast(CONTEXT_PRESETS[which].title + " applied");
+                    } else if (which > CONTEXT_PRESETS.length) {
+                        // Apply tone-only preset
+                        TonePreset tone = TONE_PRESETS[which - CONTEXT_PRESETS.length - 1];
+                        preferences.edit()
+                                .putString(GeminiConstants.PREF_CONTEXT_TONE, tone.storedValue)
+                                .apply();
+                        context.showToast("Tone: " + tone.name);
+                    }
+                    dialog.dismiss();
+                })
+                .setNegativeButton("{cancel}", null)
+                .show();
+    }
+
     private void showContextPresetsDialog(bin.mt.plugin.api.ui.PluginUI pluginUI) {
         CharSequence[] presetLabels = new CharSequence[CONTEXT_PRESETS.length];
         for (int i = 0; i < CONTEXT_PRESETS.length; i++) {
@@ -713,8 +729,12 @@ public class GeminiTranslatePreference implements PluginPreference {
 
     private void applyContextPreset(ContextPreset preset) {
         SharedPreferences.Editor editor = preferences.edit();
-        editor.putString(GeminiConstants.PREF_CONTEXT_APP_NAME, preset.appName);
-        editor.putString(GeminiConstants.PREF_CONTEXT_APP_TYPE, preset.appType);
+        // Merge appName + appType into single "App Description" field
+        String appDesc = preset.appName;
+        if (preset.appType != null && !preset.appType.isEmpty()) {
+            appDesc = appDesc + " - " + preset.appType;
+        }
+        editor.putString(GeminiConstants.PREF_CONTEXT_APP_NAME, appDesc);
         editor.putString(GeminiConstants.PREF_CONTEXT_AUDIENCE, preset.audience);
         editor.putString(GeminiConstants.PREF_CONTEXT_TONE, preset.tone);
         editor.putString(GeminiConstants.PREF_CONTEXT_NOTES, preset.notes);
@@ -762,7 +782,6 @@ public class GeminiTranslatePreference implements PluginPreference {
         Pattern keyPattern = PATTERN_GEMINI_API_KEY;
         String displayName = "Gemini AI";
         String icon = "✨";
-        int accentColor = COLOR_BRAND_GEMINI;
 
         switch (providerKey) {
             case "openai":
@@ -770,14 +789,12 @@ public class GeminiTranslatePreference implements PluginPreference {
                 keyPattern = PATTERN_OPENAI_API_KEY;
                 displayName = "OpenAI GPT-4o";
                 icon = "🧠";
-                accentColor = COLOR_BRAND_OPENAI;
                 break;
             case "claude":
                 prefKey = GeminiConstants.PREF_CLAUDE_API_KEY;
                 keyPattern = PATTERN_CLAUDE_API_KEY;
                 displayName = "Claude 3.5";
                 icon = "🎭";
-                accentColor = COLOR_BRAND_CLAUDE;
                 break;
             default:
                 break;
@@ -795,8 +812,7 @@ public class GeminiTranslatePreference implements PluginPreference {
                 icon,
                 "Not configured",
                 "Add your API key to activate " + displayName,
-                COLOR_STATUS_NEUTRAL,
-                accentColor
+                "neutral"
             );
         }
 
@@ -807,8 +823,7 @@ public class GeminiTranslatePreference implements PluginPreference {
                 icon,
                 "Invalid API key",
                 "The key format looks wrong. Re-copy it from the provider dashboard.",
-                COLOR_STATUS_ERROR,
-                accentColor
+                "error"
             );
         }
 
@@ -818,8 +833,7 @@ public class GeminiTranslatePreference implements PluginPreference {
             icon,
             "Ready to use",
             "Key active (" + formatKeyHint(keyValue) + ")",
-            COLOR_STATUS_READY,
-            accentColor
+            "ready"
         );
     }
 
@@ -867,41 +881,6 @@ public class GeminiTranslatePreference implements PluginPreference {
         return "••••" + key.substring(key.length() - visible);
     }
 
-    private int resolveDashboardSecondaryColor(bin.mt.plugin.api.ui.PluginUI pluginUI,
-                                               int primaryColor,
-                                               boolean darkTheme) {
-        int secondary = pluginUI.colorTextSecondary();
-        if (!darkTheme) {
-            return secondary;
-        }
-        float contrast = Math.abs(calculateLuminance(primaryColor) - calculateLuminance(secondary));
-        float blendRatio = contrast < 0.4f ? 0.6f : 0.45f;
-        return blendColors(secondary, primaryColor, blendRatio);
-    }
-
-    private int adaptCardBackground(int baseColor, boolean darkTheme) {
-        if (!darkTheme) {
-            return baseColor;
-        }
-        return blendColors(baseColor, Color.BLACK, 0.65f);
-    }
-
-    private static int blendColors(int startColor, int endColor, float ratio) {
-        float inverseRatio = 1f - ratio;
-        int a = Math.round(Color.alpha(startColor) * inverseRatio + Color.alpha(endColor) * ratio);
-        int r = Math.round(Color.red(startColor) * inverseRatio + Color.red(endColor) * ratio);
-        int g = Math.round(Color.green(startColor) * inverseRatio + Color.green(endColor) * ratio);
-        int b = Math.round(Color.blue(startColor) * inverseRatio + Color.blue(endColor) * ratio);
-        return Color.argb(a, r, g, b);
-    }
-
-    private static float calculateLuminance(int color) {
-        double r = Color.red(color) / 255.0;
-        double g = Color.green(color) / 255.0;
-        double b = Color.blue(color) / 255.0;
-        r = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
-        g = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
-        b = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
-        return (float)(0.2126 * r + 0.7152 * g + 0.0722 * b);
-    }
+    // Color helper methods removed - now using GeminiColorTokens
+    // calculateLuminance, blendColors, resolveDashboardSecondaryColor moved to GeminiColorTokens
 }

@@ -35,14 +35,14 @@ public class OpenAITranslatePreference implements PluginPreference {
                 .subtitle(localString.get("pref_openai_subtitle"));
 
         // Overview
-        builder.addHeader("{pref_openai_header_overview}");
+        builder.addText("{pref_openai_header_overview}").summary("");
         builder.addText("{pref_openai_overview_title}")
                 .summary("{pref_openai_overview_summary}");
         builder.addText("{pref_openai_limits}")
                 .summary("{pref_openai_limits_summary}");
 
         // API key configuration
-        builder.addHeader("{pref_openai_header_api}");
+        builder.addText("{pref_openai_header_api}").summary("");
         builder.addInput("{pref_openai_api_key_title}", GeminiConstants.PREF_OPENAI_API_KEY)
                 .defaultValue(GeminiConstants.DEFAULT_API_KEY)
                 .summary("{pref_openai_api_key_summary}")
@@ -62,14 +62,17 @@ public class OpenAITranslatePreference implements PluginPreference {
                 .url(GeminiConstants.URL_OPENAI_KEYS);
 
         // Model and endpoint
-        builder.addHeader("{pref_openai_header_model}");
+        builder.addText("{pref_openai_header_model}").summary("");
         builder.addList("{pref_openai_model_title}", GeminiConstants.PREF_OPENAI_MODEL)
-                .defaultValue(GeminiConstants.DEFAULT_OPENAI_MODEL)
                 .summary("{pref_openai_model_summary}")
-                .addItem("{pref_openai_model_gpt4omini}", "gpt-4o-mini")
-                .addItem("{pref_openai_model_gpt4o}", "gpt-4o")
-                .addItem("{pref_openai_model_o1mini}", "o1-mini")
-                .addItem("{pref_openai_model_o1}", "o1");
+                .addItem("⭐ GPT-4.1 Mini (Recommended)", GeminiConstants.OPENAI_MODEL_GPT41_MINI)
+                .addItem("GPT-5.2 (Latest)", GeminiConstants.OPENAI_MODEL_GPT52)
+                .addItem("GPT-5.1", GeminiConstants.OPENAI_MODEL_GPT51)
+                .addItem("GPT-4.1 (1M Context)", GeminiConstants.OPENAI_MODEL_GPT41)
+                .addItem("GPT-4o", GeminiConstants.OPENAI_MODEL_GPT4O)
+                .addItem("GPT-4o Mini", GeminiConstants.OPENAI_MODEL_GPT4O_MINI)
+                .addItem("o3 (Reasoning)", GeminiConstants.OPENAI_MODEL_O3)
+                .addItem("o4-mini (Reasoning)", GeminiConstants.OPENAI_MODEL_O4_MINI);
 
         builder.addInput("{pref_openai_endpoint_title}", GeminiConstants.PREF_OPENAI_ENDPOINT)
                 .defaultValue(GeminiConstants.DEFAULT_OPENAI_ENDPOINT)
@@ -77,7 +80,7 @@ public class OpenAITranslatePreference implements PluginPreference {
                 .valueAsSummary();
 
         // Helpful resources
-        builder.addHeader("{pref_openai_header_docs}");
+        builder.addText("{pref_openai_header_docs}").summary("");
         builder.addText("{pref_openai_docs}")
                 .summary("{pref_openai_docs_summary}")
                 .url(GeminiConstants.URL_OPENAI_DOCS);

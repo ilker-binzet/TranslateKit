@@ -79,12 +79,12 @@ mtPlugin {
     /**
      * 插件版本号，低版本插件无法覆盖安装高版本插件
      */
-    versionCode = 300
+    versionCode = 400
 
     /**
      * 插件版本名称
      */
-    versionName = "1.0.0"
+    versionName = "2.0.0"
 
     /**
      * 插件名称
@@ -94,7 +94,7 @@ mtPlugin {
     /**
      * 插件描述
      */
-    description = "Multi-provider AI translation hub for Gemini, OpenAI, and Claude"
+    description = "Multi-provider AI translation hub for Gemini, OpenAI, Claude, and Google Cloud Translation"
 
     /**
      * 主设置界面，可不填

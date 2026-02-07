@@ -39,7 +39,8 @@ public class GeminiProviderPreference implements PluginPreference {
         builder.setLocalString(localString);
 
         // ==================== API Configuration ====================
-        builder.addHeader("🔑 API Configuration");
+        builder.addText("🔑 API Configuration")
+                .summary("");
 
         builder.addInput("API Key", GeminiConstants.PREF_API_KEY)
                 .defaultValue(GeminiConstants.DEFAULT_API_KEY)
@@ -61,10 +62,10 @@ public class GeminiProviderPreference implements PluginPreference {
                 .url(GeminiConstants.URL_GET_API_KEY);
 
         // ==================== Model Selection ====================
-        builder.addHeader("✨ Model Selection");
+        builder.addText("✨ Model Selection")
+                .summary("");
 
         var geminiModelList = builder.addList("Gemini Model", GeminiConstants.PREF_MODEL_NAME)
-                .defaultValue(GeminiConstants.DEFAULT_MODEL)
                 .summary("Choose AI model (Gemini 2.5 Flash recommended)");
 
         boolean disableCache = preferences.getBoolean(GeminiConstants.PREF_DEBUG_DISABLE_MODEL_CACHE, false);
@@ -72,11 +73,11 @@ public class GeminiProviderPreference implements PluginPreference {
                 ? Collections.emptyList()
                 : ModelCatalogManager.loadModelCache(preferences, GeminiConstants.PREF_CACHE_GEMINI_MODELS);
         if (cachedGeminiModels == null || cachedGeminiModels.isEmpty()) {
-            geminiModelList.addItem("Gemini 2.5 Flash (Recommended)", GeminiConstants.MODEL_GEMINI_25_FLASH)
-                    .addItem("Gemini 2.5 Pro (Most Powerful)", GeminiConstants.MODEL_GEMINI_25_PRO)
-                    .addItem("Gemini 2.0 Flash Thinking (Reasoning)", GeminiConstants.MODEL_GEMINI_20_FLASH_THINKING)
-                    .addItem("Gemini 2.0 Flash (Stable)", GeminiConstants.MODEL_GEMINI_20_FLASH)
-                    .addItem("Gemini 2.0 Pro (Stable Pro)", GeminiConstants.MODEL_GEMINI_20_PRO);
+            geminiModelList.addItem("Gemini 2.5 Flash ⭐ (Stable, Recommended)", GeminiConstants.MODEL_GEMINI_25_FLASH)
+                    .addItem("Gemini 3 Flash (Preview, Pro-level)", GeminiConstants.MODEL_GEMINI_3_FLASH)
+                    .addItem("Gemini 3 Pro (Preview, Most Powerful)", GeminiConstants.MODEL_GEMINI_3_PRO)
+                    .addItem("Gemini 2.5 Pro (Advanced Reasoning)", GeminiConstants.MODEL_GEMINI_25_PRO)
+                    .addItem("Gemini 2.5 Flash-Lite (Ultra Fast)", GeminiConstants.MODEL_GEMINI_25_FLASH_LITE);
         } else {
             for (ModelCatalogManager.ModelInfo info : cachedGeminiModels) {
                 geminiModelList.addItem(formatModelLabel(info), info.id);
@@ -88,7 +89,8 @@ public class GeminiProviderPreference implements PluginPreference {
                 .onClick((pluginUI, item) -> refreshGeminiModels(pluginUI));
 
         // ==================== Usage & Limits ====================
-        builder.addHeader("📊 Usage & Limits");
+        builder.addText("📊 Usage & Limits")
+                .summary("");
 
         builder.addText("Free Tier Limits")
                 .summary("2000 requests/day (Flash) | 100 requests/day (Pro) - Completely FREE!");
@@ -98,7 +100,8 @@ public class GeminiProviderPreference implements PluginPreference {
                 .url(GeminiConstants.URL_API_DOCS);
 
         // ==================== Test & Debug ====================
-        builder.addHeader("🔧 Test & Debug");
+        builder.addText("🔧 Test & Debug")
+                .summary("");
 
         builder.addText("Quick Test")
                 .summary("Test translation with a simple phrase")
@@ -108,19 +111,12 @@ public class GeminiProviderPreference implements PluginPreference {
                 .summary("Open MT Manager log viewer")
                 .onClick((pluginUI, item) -> context.openLogViewer());
 
-        // ==================== SDK Beta2: Preference Callbacks ====================
-        // onPreferenceChange: React to model changes in real-time
+        // SDK Beta2+ callbacks enabled (minMTVersion >= 26020300)
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
             String key = preferenceItem.getKey();
-            if (GeminiConstants.PREF_MODEL_NAME.equals(key)) {
-                String modelName = (String) newValue;
-                pluginUI.showToast("Gemini model: " + modelName);
+            if (GeminiConstants.PREF_API_KEY.equals(key)) {
+                context.showToast("API key updated. Re-open settings to refresh status.");
             }
-        });
-
-        // onCreated: Log screen initialization for debugging
-        builder.onCreated((pluginUI, preferenceScreen) -> {
-            // Provider preference screen initialized
         });
     }
 

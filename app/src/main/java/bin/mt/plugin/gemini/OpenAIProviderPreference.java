@@ -39,7 +39,8 @@ public class OpenAIProviderPreference implements PluginPreference {
         builder.setLocalString(localString);
 
         // ==================== API Configuration ====================
-        builder.addHeader("🔑 API Configuration");
+        builder.addText("🔑 API Configuration")
+                .summary("");
 
         builder.addInput("API Key", GeminiConstants.PREF_OPENAI_API_KEY)
                 .defaultValue(GeminiConstants.DEFAULT_API_KEY)
@@ -61,24 +62,24 @@ public class OpenAIProviderPreference implements PluginPreference {
                 .url("https://platform.openai.com/api-keys");
 
         // ==================== Model Selection ====================
-        builder.addHeader("🧠 Model Selection");
+        builder.addText("🧠 Model Selection").summary("");
 
         var openAiModelList = builder.addList("GPT Model", GeminiConstants.PREF_OPENAI_MODEL)
-            .defaultValue(GeminiConstants.DEFAULT_OPENAI_MODEL)
-            .summary("Choose GPT model (GPT-5 Mini recommended)");
+            .summary("Choose GPT model (GPT-4.1 Mini recommended)");
 
         boolean disableCache = preferences.getBoolean(GeminiConstants.PREF_DEBUG_DISABLE_MODEL_CACHE, false);
         java.util.List<ModelCatalogManager.ModelInfo> cachedOpenAiModels = disableCache
             ? Collections.emptyList()
             : ModelCatalogManager.loadModelCache(preferences, GeminiConstants.PREF_CACHE_OPENAI_MODELS);
         if (cachedOpenAiModels == null || cachedOpenAiModels.isEmpty()) {
-            openAiModelList.addItem("GPT-5 (Most Powerful)", "gpt-5")
-                    .addItem("GPT-5 Mini (Fast, Recommended)", "gpt-5-mini")
+            openAiModelList.addItem("GPT-4.1 Mini ⭐ (Fast, Recommended)", "gpt-4.1-mini")
+                    .addItem("GPT-5.2 (Most Powerful)", "gpt-5.2")
+                    .addItem("GPT-5.1 (Flagship)", "gpt-5.1")
+                    .addItem("GPT-4.1 (1M Context)", "gpt-4.1")
                     .addItem("GPT-4o (Omni, Multimodal)", "gpt-4o")
                     .addItem("GPT-4o Mini (Economical)", "gpt-4o-mini")
                     .addItem("o3 (Advanced Reasoning)", "o3")
-                    .addItem("o3-mini (Reasoning, Fast)", "o3-mini")
-                    .addItem("o1 (Reasoning)", "o1");
+                    .addItem("o4-mini (Reasoning, Fast)", "o4-mini");
         } else {
             for (ModelCatalogManager.ModelInfo info : cachedOpenAiModels) {
                 openAiModelList.addItem(formatModelLabel(info), info.id);
@@ -90,7 +91,8 @@ public class OpenAIProviderPreference implements PluginPreference {
             .onClick((pluginUI, item) -> refreshOpenAiModels(pluginUI));
 
         // ==================== Usage & Limits ====================
-        builder.addHeader("📊 Usage & Limits");
+        builder.addText("📊 Usage & Limits")
+                .summary("");
 
         builder.addText("Pricing Information")
                 .summary("GPT-4o: $2.50/1M input tokens | GPT-4o Mini: $0.15/1M tokens - Pay as you go");
@@ -100,7 +102,8 @@ public class OpenAIProviderPreference implements PluginPreference {
                 .url("https://platform.openai.com/docs/overview");
 
         // ==================== Test & Debug ====================
-        builder.addHeader("🔧 Test & Debug");
+        builder.addText("🔧 Test & Debug")
+                .summary("");
 
         builder.addText("Quick Test")
                 .summary("Test translation with a simple phrase")
@@ -110,19 +113,12 @@ public class OpenAIProviderPreference implements PluginPreference {
                 .summary("Open MT Manager log viewer")
                 .onClick((pluginUI, item) -> context.openLogViewer());
 
-        // ==================== SDK Beta2: Preference Callbacks ====================
-        // onPreferenceChange: React to model changes in real-time
+        // SDK Beta2+ callbacks enabled (minMTVersion >= 26020300)
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
             String key = preferenceItem.getKey();
-            if (GeminiConstants.PREF_OPENAI_MODEL.equals(key)) {
-                String modelName = (String) newValue;
-                pluginUI.showToast("OpenAI model: " + modelName);
+            if (GeminiConstants.PREF_OPENAI_API_KEY.equals(key)) {
+                context.showToast("API key updated. Re-open settings to refresh status.");
             }
-        });
-
-        // onCreated: Log screen initialization for debugging
-        builder.onCreated((pluginUI, preferenceScreen) -> {
-            // Provider preference screen initialized
         });
     }
 
@@ -152,12 +148,8 @@ public class OpenAIProviderPreference implements PluginPreference {
             return;
         }
 
-        // Show progress dialog
-        bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog = 
-            new bin.mt.plugin.api.ui.dialog.LoadingDialog(pluginUI)
-                .setMessage("Translating...")
-                .setSecondaryMessage("Testing: 'Hello' → Turkish")
-                .show();
+        // Show toast instead of LoadingDialog for backward compatibility
+        context.showToast("🔄 Translating...");
         
         new Thread(() -> {
             try {
@@ -176,8 +168,6 @@ public class OpenAIProviderPreference implements PluginPreference {
                 httpRequest.header("Authorization", "Bearer " + apiKey);
                 httpRequest.jsonBody(request);
                 org.json.JSONObject response = httpRequest.executeToJson();
-
-                runOnMainThread(loadingDialog::dismiss);
 
                 if (response.has("choices")) {
                     String result = response.getJSONArray("choices")
@@ -198,7 +188,6 @@ public class OpenAIProviderPreference implements PluginPreference {
                             .show());
                 }
             } catch (Exception e) {
-                runOnMainThread(loadingDialog::dismiss);
                 runOnMainThread(() -> pluginUI.buildDialog()
                         .setTitle("❌ Test Failed")
                         .setMessage("Error: " + e.getMessage())

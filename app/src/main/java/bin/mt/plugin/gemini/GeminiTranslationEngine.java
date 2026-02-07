@@ -757,6 +757,7 @@ public class GeminiTranslationEngine extends BaseTranslationEngine {
 
     private String buildUserContextDirective(SharedPreferences prefs) {
         String appName = prefs.getString(GeminiConstants.PREF_CONTEXT_APP_NAME, "");
+        // PREF_CONTEXT_APP_TYPE is deprecated — merged into APP_NAME as "App Description"
         String appType = prefs.getString(GeminiConstants.PREF_CONTEXT_APP_TYPE, "");
         String audience = prefs.getString(GeminiConstants.PREF_CONTEXT_AUDIENCE, "");
         String tone = prefs.getString(GeminiConstants.PREF_CONTEXT_TONE, GeminiConstants.DEFAULT_CONTEXT_TONE);
@@ -764,10 +765,11 @@ public class GeminiTranslationEngine extends BaseTranslationEngine {
 
         StringBuilder sb = new StringBuilder();
         if (!isNullOrEmpty(appName)) {
-            sb.append("App Name: ").append(appName).append(". ");
+            sb.append("App: ").append(appName).append(". ");
         }
         if (!isNullOrEmpty(appType)) {
-            sb.append("App Type: ").append(appType).append(". ");
+            // Legacy: still read if user has old data
+            sb.append("Type: ").append(appType).append(". ");
         }
         if (!isNullOrEmpty(audience)) {
             sb.append("Audience: ").append(audience).append(". ");
