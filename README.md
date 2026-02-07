@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="img/icon.png" width="120" alt="TranslateKit Logo">
+<img src="icon.png" width="120" alt="TranslateKit Logo">
 
 # TranslateKit
 
