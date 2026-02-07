@@ -1,6 +1,6 @@
 @echo off
 echo ====================================
-echo  AI Translation Hub by Ilker Binzet
+echo  TranslateKit by Ilker Binzet
 echo  Build Script
 echo ====================================
 echo.

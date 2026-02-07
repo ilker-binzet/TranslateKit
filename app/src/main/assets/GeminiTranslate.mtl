@@ -1,8 +1,8 @@
-# AI Translation Hub - English Strings
+# TranslateKit - English Strings
 
 # Plugin Information
-plugin_name: AI Translation Hub
-plugin_description: Unified AI translation hub for Gemini, OpenAI, and Claude (FREE tiers available)
+plugin_name: TranslateKit
+plugin_description: Multi-provider translation for Gemini, OpenAI, and Claude (FREE tiers available)
 
 # Preference Screen
 pref_header_quick_actions: ⚡ Quick Actions ⚡━━━━━━━━━━━━━━━━━━
@@ -17,9 +17,9 @@ pref_quick_select_model_summary: Fast access to Gemini model options
 pref_quick_toggle_debug: 🛠️ Toggle Debug Mode
 pref_quick_toggle_debug_summary: Enable/disable debug logging quickly
 
-pref_header_main: 🌟 AI Translation Hub
+pref_header_main: TranslateKit
 pref_plugin_name: Plugin Name
-pref_plugin_description: Multi-provider AI translation powered by Gemini 3, GPT-5, and Claude 4.5 (v0.2.0 - January 2026)
+pref_plugin_description: Multi-provider translation powered by Gemini 3, GPT-5, and Claude 4.5
 pref_dashboard_card_title: 📊 Quick Dashboard
 pref_dashboard_card_summary: Tap to view current status and active configurations
 pref_active_provider_title: 🎯 Active Provider

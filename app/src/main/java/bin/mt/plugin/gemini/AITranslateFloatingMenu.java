@@ -21,7 +21,7 @@ import bin.mt.plugin.api.util.AsyncTask;
  * Shows a floating menu when text is selected in the editor,
  * allowing quick AI-powered translation of the selected text.
  * 
- * @author AI Translation Hub
+ * @author TranslateKit
  * @version 1.0.0
  */
 public class AITranslateFloatingMenu extends BaseTextEditorFloatingMenu {

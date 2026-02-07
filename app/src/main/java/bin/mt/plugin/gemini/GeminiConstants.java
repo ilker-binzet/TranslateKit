@@ -1,10 +1,10 @@
 package bin.mt.plugin.gemini;
 
 /**
- * Constants for Gemini AI Translation Plugin
+ * Constants for TranslateKit plugin
  *
  * @author MT Manager Plugin Developer
- * @version 2.0.0
+ * @version 0.1.0
  * @updated February 2026 - Latest AI models & SDK beta3
  */
 public class GeminiConstants {
@@ -170,9 +170,9 @@ public class GeminiConstants {
 
     // ==================== Plugin Metadata ====================
 
-    public static final String PLUGIN_ID = "mt.plugin.ai.hub";
-    public static final int PLUGIN_VERSION_CODE = 400;
-    public static final String PLUGIN_VERSION_NAME = "2.0.0";
+    public static final String PLUGIN_ID = "mt.plugin.translatekit";
+    public static final int PLUGIN_VERSION_CODE = 1;
+    public static final String PLUGIN_VERSION_NAME = "0.1.0";
 
     // ==================== API Key Pattern ====================
 

@@ -37,7 +37,7 @@ import bin.mt.plugin.api.util.AsyncTask;
  * providing a full translation dialog with engine selection,
  * source/target language options, and live translation preview.
  * 
- * @author AI Translation Hub
+ * @author TranslateKit
  * @version 1.0.0
  */
 public class AITranslateToolMenu extends BaseTextEditorToolMenu {
