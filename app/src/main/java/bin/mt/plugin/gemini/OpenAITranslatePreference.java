@@ -93,6 +93,7 @@ public class OpenAITranslatePreference implements PluginPreference {
     private void validateApiKey() {
         SharedPreferences prefs = context.getPreferences();
         String apiKey = prefs.getString(GeminiConstants.PREF_OPENAI_API_KEY, "");
+        if (apiKey != null) apiKey = apiKey.trim();
         if (apiKey == null || apiKey.isEmpty()) {
             context.showToast(localString.get("error_openai_no_api_key"));
             return;
@@ -106,7 +107,7 @@ public class OpenAITranslatePreference implements PluginPreference {
     }
 
     private boolean isValidApiKey(String apiKey) {
-        return Pattern.matches(GeminiConstants.OPENAI_API_KEY_PATTERN, apiKey);
+        return apiKey != null && Pattern.matches(GeminiConstants.OPENAI_API_KEY_PATTERN, apiKey.trim());
     }
 
     private String describeKeyStatus(String apiKey) {
