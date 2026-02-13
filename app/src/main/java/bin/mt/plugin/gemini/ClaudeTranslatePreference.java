@@ -90,6 +90,7 @@ public class ClaudeTranslatePreference implements PluginPreference {
     private void validateApiKey() {
         SharedPreferences prefs = context.getPreferences();
         String apiKey = prefs.getString(GeminiConstants.PREF_CLAUDE_API_KEY, "");
+        if (apiKey != null) apiKey = apiKey.trim();
         if (apiKey == null || apiKey.isEmpty()) {
             context.showToast(localString.get("error_claude_no_api_key"));
             return;
@@ -103,7 +104,7 @@ public class ClaudeTranslatePreference implements PluginPreference {
     }
 
     private boolean isValidApiKey(String apiKey) {
-        return Pattern.matches(GeminiConstants.CLAUDE_API_KEY_PATTERN, apiKey);
+        return apiKey != null && Pattern.matches(GeminiConstants.CLAUDE_API_KEY_PATTERN, apiKey.trim());
     }
 
     private String describeKeyStatus(String apiKey) {

@@ -284,23 +284,25 @@ public class ModelCatalogManager {
         if (lower.contains("audio") || lower.contains("embedding") || lower.contains("embedding")) {
             return false;
         }
-        if (lower.startsWith("gpt-4") || lower.startsWith("gpt-3.5") || lower.startsWith("o3")) {
+        if (lower.startsWith("gpt-4") || lower.startsWith("gpt-3.5") || lower.startsWith("o3") || lower.startsWith("o4")) {
             return true;
         }
         return lower.startsWith("gpt-5") || lower.startsWith("gpt-4o");
     }
 
     private static boolean isRecommendedOpenAiModel(String id) {
-        return "gpt-4o".equals(id) || id.startsWith("gpt-4o-mini") || id.startsWith("gpt-4.1");
+        return id.startsWith("gpt-4.1-mini") || id.startsWith("gpt-4.1") || "gpt-4o".equals(id);
     }
 
     private static int priorityForOpenAi(String id) {
         if (id == null) {
             return 0;
         }
-        if (id.startsWith("gpt-4o")) return 100;
-        if (id.startsWith("gpt-4.1")) return 95;
-        if (id.startsWith("gpt-5")) return 90;
+        if (id.startsWith("gpt-4.1-mini")) return 120;
+        if (id.startsWith("gpt-4.1")) return 110;
+        if (id.startsWith("gpt-5")) return 100;
+        if (id.startsWith("gpt-4o")) return 90;
+        if (id.startsWith("o4-mini")) return 85;
         if (id.startsWith("o3")) return 80;
         if (id.startsWith("gpt-4-turbo")) return 70;
         if (id.startsWith("gpt-3.5")) return 40;
@@ -311,10 +313,12 @@ public class ModelCatalogManager {
         if (TextUtils.isEmpty(id)) {
             return "OpenAI Model";
         }
-        if ("gpt-4o".equals(id)) return "GPT-4o (Recommended)";
-        if (id.startsWith("gpt-4o-mini")) return "GPT-4o Mini";
+        if (id.startsWith("gpt-4.1-mini")) return "GPT-4.1 Mini (Recommended)";
         if (id.startsWith("gpt-4.1")) return "GPT-4.1";
+        if ("gpt-4o".equals(id)) return "GPT-4o";
+        if (id.startsWith("gpt-4o-mini")) return "GPT-4o Mini";
         if (id.startsWith("gpt-5")) return "GPT-5";
+        if (id.startsWith("o4-mini")) return "o4-mini Reasoning";
         if (id.startsWith("o3")) return "o3 Reasoning";
         if (id.startsWith("gpt-4-turbo")) return "GPT-4 Turbo";
         if (id.startsWith("gpt-3.5")) return "GPT-3.5 Turbo";
@@ -326,21 +330,29 @@ public class ModelCatalogManager {
     }
 
     private static boolean isRecommendedClaudeModel(String id) {
-        return id != null && (id.startsWith("claude-3-5-sonnet") || id.startsWith("claude-3-5-haiku"));
+        return id != null && (id.contains("sonnet-4") || id.contains("haiku-4"));
     }
 
     private static int priorityForClaude(String id) {
         if (id == null) return 0;
-        if (id.startsWith("claude-3-5-sonnet")) return 120;
-        if (id.startsWith("claude-3-5-haiku")) return 110;
-        if (id.startsWith("claude-3-opus")) return 90;
-        if (id.startsWith("claude-3-sonnet")) return 80;
-        if (id.startsWith("claude-3-haiku")) return 70;
+        if (id.contains("sonnet-4-5")) return 130;
+        if (id.contains("haiku-4-5")) return 120;
+        if (id.contains("opus-4")) return 110;
+        if (id.contains("sonnet-4")) return 100;
+        if (id.startsWith("claude-3-5-sonnet")) return 90;
+        if (id.startsWith("claude-3-5-haiku")) return 80;
+        if (id.startsWith("claude-3-opus")) return 70;
+        if (id.startsWith("claude-3-sonnet")) return 60;
+        if (id.startsWith("claude-3-haiku")) return 50;
         return 10;
     }
 
     private static String formatClaudeName(String id) {
         if (TextUtils.isEmpty(id)) return "Claude Model";
+        if (id.contains("sonnet-4-5")) return "Claude Sonnet 4.5 (Recommended)";
+        if (id.contains("haiku-4-5")) return "Claude Haiku 4.5";
+        if (id.contains("opus-4")) return "Claude Opus 4";
+        if (id.contains("sonnet-4")) return "Claude Sonnet 4";
         if (id.startsWith("claude-3-5-sonnet")) return "Claude 3.5 Sonnet";
         if (id.startsWith("claude-3-5-haiku")) return "Claude 3.5 Haiku";
         if (id.startsWith("claude-3-opus")) return "Claude 3 Opus";
@@ -372,6 +384,8 @@ public class ModelCatalogManager {
         if (name.contains("2.5-flash") && !name.contains("lite")) return 130;
         if (name.contains("2.5-flash-lite")) return 120;
         if (name.contains("2.5-pro")) return 110;
+        if (name.contains("3") && name.contains("flash")) return 105;
+        if (name.contains("3") && name.contains("pro")) return 100;
         if (name.contains("2.0-flash")) return 80;
         return 10;
     }
