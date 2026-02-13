@@ -7,7 +7,7 @@
 **Multi-provider AI translation plugin for [MT Manager](https://mt2.cn)**
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](https://github.com/ilker-binzet/TranslateKit/releases)
-[![SDK](https://img.shields.io/badge/MT%20Plugin%20SDK-v3%20beta3-purple?style=flat-square)](https://gitee.com/AntlersMa/mt-plugin-sdk)
+[![SDK](https://img.shields.io/badge/MT%20Plugin%20SDK-v3%20beta3-purple?style=flat-square)]([https://gitee.com/AntlersMa/mt-plugin-sdk](https://gitee.com/L-JINBIN/mt-plugin-v3-demo))
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square)](#)
 
