@@ -7,7 +7,7 @@
 **Multi-provider AI translation plugin for [MT Manager](https://mt2.cn)**
 
 [![Version](https://img.shields.io/badge/version-0.2.0--alpha-blue?style=flat-square)](https://github.com/ilker-binzet/TranslateKit/releases)
-[![SDK](https://img.shields.io/badge/MT%20Plugin%20SDK-v3%20beta3-purple?style=flat-square)](https://gitee.com/AntlersMa/mt-plugin-sdk)
+[![SDK](https://img.shields.io/badge/MT%20Plugin%20SDK-v3%20beta3-purple?style=flat-square)](https://gitee.com/L-JINBIN/mt-plugin-v3-demo)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square)](#)
 
@@ -28,22 +28,25 @@ The plugin supports three AI providers and Google Cloud Translation, with built-
 ## Features
 
 ### Multi-Provider Architecture
-| Provider | Models | Free Tier |
-|----------|--------|-----------|
-| **Google Gemini** | Gemini 3 Pro/Flash, 2.5 Flash/Pro, 2.5 Flash-Lite | 2000 req/day (Flash) |
-| **OpenAI** | GPT-4o, GPT-4o Mini, o3 Mini | Pay-as-you-go |
-| **Anthropic Claude** | Claude 4.5 Sonnet, 4 Opus/Sonnet, 3.5 Sonnet/Haiku | Pay-as-you-go |
-| **Google Cloud** | Neural Machine Translation | 500K chars/month free |
+
+| Provider                   | Models                                             | Free Tier             |
+| -------------------------- | -------------------------------------------------- | --------------------- |
+| **Google Gemini**    | Gemini 3 Pro/Flash, 2.5 Flash/Pro, 2.5 Flash-Lite  | 2000 req/day (Flash)  |
+| **OpenAI**           | GPT-4o, GPT-4o Mini, o3 Mini                       | Pay-as-you-go         |
+| **Anthropic Claude** | Claude 4.5 Sonnet, 4 Opus/Sonnet, 3.5 Sonnet/Haiku | Pay-as-you-go         |
+| **Google Cloud**     | Neural Machine Translation                         | 500K chars/month free |
 
 > Dynamic model catalog — the plugin fetches the latest available models from each provider's API automatically.
 
 ### Context-Aware Translation
+
 - **8 ready-made context presets** — Mobile App, Gaming, E-commerce, Developer Docs, and more
 - **6 tone presets** — Friendly, Marketing, Legal, Support, Technical, Playful
 - **Custom context fields** — App description, target audience, extra rules
 - Translations adapt to your app's domain and user base
 
 ### Clean Settings UI
+
 Organized into 5 navigable categories instead of a flat list:
 
 ```
@@ -56,6 +59,7 @@ TranslateKit Settings
 ```
 
 ### Developer Tools
+
 - **Provider Dashboard** — See all API key statuses at a glance
 - **Interactive Provider Test** — Validate API key format instantly
 - **Debug Logging** — Detailed request/response logs in MT Manager
@@ -66,17 +70,21 @@ TranslateKit Settings
 ## Quick Start
 
 ### 1. Download
+
 Grab the latest `mt.plugin.translatekit.mtp` from [Releases](https://github.com/ilker-binzet/TranslateKit/releases).
 
 ### 2. Install
+
 Open the `.mtp` file with MT Manager → tap **Install**.
 
 ### 3. Configure
+
 Open the plugin settings → **AI Providers** → add your API key for at least one provider.
 
 > **Tip:** Gemini offers a generous free tier. Get your key at [aistudio.google.com](https://aistudio.google.com/apikey).
 
 ### 4. Translate
+
 Open any `strings.xml` in MT Manager → use the translation function → TranslateKit handles the rest.
 
 ---
@@ -124,15 +132,15 @@ app/src/main/java/bin/mt/plugin/
 
 ## Configuration Reference
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| Default AI Engine | Gemini | Which provider handles translations |
-| Request Timeout | 30000 ms | Max wait time per API call |
-| Max Retries | 2 | Retry attempts on failure |
-| Tone & Voice | *(empty)* | Writing style guidance for AI |
-| App Description | *(empty)* | App name and type context |
-| Target Audience | *(empty)* | Who uses your app |
-| Debug Logging | Off | Verbose request/response logs |
+| Setting           | Default     | Description                         |
+| ----------------- | ----------- | ----------------------------------- |
+| Default AI Engine | Gemini      | Which provider handles translations |
+| Request Timeout   | 30000 ms    | Max wait time per API call          |
+| Max Retries       | 2           | Retry attempts on failure           |
+| Tone & Voice      | *(empty)* | Writing style guidance for AI       |
+| App Description   | *(empty)* | App name and type context           |
+| Target Audience   | *(empty)* | Who uses your app                   |
+| Debug Logging     | Off         | Verbose request/response logs       |
 
 ---
 
