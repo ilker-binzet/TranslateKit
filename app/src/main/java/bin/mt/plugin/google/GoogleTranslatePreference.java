@@ -189,7 +189,7 @@ public class GoogleTranslatePreference implements PluginPreference {
      * @return true if format is valid
      */
     private boolean isValidApiKey(String apiKey) {
-        return Pattern.matches(GoogleConstants.API_KEY_PATTERN, apiKey);
+        return apiKey != null && Pattern.matches(GoogleConstants.API_KEY_PATTERN, apiKey.trim());
     }
 
     /**
@@ -200,7 +200,7 @@ public class GoogleTranslatePreference implements PluginPreference {
     private boolean isApiKeyPresent() {
         SharedPreferences prefs = context.getPreferences();
         String apiKey = prefs.getString(GoogleConstants.PREF_API_KEY, "");
-        return !apiKey.isEmpty();
+        return apiKey != null && !apiKey.trim().isEmpty();
     }
 
     /**
@@ -208,7 +208,8 @@ public class GoogleTranslatePreference implements PluginPreference {
      */
     private void testApiKey() {
         SharedPreferences prefs = context.getPreferences();
-        String apiKey = prefs.getString(GoogleConstants.PREF_API_KEY, "");
+        String rawKey = prefs.getString(GoogleConstants.PREF_API_KEY, "");
+        final String apiKey = (rawKey != null) ? rawKey.trim() : "";
 
         if (apiKey.isEmpty()) {
             return;

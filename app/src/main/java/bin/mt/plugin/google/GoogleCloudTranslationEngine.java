@@ -14,7 +14,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import bin.mt.plugin.api.LocalString;
-import bin.mt.plugin.api.translation.BaseTranslationEngine;
+import bin.mt.plugin.api.translation.BaseBatchTranslationEngine;
+import bin.mt.plugin.api.translation.BatchTranslationEngine;
 
 /**
  * Google Cloud Translation API Engine for MT Manager
@@ -27,7 +28,7 @@ import bin.mt.plugin.api.translation.BaseTranslationEngine;
  *
  * API Documentation: https://cloud.google.com/translate/docs/reference/rest/v2/translate
  */
-public class GoogleCloudTranslationEngine extends BaseTranslationEngine {
+public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
 
     // ISO 639-1 language codes supported by Google Cloud Translation API
     // Reference: https://cloud.google.com/translate/docs/languages
@@ -141,8 +142,9 @@ public class GoogleCloudTranslationEngine extends BaseTranslationEngine {
     public void onStart() {
         SharedPreferences prefs = getContext().getPreferences();
 
-        // Load API key
+        // Load API key (trim whitespace from copy-paste)
         apiKey = prefs.getString(GoogleConstants.PREF_API_KEY, "");
+        if (apiKey != null) apiKey = apiKey.trim();
 
         // Load advanced settings
         maxRetries = prefs.getInt(GoogleConstants.PREF_MAX_RETRIES, GoogleConstants.DEFAULT_MAX_RETRIES);
@@ -154,6 +156,9 @@ public class GoogleCloudTranslationEngine extends BaseTranslationEngine {
             throw new RuntimeException(
                 localString != null ? localString.get("error_no_api_key") : "API key not configured"
             );
+        }
+        if (!java.util.regex.Pattern.matches(GoogleConstants.API_KEY_PATTERN, apiKey)) {
+            android.util.Log.w("GoogleTranslate", "Google Cloud API key format appears invalid (expected: AIzaSy...)");
         }
     }
 
@@ -189,6 +194,174 @@ public class GoogleCloudTranslationEngine extends BaseTranslationEngine {
 
         // Perform translation with retry logic
         return performTranslationWithRetry(apiUrl, text);
+    }
+
+    /**
+     * Configure batch size limits for the translation engine.
+     * Google API supports up to 128 text segments per request, with 30K char total limit.
+     *
+     * @return BatchingStrategy with conservative limits
+     */
+    @Override
+    public BatchTranslationEngine.BatchingStrategy createBatchingStrategy() {
+        return new BatchTranslationEngine.DefaultBatchingStrategy(50, 5000);
+    }
+
+    /**
+     * Batch translate multiple texts in a single Google Cloud API call.
+     *
+     * Uses POST endpoint with a JSON body containing a "q" array,
+     * which is the native batch mechanism of Google Cloud Translation API v2.
+     * This avoids URL length limits of the GET method and substantially
+     * reduces the number of API calls.
+     *
+     * @param texts Array of texts to translate
+     * @param sourceLanguage Source language code (use "auto" for auto-detection)
+     * @param targetLanguage Target language code
+     * @return Array of translated texts in the same order
+     * @throws IOException If network or API error occurs
+     */
+    @NonNull
+    @Override
+    public String[] batchTranslate(@NonNull String[] texts, String sourceLanguage, String targetLanguage) throws IOException {
+        if (texts.length == 0) return new String[0];
+
+        // Single text: use the simpler GET path
+        if (texts.length == 1) {
+            return new String[]{ translate(texts[0], sourceLanguage, targetLanguage) };
+        }
+
+        // Build JSON body for POST request
+        JSONObject body = buildBatchRequestBody(texts, sourceLanguage, targetLanguage);
+
+        // Execute with retry
+        return performBatchTranslationWithRetry(body, texts);
+    }
+
+    /**
+     * Build JSON request body for batch translation via POST.
+     *
+     * Request format:
+     * {
+     *   "q": ["text1", "text2", ...],
+     *   "target": "tr",
+     *   "source": "en",  (omitted if "auto")
+     *   "format": "text",
+     *   "model": "nmt"   (if advanced model enabled)
+     * }
+     */
+    private JSONObject buildBatchRequestBody(String[] texts, String sourceLanguage, String targetLanguage) throws IOException {
+        try {
+            JSONObject body = new JSONObject();
+
+            JSONArray qArray = new JSONArray();
+            for (String text : texts) {
+                qArray.put(text != null ? text : "");
+            }
+            body.put("q", qArray);
+            body.put("target", targetLanguage);
+
+            if (!"auto".equals(sourceLanguage)) {
+                body.put("source", sourceLanguage);
+            }
+
+            body.put("format", "text");
+
+            if (useAdvancedModel) {
+                body.put("model", "nmt");
+            }
+
+            return body;
+        } catch (JSONException e) {
+            throw new IOException("Failed to build batch request body: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Execute batch translation POST request with retry logic.
+     */
+    private String[] performBatchTranslationWithRetry(JSONObject body, String[] originalTexts) throws IOException {
+        IOException lastException = null;
+        String apiUrl = GoogleConstants.API_BASE_URL + "?key=" + URLEncoder.encode(apiKey, "UTF-8");
+
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                HttpUtils.Request request = HttpUtils.post(apiUrl);
+                request.setTimeout(requestTimeout);
+                request.jsonBody(body);
+
+                String responseBody = request.execute();
+                return parseBatchTranslationResponse(responseBody, originalTexts.length);
+
+            } catch (IOException e) {
+                lastException = e;
+
+                if (isNonRetryableError(e)) {
+                    throw e;
+                }
+
+                if (attempt < maxRetries) {
+                    try {
+                        Thread.sleep((long) Math.pow(2, attempt) * 1000);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new IOException("Translation interrupted", ie);
+                    }
+                }
+            }
+        }
+
+        throw new IOException(
+            String.format("Batch translation failed after %d attempts: %s",
+                maxRetries + 1,
+                lastException != null ? lastException.getMessage() : "Unknown error"),
+            lastException
+        );
+    }
+
+    /**
+     * Parse batch response from Google Cloud Translation API.
+     *
+     * Response format:
+     * {
+     *   "data": {
+     *     "translations": [
+     *       {"translatedText": "...", "detectedSourceLanguage": "en"},
+     *       {"translatedText": "...", "detectedSourceLanguage": "en"},
+     *       ...
+     *     ]
+     *   }
+     * }
+     */
+    private String[] parseBatchTranslationResponse(String responseBody, int expectedCount) throws IOException {
+        try {
+            JSONObject json = new JSONObject(responseBody);
+
+            if (json.has("error")) {
+                JSONObject error = json.getJSONObject("error");
+                int code = error.optInt("code", -1);
+                String message = error.optString("message", "Unknown error");
+                throw new IOException(formatApiError(code, message));
+            }
+
+            JSONObject data = json.getJSONObject("data");
+            JSONArray translations = data.getJSONArray("translations");
+
+            String[] results = new String[expectedCount];
+            for (int i = 0; i < expectedCount && i < translations.length(); i++) {
+                JSONObject translation = translations.getJSONObject(i);
+                results[i] = translation.getString("translatedText");
+            }
+
+            // Fill any missing entries with empty string
+            for (int i = translations.length(); i < expectedCount; i++) {
+                results[i] = "";
+            }
+
+            return results;
+        } catch (JSONException e) {
+            throw new IOException("Failed to parse batch API response: " + e.getMessage(), e);
+        }
     }
 
     /**

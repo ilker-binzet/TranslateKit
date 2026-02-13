@@ -11,10 +11,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.PluginContext;
-import bin.mt.plugin.api.translation.BaseTranslationEngine;
+import bin.mt.plugin.api.translation.BaseBatchTranslationEngine;
+import bin.mt.plugin.api.translation.BatchTranslationEngine;
 
 /**
  * Gemini API Translation Engine for MT Manager
@@ -28,7 +31,7 @@ import bin.mt.plugin.api.translation.BaseTranslationEngine;
  * @author MT Manager Plugin Developer
  * @version 1.0.0
  */
-public class GeminiTranslationEngine extends BaseTranslationEngine {
+public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
     // ISO 639-1 language codes
     private static final List<String> SOURCE_LANGUAGES = Arrays.asList(
@@ -142,21 +145,25 @@ public class GeminiTranslationEngine extends BaseTranslationEngine {
 
         switch (selectedEngine) {
             case GeminiConstants.ENGINE_OPENAI:
-                openAiApiKey = prefs.getString(GeminiConstants.PREF_OPENAI_API_KEY, "");
+                openAiApiKey = trimKey(prefs.getString(GeminiConstants.PREF_OPENAI_API_KEY, ""));
                 openAiModel = prefs.getString(GeminiConstants.PREF_OPENAI_MODEL, GeminiConstants.DEFAULT_OPENAI_MODEL);
                 openAiEndpoint = prefs.getString(GeminiConstants.PREF_OPENAI_ENDPOINT, GeminiConstants.DEFAULT_OPENAI_ENDPOINT);
                 if (isNullOrEmpty(openAiApiKey)) {
                     notifyAndFallbackToGemini(prefs, "error_openai_no_api_key");
+                } else if (!java.util.regex.Pattern.matches(GeminiConstants.OPENAI_API_KEY_PATTERN, openAiApiKey)) {
+                    logWarn("OpenAI API key format appears invalid (expected: sk-...)");
                 } else {
                     logInfo("Using OpenAI engine (model=" + openAiModel + ")");
                 }
                 break;
             case GeminiConstants.ENGINE_CLAUDE:
-                claudeApiKey = prefs.getString(GeminiConstants.PREF_CLAUDE_API_KEY, "");
+                claudeApiKey = trimKey(prefs.getString(GeminiConstants.PREF_CLAUDE_API_KEY, ""));
                 claudeModel = prefs.getString(GeminiConstants.PREF_CLAUDE_MODEL, GeminiConstants.DEFAULT_CLAUDE_MODEL);
                 claudeEndpoint = prefs.getString(GeminiConstants.PREF_CLAUDE_ENDPOINT, GeminiConstants.DEFAULT_CLAUDE_ENDPOINT);
                 if (isNullOrEmpty(claudeApiKey)) {
                     notifyAndFallbackToGemini(prefs, "error_claude_no_api_key");
+                } else if (!java.util.regex.Pattern.matches(GeminiConstants.CLAUDE_API_KEY_PATTERN, claudeApiKey)) {
+                    logWarn("Claude API key format appears invalid (expected: sk-ant-...)");
                 } else {
                     logInfo("Using Claude engine (model=" + claudeModel + ")");
                 }
@@ -173,7 +180,18 @@ public class GeminiTranslationEngine extends BaseTranslationEngine {
     }
 
     /**
-     * Translate text using Gemini API
+     * Configure batch size limits for the translation engine.
+     * Controls how many texts are grouped per API call.
+     *
+     * @return BatchingStrategy with maxCount=25 items and maxDataSize=10000 chars
+     */
+    @Override
+    public BatchTranslationEngine.BatchingStrategy createBatchingStrategy() {
+        return new BatchTranslationEngine.DefaultBatchingStrategy(25, 10000);
+    }
+
+    /**
+     * Translate text using Gemini API (single-text path)
      *
      * This uses the generateContent endpoint with a translation prompt.
      * Gemini will act as a translator based on the prompt.
@@ -211,6 +229,60 @@ public class GeminiTranslationEngine extends BaseTranslationEngine {
     }
 
     /**
+     * Batch translate multiple texts in a single API call.
+     *
+     * Groups all input texts into a numbered prompt and sends one request
+     * instead of N individual requests, dramatically reducing API calls
+     * and improving throughput.
+     *
+     * @param texts Array of texts to translate
+     * @param sourceLanguage Source language code (or "auto")
+     * @param targetLanguage Target language code
+     * @return Array of translated texts in the same order
+     * @throws IOException If translation fails
+     */
+    @NonNull
+    @Override
+    public String[] batchTranslate(@NonNull String[] texts, String sourceLanguage, String targetLanguage) throws IOException {
+        if (texts.length == 0) return new String[0];
+
+        // Single text optimization: use direct prompt (more precise, no parsing overhead)
+        if (texts.length == 1) {
+            return new String[]{ translate(texts[0], sourceLanguage, targetLanguage) };
+        }
+
+        // Build batch prompt with numbered format
+        String prompt = buildBatchTranslationPrompt(texts, sourceLanguage, targetLanguage);
+        int totalChars = 0;
+        for (String t : texts) {
+            if (t != null) totalChars += t.length();
+        }
+        String preview = "[batch:" + texts.length + "] " + totalChars + " chars";
+
+        logInfo("Batch translate via " + selectedEngine + " | count=" + texts.length
+                + " | src=" + sourceLanguage + " -> " + targetLanguage
+                + " | totalChars=" + totalChars);
+
+        String rawResponse;
+        switch (selectedEngine) {
+            case GeminiConstants.ENGINE_OPENAI:
+                rawResponse = translateWithOpenAI(prompt, sourceLanguage, targetLanguage, totalChars, preview);
+                break;
+            case GeminiConstants.ENGINE_CLAUDE:
+                rawResponse = translateWithClaudeWithFallback(prompt, sourceLanguage, targetLanguage, totalChars, preview);
+                break;
+            case GeminiConstants.ENGINE_GEMINI:
+            default:
+                rawResponse = translateWithGemini(prompt, sourceLanguage, targetLanguage, totalChars, preview);
+                break;
+        }
+
+        String[] results = parseBatchResponse(rawResponse, texts);
+        logSuccess("Batch translate complete: " + texts.length + " texts in single API call");
+        return results;
+    }
+
+    /**
      * Build translation prompt for Gemini
      *
      * Creates a clear instruction for Gemini to translate the text.
@@ -239,6 +311,122 @@ public class GeminiTranslationEngine extends BaseTranslationEngine {
         prompt.append(text);
 
         return prompt.toString();
+    }
+
+    /**
+     * Build a batch translation prompt with numbered texts.
+     *
+     * Uses [N] prefix format to send multiple texts in a single API call.
+     * The AI model translates all texts at once and returns them in the same format.
+     *
+     * @param texts Array of texts to translate
+     * @param sourceLanguage Source language code
+     * @param targetLanguage Target language code
+     * @return Combined prompt with numbered texts
+     */
+    private String buildBatchTranslationPrompt(String[] texts, String sourceLanguage, String targetLanguage) {
+        String sourceLangName = getLanguageDisplayName(sourceLanguage);
+        String targetLangName = getLanguageDisplayName(targetLanguage);
+
+        StringBuilder prompt = new StringBuilder();
+
+        if ("auto".equals(sourceLanguage)) {
+            prompt.append("Translate each of the following numbered texts to ").append(targetLangName).append(".\n");
+        } else {
+            prompt.append("Translate each of the following numbered texts from ").append(sourceLangName)
+                  .append(" to ").append(targetLangName).append(".\n");
+        }
+
+        prompt.append("Context: These are Android mobile application UI strings. Preserve semantics and ensure wording fits an app interface.\n");
+        if (!isNullOrEmpty(userContextDirective)) {
+            prompt.append(userContextDirective).append('\n');
+        }
+        prompt.append("IMPORTANT RULES:\n");
+        prompt.append("- Return ONLY the translations in the EXACT same numbered format: [N] translated text\n");
+        prompt.append("- Translate ALL items. Do not skip, merge, or reorder any item.\n");
+        prompt.append("- Keep emojis exactly as they appear.\n");
+        prompt.append("- Preserve placeholders/tokens (e.g., %1$s, %d, {0}, {name}, {{value}}, <b>, $PATH, `code`) verbatim and in their original order.\n");
+        prompt.append("- Do not add quotes, explanations, notes, or any extra text.\n\n");
+
+        for (int i = 0; i < texts.length; i++) {
+            prompt.append('[').append(i + 1).append("] ");
+            prompt.append(texts[i] != null ? texts[i] : "");
+            prompt.append('\n');
+        }
+
+        return prompt.toString();
+    }
+
+    /**
+     * Parse a batch response with numbered translations.
+     *
+     * Expects format:
+     * [1] Translation one
+     * [2] Translation two
+     * ...
+     *
+     * Falls back to original text for any missing translation.
+     *
+     * @param response Raw AI response
+     * @param originalTexts Original texts for fallback
+     * @return Array of translated texts in the same order
+     * @throws IOException If response is completely unparseable
+     */
+    private String[] parseBatchResponse(String response, String[] originalTexts) throws IOException {
+        int count = originalTexts.length;
+        String[] results = new String[count];
+
+        if (response == null || response.trim().isEmpty()) {
+            throw new IOException("Empty batch translation response");
+        }
+
+        // Strip markdown code blocks if the model wrapped the response
+        String cleaned = response.trim();
+        if (cleaned.startsWith("```")) {
+            int firstNewline = cleaned.indexOf('\n');
+            int lastFence = cleaned.lastIndexOf("```");
+            if (firstNewline > 0 && lastFence > firstNewline) {
+                cleaned = cleaned.substring(firstNewline + 1, lastFence).trim();
+            }
+        }
+
+        // Pattern: [N] followed by text, captured until next [N] or end of string
+        Pattern pattern = Pattern.compile(
+                "\\[(\\d+)]\\s*(.*?)(?=\\n\\s*\\[\\d+]|$)",
+                Pattern.DOTALL
+        );
+        Matcher matcher = pattern.matcher(cleaned);
+
+        int found = 0;
+        while (matcher.find()) {
+            try {
+                int index = Integer.parseInt(matcher.group(1)) - 1; // 0-based
+                String text = matcher.group(2).trim();
+                if (index >= 0 && index < count && !text.isEmpty()) {
+                    results[index] = text;
+                    found++;
+                }
+            } catch (NumberFormatException ignored) {
+                // Skip malformed entries
+            }
+        }
+
+        // Fill missing translations with originals
+        int missing = 0;
+        for (int i = 0; i < count; i++) {
+            if (results[i] == null || results[i].isEmpty()) {
+                results[i] = originalTexts[i];
+                missing++;
+            }
+        }
+
+        if (found == 0) {
+            logWarn("Batch response could not be parsed, falling back to originals");
+        } else if (missing > 0) {
+            logWarn("Batch parse: " + missing + "/" + count + " translations missing, kept originals");
+        }
+
+        return results;
     }
 
     private String buildSystemPrompt(String sourceLanguage, String targetLanguage) {
@@ -683,7 +871,7 @@ public class GeminiTranslationEngine extends BaseTranslationEngine {
     }
 
     private void loadGeminiConfig(SharedPreferences prefs) {
-        apiKey = prefs.getString(GeminiConstants.PREF_API_KEY, "");
+        apiKey = trimKey(prefs.getString(GeminiConstants.PREF_API_KEY, ""));
         if (isNullOrEmpty(apiKey)) {
             PluginContext pluginContext = getContext();
             if (pluginContext != null && localString != null) {
@@ -697,6 +885,10 @@ public class GeminiTranslationEngine extends BaseTranslationEngine {
 
     private boolean isNullOrEmpty(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private String trimKey(String key) {
+        return key == null ? "" : key.trim();
     }
 
     private boolean trySwitchClaudeFallbackModel(IOException e) {

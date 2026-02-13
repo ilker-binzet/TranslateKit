@@ -200,17 +200,30 @@ public class ToolsSubPreference implements PluginPreference {
         String statusMsg;
         String resultMsg;
 
+        // Trim whitespace that may come from copy-paste
+        key = key.trim();
+
+        // Determine expected format hint per provider
+        String formatHint;
+        if (GeminiConstants.ENGINE_OPENAI.equals(engine)) {
+            formatHint = "Expected format: sk-...";
+        } else if (GeminiConstants.ENGINE_CLAUDE.equals(engine)) {
+            formatHint = "Expected format: sk-ant-...";
+        } else {
+            formatHint = "Expected format: AIzaSy...";
+        }
+
         if (key.isEmpty()) {
             statusIcon = "⚪";
             statusMsg = "API Key Missing";
-            resultMsg = "Please configure your API key in provider settings.";
+            resultMsg = "Please configure your API key in provider settings.\n\n" + formatHint;
         } else if (!keyPattern.matcher(key).matches()) {
             statusIcon = "🔴";
             statusMsg = "Invalid Format";
-            resultMsg = "API key format is invalid. Please check your key.";
+            resultMsg = "API key format is invalid. Please check your key.\n\n" + formatHint;
         } else {
-            statusIcon = "🟡";
-            statusMsg = "Configuration Valid";
+            statusIcon = "🟢";
+            statusMsg = "Format Valid";
             resultMsg = "API key format is correct!\n\nTip: This validates format only. Use 'Test API Key' in provider settings to verify connectivity.";
         }
 
@@ -331,8 +344,8 @@ public class ToolsSubPreference implements PluginPreference {
     private String getActiveProviderName() {
         String engine = preferences.getString(GeminiConstants.PREF_DEFAULT_ENGINE, GeminiConstants.DEFAULT_ENGINE);
         switch (engine) {
-            case GeminiConstants.ENGINE_OPENAI: return "OpenAI GPT-4o";
-            case GeminiConstants.ENGINE_CLAUDE: return "Claude 3.5";
+            case GeminiConstants.ENGINE_OPENAI: return "OpenAI GPT";
+            case GeminiConstants.ENGINE_CLAUDE: return "Claude AI";
             default: return "Gemini AI";
         }
     }
@@ -372,13 +385,13 @@ public class ToolsSubPreference implements PluginPreference {
             case "openai":
                 prefKey = GeminiConstants.PREF_OPENAI_API_KEY;
                 keyPattern = PATTERN_OPENAI_API_KEY;
-                displayName = "OpenAI GPT-4o";
+                displayName = "OpenAI GPT";
                 icon = "🧠";
                 break;
             case "claude":
                 prefKey = GeminiConstants.PREF_CLAUDE_API_KEY;
                 keyPattern = PATTERN_CLAUDE_API_KEY;
-                displayName = "Claude 3.5";
+                displayName = "Claude AI";
                 icon = "🎭";
                 break;
             default:
