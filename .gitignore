@@ -63,6 +63,7 @@ Desktop.ini
 /docs/internal/
 /notes/
 *.draft.md
+CLAUDE.md
 
 # ==================================
 # SDK reference (local only)
