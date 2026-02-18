@@ -11,7 +11,11 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.translation.BaseBatchTranslationEngine;
@@ -59,11 +63,28 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
         "yo", "zu"
     );
 
+    // Pattern for detecting placeholders in Android strings
+    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile(
+        "(%(?:\\d+\\$)?[-+# 0,(]*\\d*\\.?\\d*[sdfiboxXeEgGcChHnAt%])" +
+        "|(\\{\\{[^}]*\\}\\})" +
+        "|(\\{[^}]*\\})" +
+        "|(<[^>]+>)" +
+        "|(\\$\\{[^}]+\\})" +
+        "|(\\$[A-Za-z_]\\w*)"
+    );
+
+    // Pattern for non-translatable strings (only symbols, numbers, whitespace)
+    private static final Pattern NON_TRANSLATABLE_PATTERN = Pattern.compile(
+        "^[\\p{Punct}\\p{Symbol}\\d\\s]*$"
+    );
+
     private LocalString localString;
     private String apiKey;
     private int maxRetries;
     private int requestTimeout;
     private boolean useAdvancedModel;
+    private int batchSize;
+    private int batchMaxChars;
 
     /**
      * Constructor with default configuration
@@ -160,6 +181,13 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
         if (!java.util.regex.Pattern.matches(GoogleConstants.API_KEY_PATTERN, apiKey)) {
             android.util.Log.w("GoogleTranslate", "Google Cloud API key format appears invalid (expected: AIzaSy...)");
         }
+
+        // Load batch size configuration
+        batchSize = prefs.getInt(GoogleConstants.PREF_BATCH_SIZE, GoogleConstants.DEFAULT_BATCH_SIZE);
+        batchMaxChars = prefs.getInt(GoogleConstants.PREF_BATCH_MAX_CHARS, GoogleConstants.DEFAULT_BATCH_MAX_CHARS);
+        if (batchSize < 1) batchSize = GoogleConstants.DEFAULT_BATCH_SIZE;
+        if (batchMaxChars < 100) batchMaxChars = GoogleConstants.DEFAULT_BATCH_MAX_CHARS;
+        android.util.Log.i("GoogleTranslate", "Batch config: size=" + batchSize + ", maxChars=" + batchMaxChars);
     }
 
     /**
@@ -182,6 +210,11 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
             return text;
         }
 
+        // Skip non-translatable strings (only symbols/numbers/whitespace)
+        if (isNonTranslatable(text)) {
+            return text;
+        }
+
         // Check character limit (Google recommends max 5000 chars per request)
         if (text.length() > 5000) {
             throw new IOException(
@@ -189,22 +222,35 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
             );
         }
 
-        // Build API request URL
-        String apiUrl = buildApiUrl(text, sourceLanguage, targetLanguage);
+        // Tokenize placeholders for protection
+        PlaceholderResult phResult = tokenizePlaceholders(text);
+
+        // Build API request URL with tokenized text
+        String apiUrl = buildApiUrl(phResult.tokenizedText, sourceLanguage, targetLanguage);
 
         // Perform translation with retry logic
-        return performTranslationWithRetry(apiUrl, text);
+        String result = performTranslationWithRetry(apiUrl, phResult.tokenizedText);
+
+        // Restore placeholders and validate
+        if (phResult.hasPlaceholders()) {
+            result = restorePlaceholders(result, phResult.placeholders);
+            if (!validatePlaceholders(text, result)) {
+                return text; // Placeholder validation failed, return original
+            }
+        }
+
+        return result;
     }
 
     /**
      * Configure batch size limits for the translation engine.
      * Google API supports up to 128 text segments per request, with 30K char total limit.
      *
-     * @return BatchingStrategy with conservative limits
+     * @return BatchingStrategy with user-configured limits
      */
     @Override
     public BatchTranslationEngine.BatchingStrategy createBatchingStrategy() {
-        return new BatchTranslationEngine.DefaultBatchingStrategy(50, 5000);
+        return new BatchTranslationEngine.DefaultBatchingStrategy(batchSize, batchMaxChars);
     }
 
     /**
@@ -231,11 +277,67 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
             return new String[]{ translate(texts[0], sourceLanguage, targetLanguage) };
         }
 
-        // Build JSON body for POST request
-        JSONObject body = buildBatchRequestBody(texts, sourceLanguage, targetLanguage);
+        int count = texts.length;
+        String[] results = new String[count];
 
-        // Execute with retry
-        return performBatchTranslationWithRetry(body, texts);
+        // Pre-filter non-translatable strings and tokenize placeholders
+        PlaceholderResult[] phResults = new PlaceholderResult[count];
+        List<Integer> translatableIndices = new ArrayList<>();
+
+        for (int i = 0; i < count; i++) {
+            results[i] = texts[i]; // default: keep original
+            if (texts[i] != null && !texts[i].trim().isEmpty() && !isNonTranslatable(texts[i])) {
+                phResults[i] = tokenizePlaceholders(texts[i]);
+                translatableIndices.add(i);
+            }
+        }
+
+        if (translatableIndices.isEmpty()) {
+            return results;
+        }
+
+        // Build tokenized texts array for batch
+        String[] tokenizedTexts = new String[translatableIndices.size()];
+        for (int j = 0; j < translatableIndices.size(); j++) {
+            tokenizedTexts[j] = phResults[translatableIndices.get(j)].tokenizedText;
+        }
+
+        try {
+            // Build JSON body with tokenized texts
+            JSONObject body = buildBatchRequestBody(tokenizedTexts, sourceLanguage, targetLanguage);
+
+            // Execute with retry
+            String[] batchResults = performBatchTranslationWithRetry(body, tokenizedTexts);
+
+            // Map back and restore placeholders
+            for (int j = 0; j < translatableIndices.size(); j++) {
+                int idx = translatableIndices.get(j);
+                String translated = (j < batchResults.length && batchResults[j] != null && !batchResults[j].isEmpty())
+                        ? batchResults[j] : texts[idx];
+
+                if (phResults[idx].hasPlaceholders()) {
+                    translated = restorePlaceholders(translated, phResults[idx].placeholders);
+                    if (!validatePlaceholders(texts[idx], translated)) {
+                        translated = texts[idx]; // keep original on validation failure
+                    }
+                }
+
+                results[idx] = translated;
+            }
+
+            return results;
+
+        } catch (IOException e) {
+            // Batch failed — fall back to individual translation
+            for (int idx : translatableIndices) {
+                try {
+                    results[idx] = translate(texts[idx], sourceLanguage, targetLanguage);
+                } catch (IOException singleError) {
+                    results[idx] = texts[idx]; // keep original
+                }
+            }
+            return results;
+        }
     }
 
     /**
@@ -497,6 +599,97 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
         } catch (JSONException e) {
             throw new IOException("Failed to parse API response: " + e.getMessage(), e);
         }
+    }
+
+    // ── Placeholder Protection Utilities ──────────────────────────────────────
+
+    /**
+     * Holds text with placeholders replaced by tokens, and the original placeholders.
+     */
+    private static class PlaceholderResult {
+        final String tokenizedText;
+        final List<String> placeholders;
+
+        PlaceholderResult(String tokenizedText, List<String> placeholders) {
+            this.tokenizedText = tokenizedText;
+            this.placeholders = placeholders;
+        }
+
+        boolean hasPlaceholders() {
+            return !placeholders.isEmpty();
+        }
+    }
+
+    /**
+     * Replace placeholders with safe tokens (__PH0__, __PH1__, etc.)
+     * so the translation engine doesn't modify them.
+     */
+    private PlaceholderResult tokenizePlaceholders(String text) {
+        List<String> placeholders = new ArrayList<>();
+        Matcher matcher = PLACEHOLDER_PATTERN.matcher(text);
+        StringBuffer sb = new StringBuffer();
+        int index = 0;
+        while (matcher.find()) {
+            placeholders.add(matcher.group());
+            matcher.appendReplacement(sb, Matcher.quoteReplacement("__PH" + index + "__"));
+            index++;
+        }
+        matcher.appendTail(sb);
+        return new PlaceholderResult(sb.toString(), placeholders);
+    }
+
+    /**
+     * Restore placeholder tokens back to original placeholders.
+     */
+    private String restorePlaceholders(String translatedText, List<String> placeholders) {
+        String result = translatedText;
+        for (int i = 0; i < placeholders.size(); i++) {
+            String token = "__PH" + i + "__";
+            if (result.contains(token)) {
+                result = result.replace(token, placeholders.get(i));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Validate that all original placeholders are present in the translated text
+     * with the correct occurrence counts.
+     */
+    private boolean validatePlaceholders(String original, String translated) {
+        Matcher sourceMatcher = PLACEHOLDER_PATTERN.matcher(original);
+        Map<String, Integer> sourceCounts = new LinkedHashMap<>();
+        while (sourceMatcher.find()) {
+            String ph = sourceMatcher.group();
+            sourceCounts.put(ph, countOccurrences(original, ph));
+        }
+        if (sourceCounts.isEmpty()) return true;
+
+        for (Map.Entry<String, Integer> entry : sourceCounts.entrySet()) {
+            int translatedCount = countOccurrences(translated, entry.getKey());
+            if (translatedCount != entry.getValue()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private int countOccurrences(String text, String sub) {
+        int count = 0;
+        int idx = 0;
+        while ((idx = text.indexOf(sub, idx)) != -1) {
+            count++;
+            idx += sub.length();
+        }
+        return count;
+    }
+
+    /**
+     * Check if a string contains only symbols/numbers/whitespace and doesn't need translation.
+     */
+    private boolean isNonTranslatable(String text) {
+        if (text == null || text.isEmpty()) return true;
+        return NON_TRANSLATABLE_PATTERN.matcher(text).matches();
     }
 
     /**
