@@ -5,6 +5,19 @@ All notable changes to TranslateKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2-alpha] - 2026-02-18
+
+### Added
+- User-configurable batch size via SharedPreferences (gemini_batch_size, google_batch_size)
+- Batch max characters preference for both engines
+- Input validation with safe fallback to defaults for invalid batch config values
+
+### Fixed
+- Placeholder corruption during translation (%s, %1$s, {0} etc. now protected via tokenization)
+- Batch translation skipping/dropping strings (multi-format response parser with [N], N., N) support)
+- Special character breakage causing formatting issues or skipped strings
+- Added batch-to-individual fallback on IOException for resilient translation
+
 ## [0.2.0-alpha] - 2026-02-12
 
 ### Added
