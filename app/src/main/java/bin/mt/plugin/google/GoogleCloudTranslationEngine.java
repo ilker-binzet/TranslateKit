@@ -83,6 +83,8 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
     private int maxRetries;
     private int requestTimeout;
     private boolean useAdvancedModel;
+    private int batchSize;
+    private int batchMaxChars;
 
     /**
      * Constructor with default configuration
@@ -179,6 +181,13 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
         if (!java.util.regex.Pattern.matches(GoogleConstants.API_KEY_PATTERN, apiKey)) {
             android.util.Log.w("GoogleTranslate", "Google Cloud API key format appears invalid (expected: AIzaSy...)");
         }
+
+        // Load batch size configuration
+        batchSize = prefs.getInt(GoogleConstants.PREF_BATCH_SIZE, GoogleConstants.DEFAULT_BATCH_SIZE);
+        batchMaxChars = prefs.getInt(GoogleConstants.PREF_BATCH_MAX_CHARS, GoogleConstants.DEFAULT_BATCH_MAX_CHARS);
+        if (batchSize < 1) batchSize = GoogleConstants.DEFAULT_BATCH_SIZE;
+        if (batchMaxChars < 100) batchMaxChars = GoogleConstants.DEFAULT_BATCH_MAX_CHARS;
+        android.util.Log.i("GoogleTranslate", "Batch config: size=" + batchSize + ", maxChars=" + batchMaxChars);
     }
 
     /**
@@ -237,11 +246,11 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
      * Configure batch size limits for the translation engine.
      * Google API supports up to 128 text segments per request, with 30K char total limit.
      *
-     * @return BatchingStrategy with conservative limits
+     * @return BatchingStrategy with user-configured limits
      */
     @Override
     public BatchTranslationEngine.BatchingStrategy createBatchingStrategy() {
-        return new BatchTranslationEngine.DefaultBatchingStrategy(50, 5000);
+        return new BatchTranslationEngine.DefaultBatchingStrategy(batchSize, batchMaxChars);
     }
 
     /**

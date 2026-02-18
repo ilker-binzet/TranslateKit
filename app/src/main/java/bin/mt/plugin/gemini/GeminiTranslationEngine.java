@@ -89,6 +89,8 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     private SharedPreferences preferences;
     private String userContextDirective = "";
     private TranslationDebugLogger debugLogger;
+    private int batchSize;
+    private int batchMaxChars;
 
     /**
      * Constructor with default configuration
@@ -198,17 +200,25 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         }
 
         userContextDirective = buildUserContextDirective(prefs);
+
+        // Load batch size configuration
+        batchSize = readIntPreference(prefs, GeminiConstants.PREF_BATCH_SIZE, GeminiConstants.DEFAULT_BATCH_SIZE);
+        batchMaxChars = readIntPreference(prefs, GeminiConstants.PREF_BATCH_MAX_CHARS, GeminiConstants.DEFAULT_BATCH_MAX_CHARS);
+        if (batchSize < 1) batchSize = GeminiConstants.DEFAULT_BATCH_SIZE;
+        if (batchMaxChars < 100) batchMaxChars = GeminiConstants.DEFAULT_BATCH_MAX_CHARS;
+        logInfo("Batch config: size=" + batchSize + ", maxChars=" + batchMaxChars);
     }
 
     /**
      * Configure batch size limits for the translation engine.
      * Controls how many texts are grouped per API call.
+     * Values are user-configurable via SharedPreferences.
      *
-     * @return BatchingStrategy with maxCount=25 items and maxDataSize=10000 chars
+     * @return BatchingStrategy with user-configured maxCount and maxDataSize
      */
     @Override
     public BatchTranslationEngine.BatchingStrategy createBatchingStrategy() {
-        return new BatchTranslationEngine.DefaultBatchingStrategy(25, 10000);
+        return new BatchTranslationEngine.DefaultBatchingStrategy(batchSize, batchMaxChars);
     }
 
     /**
