@@ -4,7 +4,7 @@ package bin.mt.plugin.gemini;
  * Constants for TranslateKit plugin
  *
  * @author MT Manager Plugin Developer
- * @version 0.2.0-alpha
+ * @version 0.2.2-alpha
  * @updated February 2026 - BaseBatchTranslationEngine, latest AI models & SDK beta3
  */
 public class GeminiConstants {
@@ -175,8 +175,8 @@ public class GeminiConstants {
     // ==================== Plugin Metadata ====================
 
     public static final String PLUGIN_ID = "mt.plugin.translatekit";
-    public static final int PLUGIN_VERSION_CODE = 2;
-    public static final String PLUGIN_VERSION_NAME = "0.2.0-alpha";
+    public static final int PLUGIN_VERSION_CODE = 4;
+    public static final String PLUGIN_VERSION_NAME = "0.2.2-alpha";
 
     // ==================== API Key Pattern ====================
 
