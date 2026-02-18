@@ -61,6 +61,16 @@ public class GoogleConstants {
      */
     public static final String PREF_CACHE_EXPIRATION = "google_cache_expiration";
 
+    /**
+     * Preference key for batch size (max items per batch request)
+     */
+    public static final String PREF_BATCH_SIZE = "google_batch_size";
+
+    /**
+     * Preference key for batch max characters (total chars per batch)
+     */
+    public static final String PREF_BATCH_MAX_CHARS = "google_batch_max_chars";
+
     // ==================== Default Values ====================
 
     /**
@@ -87,6 +97,16 @@ public class GoogleConstants {
      * Default cache expiration: 60 minutes
      */
     public static final int DEFAULT_CACHE_EXPIRATION = 60;
+
+    /**
+     * Default batch size: 50 items per batch
+     */
+    public static final int DEFAULT_BATCH_SIZE = 50;
+
+    /**
+     * Default batch max characters: 5000 total
+     */
+    public static final int DEFAULT_BATCH_MAX_CHARS = 5000;
 
     // ==================== API Limits ====================
 
