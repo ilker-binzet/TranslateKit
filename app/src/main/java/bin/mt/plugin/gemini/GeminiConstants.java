@@ -68,6 +68,8 @@ public class GeminiConstants {
     public static final String PREF_CONTEXT_TONE = "ai_context_tone";
     public static final String PREF_CONTEXT_NOTES = "ai_context_custom_notes";
     public static final String PREF_DEFAULT_TARGET_LANG = "ai_default_target_lang";
+    public static final String PREF_BATCH_SIZE = "gemini_batch_size";
+    public static final String PREF_BATCH_MAX_CHARS = "gemini_batch_max_chars";
 
     // OpenAI preference keys
     public static final String PREF_OPENAI_API_KEY = "openai_api_key";
@@ -98,6 +100,8 @@ public class GeminiConstants {
     public static final float DEFAULT_TEMPERATURE = 0.1f; // Low for consistent translation
     public static final String DEFAULT_ENGINE = "gemini";
     public static final boolean DEFAULT_ENABLE_DEBUG = false;
+    public static final int DEFAULT_BATCH_SIZE = 25;
+    public static final int DEFAULT_BATCH_MAX_CHARS = 10000;
     public static final String CLAUDE_MODEL_FALLBACK = "claude-sonnet-4-5-latest";
     public static final String DEFAULT_CONTEXT_TONE = "Clear and instructional";
 
