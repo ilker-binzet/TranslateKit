@@ -98,6 +98,8 @@ pref_batch_size: Toplu İşlem Boyutu
 pref_batch_size_summary: Toplu istek başına maksimum metin sayısı (1-100)
 pref_batch_max_chars: Maks. Toplu Karakter
 pref_batch_max_chars_summary: Toplu istek başına maksimum toplam karakter sayısı (500-50000)
+pref_bilingual_mode: İki Dilli Çıktı
+pref_bilingual_mode_summary: Orijinal metni koru ve çeviriyi altına ekle
 
 pref_header_performance: ⚡ Performans Ayarları 💨━━━━━━━━━━━━
 pref_timeout: İstek Zaman Aşımı (ms)

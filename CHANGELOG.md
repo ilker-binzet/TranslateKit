@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.2-alpha] - 2026-02-18
 
 ### Added
+- Bilingual output mode: keep original text with translation below it
 - User-configurable batch size via SharedPreferences (gemini_batch_size, google_batch_size)
 - Batch max characters preference for both engines
 - Input validation with safe fallback to defaults for invalid batch config values

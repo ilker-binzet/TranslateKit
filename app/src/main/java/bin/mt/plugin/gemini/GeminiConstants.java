@@ -71,6 +71,7 @@ public class GeminiConstants {
     public static final String PREF_BATCH_ENABLED = "gemini_batch_enabled";
     public static final String PREF_BATCH_SIZE = "gemini_batch_size";
     public static final String PREF_BATCH_MAX_CHARS = "gemini_batch_max_chars";
+    public static final String PREF_BILINGUAL_MODE = "ai_bilingual_mode";
 
     // OpenAI preference keys
     public static final String PREF_OPENAI_API_KEY = "openai_api_key";
@@ -104,6 +105,7 @@ public class GeminiConstants {
     public static final boolean DEFAULT_BATCH_ENABLED = true;
     public static final int DEFAULT_BATCH_SIZE = 25;
     public static final int DEFAULT_BATCH_MAX_CHARS = 10000;
+    public static final boolean DEFAULT_BILINGUAL_MODE = false;
     public static final String CLAUDE_MODEL_FALLBACK = "claude-sonnet-4-5-latest";
     public static final String DEFAULT_CONTEXT_TONE = "Clear and instructional";
 

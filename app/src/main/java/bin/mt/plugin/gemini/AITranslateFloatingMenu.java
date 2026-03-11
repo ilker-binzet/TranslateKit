@@ -102,7 +102,9 @@ public class AITranslateFloatingMenu extends BaseTextEditorFloatingMenu {
                 }
                 
                 if (translatedText != null && !translatedText.isEmpty()) {
-                    editor.replaceText(selStart, selEnd, translatedText);
+                    boolean bilingualMode = prefs.getBoolean(GeminiConstants.PREF_BILINGUAL_MODE, GeminiConstants.DEFAULT_BILINGUAL_MODE);
+                    String finalText = bilingualMode ? selectedText + "\n" + translatedText : translatedText;
+                    editor.replaceText(selStart, selEnd, finalText);
                     pluginUI.showToast(localString != null 
                         ? localString.get("translation_complete")
                         : "Translation complete");

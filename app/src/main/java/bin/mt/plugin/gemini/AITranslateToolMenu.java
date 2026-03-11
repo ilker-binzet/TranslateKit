@@ -210,7 +210,9 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
             replaceButton.setOnClickListener(button -> {
                 String translation = outputText.getText().toString();
                 if (!TextUtils.isEmpty(translation)) {
-                    editor.replaceText(selStart, selEnd, translation);
+                    boolean bilingualMode = preferences.getBoolean(GeminiConstants.PREF_BILINGUAL_MODE, GeminiConstants.DEFAULT_BILINGUAL_MODE);
+                    String finalText = bilingualMode ? selectedText + "\n" + translation : translation;
+                    editor.replaceText(selStart, selEnd, finalText);
                     dialog.dismiss();
                     pluginUI.showToast(localString != null ? localString.get("text_replaced") : "Text replaced");
                 }
