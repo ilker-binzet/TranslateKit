@@ -61,6 +61,11 @@ public class TranslationSubPreference implements PluginPreference {
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_NUMBER);
 
+        // Bilingual output mode
+        builder.addSwitch(localString.get("pref_bilingual_mode"), GeminiConstants.PREF_BILINGUAL_MODE)
+                .defaultValue(GeminiConstants.DEFAULT_BILINGUAL_MODE)
+                .summary(localString.get("pref_bilingual_mode_summary"));
+
         // Preference change callback
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
             String key = preferenceItem.getKey();
