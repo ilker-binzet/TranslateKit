@@ -217,9 +217,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
         }
     }
 
-    @NonNull
-    @Override
-    public String translate(String text, String sourceLanguage, String targetLanguage) throws IOException {
+    private String translateSingle(String text, String sourceLanguage, String targetLanguage) throws IOException {
         sourceLanguage = normalizeLanguageCode(sourceLanguage);
         targetLanguage = normalizeLanguageCode(targetLanguage);
 
@@ -268,7 +266,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
      */
     @Override
     public BatchTranslationEngine.BatchingStrategy createBatchingStrategy() {
-        return new BatchTranslationEngine.DefaultBatchingStrategy(batchSize, batchMaxChars);
+        return new SimpleBatchingStrategy(batchSize, batchMaxChars);
     }
 
     /**
@@ -295,7 +293,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
 
         // Single text: use the simpler GET path
         if (texts.length == 1) {
-            return new String[]{ translate(texts[0], sourceLanguage, targetLanguage) };
+            return new String[]{ translateSingle(texts[0], sourceLanguage, targetLanguage) };
         }
 
         int count = texts.length;
@@ -352,7 +350,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
             // Batch failed — fall back to individual translation
             for (int idx : translatableIndices) {
                 try {
-                    results[idx] = translate(texts[idx], sourceLanguage, targetLanguage);
+                    results[idx] = translateSingle(texts[idx], sourceLanguage, targetLanguage);
                 } catch (IOException singleError) {
                     results[idx] = texts[idx]; // keep original
                 }
@@ -807,5 +805,36 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
 
         // Continue with next translation for transient errors
         return true;
+    }
+
+    /**
+     * Simple batching strategy that limits batch by count and total text length.
+     */
+    private static class SimpleBatchingStrategy implements BatchTranslationEngine.BatchingStrategy {
+        private final int maxCount;
+        private final int maxTextLength;
+        private int count;
+        private int totalTextLength;
+
+        SimpleBatchingStrategy(int maxCount, int maxTextLength) {
+            this.maxCount = maxCount;
+            this.maxTextLength = maxTextLength;
+        }
+
+        @Override
+        public void reset() {
+            count = 0;
+            totalTextLength = 0;
+        }
+
+        @Override
+        public boolean tryAdd(String text) {
+            if (maxCount > 0 && count >= maxCount) return false;
+            int len = text.length();
+            if (maxTextLength > 0 && totalTextLength + len > maxTextLength) return false;
+            count++;
+            totalTextLength += len;
+            return true;
+        }
     }
 }
