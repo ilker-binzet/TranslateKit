@@ -202,9 +202,25 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
      * @return Translated text
      * @throws IOException If network error, API error, or invalid response occurs
      */
-    @NonNull
-    @Override
-    public String translate(String text, String sourceLanguage, String targetLanguage) throws IOException {
+    /**
+     * Normalizes legacy Java Locale language codes to modern ISO 639-1.
+     * Java's Locale.getLanguage() returns obsolete codes for some languages:
+     * "iw" (Hebrew) → "he", "in" (Indonesian) → "id", "ji" (Yiddish) → "yi".
+     */
+    private static String normalizeLanguageCode(String code) {
+        if (code == null) return code;
+        switch (code) {
+            case "iw": return "he";
+            case "in": return "id";
+            case "ji": return "yi";
+            default: return code;
+        }
+    }
+
+    private String translateSingle(String text, String sourceLanguage, String targetLanguage) throws IOException {
+        sourceLanguage = normalizeLanguageCode(sourceLanguage);
+        targetLanguage = normalizeLanguageCode(targetLanguage);
+
         // Input validation
         if (text == null || text.trim().isEmpty()) {
             return text;
@@ -250,7 +266,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
      */
     @Override
     public BatchTranslationEngine.BatchingStrategy createBatchingStrategy() {
-        return new BatchTranslationEngine.DefaultBatchingStrategy(batchSize, batchMaxChars);
+        return new SimpleBatchingStrategy(batchSize, batchMaxChars);
     }
 
     /**
@@ -270,11 +286,14 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
     @NonNull
     @Override
     public String[] batchTranslate(@NonNull String[] texts, String sourceLanguage, String targetLanguage) throws IOException {
+        sourceLanguage = normalizeLanguageCode(sourceLanguage);
+        targetLanguage = normalizeLanguageCode(targetLanguage);
+
         if (texts.length == 0) return new String[0];
 
         // Single text: use the simpler GET path
         if (texts.length == 1) {
-            return new String[]{ translate(texts[0], sourceLanguage, targetLanguage) };
+            return new String[]{ translateSingle(texts[0], sourceLanguage, targetLanguage) };
         }
 
         int count = texts.length;
@@ -331,7 +350,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
             // Batch failed — fall back to individual translation
             for (int idx : translatableIndices) {
                 try {
-                    results[idx] = translate(texts[idx], sourceLanguage, targetLanguage);
+                    results[idx] = translateSingle(texts[idx], sourceLanguage, targetLanguage);
                 } catch (IOException singleError) {
                     results[idx] = texts[idx]; // keep original
                 }
@@ -404,7 +423,11 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
 
                 if (attempt < maxRetries) {
                     try {
-                        Thread.sleep((long) Math.pow(2, attempt) * 1000);
+                        long waitMs = parseRetryAfterMs(e.getMessage());
+                        if (waitMs <= 0) {
+                            waitMs = (long) Math.pow(2, attempt) * 1000;
+                        }
+                        Thread.sleep(waitMs);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         throw new IOException("Translation interrupted", ie);
@@ -531,10 +554,14 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
                     throw e;
                 }
 
-                // Wait before retry (exponential backoff)
+                // Wait before retry (exponential backoff or Retry-After)
                 if (attempt < maxRetries) {
                     try {
-                        Thread.sleep((long) Math.pow(2, attempt) * 1000);
+                        long waitMs = parseRetryAfterMs(e.getMessage());
+                        if (waitMs <= 0) {
+                            waitMs = (long) Math.pow(2, attempt) * 1000;
+                        }
+                        Thread.sleep(waitMs);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         throw new IOException("Translation interrupted", ie);
@@ -732,11 +759,31 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
             return false;
         }
 
-        // Don't retry authentication errors, invalid requests, or quota errors
+        // Don't retry authentication errors or invalid requests
+        // Note: 429 (rate limit) IS retryable — removed from this list
         return message.contains("(400)") ||
                message.contains("(401)") ||
-               message.contains("(403)") ||
-               message.contains("(429)");
+               message.contains("(403)");
+    }
+
+    /**
+     * Parse Retry-After value from error message.
+     * Looks for pattern [Retry-After: N] embedded by HttpUtils.
+     *
+     * @param message Error message
+     * @return Wait time in milliseconds, or -1 if not found
+     */
+    private long parseRetryAfterMs(String message) {
+        if (message == null) return -1;
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\\[Retry-After: (\\d+)\\]")
+                .matcher(message);
+        if (m.find()) {
+            try {
+                return Long.parseLong(m.group(1)) * 1000L;
+            } catch (NumberFormatException ignored) {}
+        }
+        return -1;
     }
 
     /**
@@ -758,5 +805,36 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
 
         // Continue with next translation for transient errors
         return true;
+    }
+
+    /**
+     * Simple batching strategy that limits batch by count and total text length.
+     */
+    private static class SimpleBatchingStrategy implements BatchTranslationEngine.BatchingStrategy {
+        private final int maxCount;
+        private final int maxTextLength;
+        private int count;
+        private int totalTextLength;
+
+        SimpleBatchingStrategy(int maxCount, int maxTextLength) {
+            this.maxCount = maxCount;
+            this.maxTextLength = maxTextLength;
+        }
+
+        @Override
+        public void reset() {
+            count = 0;
+            totalTextLength = 0;
+        }
+
+        @Override
+        public boolean tryAdd(String text) {
+            if (maxCount > 0 && count >= maxCount) return false;
+            int len = text.length();
+            if (maxTextLength > 0 && totalTextLength + len > maxTextLength) return false;
+            count++;
+            totalTextLength += len;
+            return true;
+        }
     }
 }

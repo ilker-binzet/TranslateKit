@@ -27,6 +27,20 @@ public class TranslationDebugLogger {
         return enabled;
     }
 
+    public BatchSpan newBatchSpan(String engine,
+                                  String model,
+                                  String sourceLanguage,
+                                  String targetLanguage,
+                                  int totalTexts,
+                                  int translatableCount,
+                                  int totalChars) {
+        if (!enabled) {
+            return BatchSpan.disabled();
+        }
+        return new BatchSpan(this, engine, model, sourceLanguage, targetLanguage,
+                totalTexts, translatableCount, totalChars);
+    }
+
     public Span newSpan(String engine,
                         String model,
                         String sourceLanguage,
@@ -156,6 +170,117 @@ public class TranslationDebugLogger {
                     "❌ [TranslateKit] translate_error engine=%s model=%s latency=%dms attempt=%d/%d retry=%s error=\"%s\"",
                     engine, model, latency, attempt, totalAttempts,
                     willRetry ? "yes" : "no",
+                    errorMessage == null ? "" : errorMessage.replace('\n', ' ')));
+        }
+    }
+
+    /**
+     * Structured batch translation span — tracks the full lifecycle of a batch translate call.
+     */
+    public static class BatchSpan {
+        private static final BatchSpan DISABLED = new BatchSpan(null, null, null, null, null, 0, 0, 0);
+
+        private final TranslationDebugLogger parent;
+        private final String engine;
+        private final String model;
+        private final String sourceLanguage;
+        private final String targetLanguage;
+        private final int totalTexts;
+        private final int translatableCount;
+        private final int totalChars;
+        private final long startedAt;
+
+        BatchSpan(TranslationDebugLogger parent,
+                  String engine, String model,
+                  String sourceLanguage, String targetLanguage,
+                  int totalTexts, int translatableCount, int totalChars) {
+            this.parent = parent;
+            this.engine = engine;
+            this.model = model;
+            this.sourceLanguage = sourceLanguage;
+            this.targetLanguage = targetLanguage;
+            this.totalTexts = totalTexts;
+            this.translatableCount = translatableCount;
+            this.totalChars = totalChars;
+            this.startedAt = System.currentTimeMillis();
+            logStart();
+        }
+
+        public static BatchSpan disabled() {
+            return DISABLED;
+        }
+
+        private boolean isEnabled() {
+            return parent != null && parent.enabled;
+        }
+
+        private void logStart() {
+            if (!isEnabled()) return;
+            parent.emit(String.format(Locale.US,
+                    "📦 [TranslateKit] batch_start engine=%s model=%s src=%s tgt=%s total=%d translatable=%d chars=%d",
+                    engine, model, sourceLanguage, targetLanguage,
+                    totalTexts, translatableCount, totalChars));
+        }
+
+        public void logPreprocess(int skippedCount) {
+            if (!isEnabled()) return;
+            parent.emit(String.format(Locale.US,
+                    "🔧 [TranslateKit] batch_preprocess translatable=%d skipped=%d total=%d",
+                    translatableCount, skippedCount, totalTexts));
+        }
+
+        public void logApiCall(int promptChars) {
+            if (!isEnabled()) return;
+            parent.emit(String.format(Locale.US,
+                    "🌐 [TranslateKit] batch_api_call engine=%s prompt_chars=%d items=%d",
+                    engine, promptChars, translatableCount));
+        }
+
+        public void logParseResult(String formatUsed, int matchedCount, int expectedCount) {
+            if (!isEnabled()) return;
+            parent.emit(String.format(Locale.US,
+                    "📋 [TranslateKit] batch_parse format=%s matched=%d expected=%d %s",
+                    formatUsed, matchedCount, expectedCount,
+                    matchedCount == expectedCount ? "OK" : "MISMATCH"));
+        }
+
+        public void logParseWarning(int missingCount, String details) {
+            if (!isEnabled()) return;
+            parent.emit(String.format(Locale.US,
+                    "⚠️ [TranslateKit] batch_parse_warning missing=%d details=\"%s\"",
+                    missingCount, details == null ? "" : details.replace('\n', ' ')));
+        }
+
+        public void logPlaceholderRestore(int itemIndex, boolean success, String details) {
+            if (!isEnabled()) return;
+            parent.emit(String.format(Locale.US,
+                    "🔗 [TranslateKit] batch_placeholder_restore item=%d success=%s details=\"%s\"",
+                    itemIndex, success ? "yes" : "no",
+                    details == null ? "" : details.replace('\n', ' ')));
+        }
+
+        public void markSuccess(int translatedCount) {
+            if (!isEnabled()) return;
+            long latency = System.currentTimeMillis() - startedAt;
+            parent.emit(String.format(Locale.US,
+                    "✅ [TranslateKit] batch_success engine=%s model=%s latency=%dms translated=%d total=%d",
+                    engine, model, latency, translatedCount, totalTexts));
+        }
+
+        public void logFallbackToIndividual(String reason) {
+            if (!isEnabled()) return;
+            parent.emit(String.format(Locale.US,
+                    "🔄 [TranslateKit] batch_fallback_individual engine=%s items=%d reason=\"%s\"",
+                    engine, totalTexts,
+                    reason == null ? "" : reason.replace('\n', ' ')));
+        }
+
+        public void markFailure(String errorMessage) {
+            if (!isEnabled()) return;
+            long latency = System.currentTimeMillis() - startedAt;
+            parent.emit(String.format(Locale.US,
+                    "❌ [TranslateKit] batch_error engine=%s model=%s latency=%dms items=%d error=\"%s\"",
+                    engine, model, latency, totalTexts,
                     errorMessage == null ? "" : errorMessage.replace('\n', ' ')));
         }
     }

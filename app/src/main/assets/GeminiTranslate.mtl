@@ -92,6 +92,15 @@ model_legacy: Gemini 2.0 Flash (Legacy)
 pref_rate_limits: 🎁 Free Tier Limits
 pref_rate_limits_summary: 2000 requests/day (Flash) | 100 requests/day (Pro) - Completely FREE!
 
+pref_batch_enabled: Batch Translation
+pref_batch_enabled_summary: Send multiple texts in a single API call for faster translation
+pref_batch_size: Batch Size
+pref_batch_size_summary: Maximum number of texts per batch request (1-100)
+pref_batch_max_chars: Max Batch Characters
+pref_batch_max_chars_summary: Maximum total characters per batch request (500-50000)
+pref_bilingual_mode: Bilingual Output
+pref_bilingual_mode_summary: Keep original text and show translation below it
+
 pref_header_performance: ⚡ Performance Settings 💨━━━━━━━━━━━
 pref_timeout: Request Timeout (ms)
 pref_timeout_summary: Maximum wait time for API response (5000-120000 ms)
