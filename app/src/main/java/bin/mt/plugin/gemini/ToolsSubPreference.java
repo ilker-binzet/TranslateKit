@@ -3,9 +3,18 @@ package bin.mt.plugin.gemini;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
 import android.text.format.DateFormat;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import bin.mt.plugin.api.ui.PluginEditText;
+import bin.mt.plugin.api.ui.PluginView;
 
 import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.PluginContext;
@@ -90,6 +99,16 @@ public class ToolsSubPreference implements PluginPreference {
                 .defaultValue(GeminiConstants.DEFAULT_ENABLE_DEBUG)
                 .summary("Record detailed request info to MT Manager logs");
 
+        // ==================== Export Settings ====================
+        builder.addText("Export Settings")
+                .summary("Copy all settings as JSON to share")
+                .onClick((pluginUI, item) -> showExportDialog(pluginUI));
+
+        // ==================== Import Settings ====================
+        builder.addText("Import Settings")
+                .summary("Restore settings from JSON preset")
+                .onClick((pluginUI, item) -> showImportDialog(pluginUI));
+
         // ==================== Hidden Debug Access ====================
         builder.addText("Plugin Version")
             .summary("v" + GeminiConstants.PLUGIN_VERSION_NAME)
@@ -104,6 +123,144 @@ public class ToolsSubPreference implements PluginPreference {
                 }
             }
         });
+    }
+
+    // ==================== Exportable Preference Keys ====================
+
+    /** Non-sensitive preference keys eligible for export. API keys are always excluded. */
+    private static final Set<String> EXPORTABLE_KEYS = new HashSet<>(Arrays.asList(
+            GeminiConstants.PREF_DEFAULT_ENGINE,
+            GeminiConstants.PREF_MODEL_NAME,
+            GeminiConstants.PREF_TIMEOUT,
+            GeminiConstants.PREF_MAX_RETRIES,
+            GeminiConstants.PREF_TEMPERATURE,
+            GeminiConstants.PREF_ENABLE_CACHE,
+            GeminiConstants.PREF_BATCH_ENABLED,
+            GeminiConstants.PREF_BATCH_SIZE,
+            GeminiConstants.PREF_BATCH_MAX_CHARS,
+            GeminiConstants.PREF_CONTEXT_APP_NAME,
+            GeminiConstants.PREF_CONTEXT_APP_TYPE,
+            GeminiConstants.PREF_CONTEXT_AUDIENCE,
+            GeminiConstants.PREF_CONTEXT_TONE,
+            GeminiConstants.PREF_CONTEXT_NOTES,
+            GeminiConstants.PREF_DEFAULT_TARGET_LANG,
+            GeminiConstants.PREF_ENABLE_DEBUG,
+            GeminiConstants.PREF_OPENAI_MODEL,
+            GeminiConstants.PREF_OPENAI_ENDPOINT,
+            GeminiConstants.PREF_CLAUDE_MODEL,
+            GeminiConstants.PREF_CLAUDE_ENDPOINT
+    ));
+
+    /** Keys stored as boolean (all others are treated as String). */
+    private static final Set<String> BOOLEAN_KEYS = new HashSet<>(Arrays.asList(
+            GeminiConstants.PREF_ENABLE_CACHE,
+            GeminiConstants.PREF_BATCH_ENABLED,
+            GeminiConstants.PREF_ENABLE_DEBUG
+    ));
+
+    // ==================== Export Dialog ====================
+
+    private void showExportDialog(bin.mt.plugin.api.ui.PluginUI pluginUI) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("preset_version", 1);
+            json.put("plugin_version", GeminiConstants.PLUGIN_VERSION_NAME);
+
+            JSONObject settings = new JSONObject();
+            int count = 0;
+            for (String key : EXPORTABLE_KEYS) {
+                if (BOOLEAN_KEYS.contains(key)) {
+                    if (preferences.contains(key)) {
+                        settings.put(key, preferences.getBoolean(key, false));
+                        count++;
+                    }
+                } else {
+                    String value = preferences.getString(key, null);
+                    if (value != null && !value.isEmpty()) {
+                        settings.put(key, value);
+                        count++;
+                    }
+                }
+            }
+            json.put("settings", settings);
+
+            String jsonText = json.toString(2);
+
+            pluginUI.buildDialog()
+                    .setTitle("Export Settings (" + count + " items)")
+                    .setView(pluginUI.buildVerticalLayout()
+                            .addTextView().text("Long\u2011press the text below to select and copy:")
+                            .textColor(GeminiColorTokens.getSecondaryTextColor(pluginUI))
+                            .textSize(13)
+                            .addEditBox("exportJson").text(jsonText)
+                            .minLines(6).maxLines(12).textSize(12)
+                            .softWrap(PluginEditText.SOFT_WRAP_KEEP_WORD)
+                            .build())
+                    .setPositiveButton("Done", null)
+                    .show();
+        } catch (JSONException e) {
+            context.showToast("Export failed: " + e.getMessage());
+        }
+    }
+
+    // ==================== Import Dialog ====================
+
+    private void showImportDialog(bin.mt.plugin.api.ui.PluginUI pluginUI) {
+        PluginView dialogView = pluginUI.buildVerticalLayout()
+                .addTextView().text("Paste a preset JSON below:")
+                .textColor(GeminiColorTokens.getSecondaryTextColor(pluginUI))
+                .textSize(13)
+                .addEditBox("importJson").hint("{ \"preset_version\": 1, ... }")
+                .minLines(6).maxLines(12).textSize(12)
+                .build();
+
+        pluginUI.buildDialog()
+                .setTitle("Import Settings")
+                .setView(dialogView)
+                .setPositiveButton("Import", (dialog, which) -> {
+                    PluginEditText editText = dialogView.requireViewById("importJson");
+                    String input = editText.getText().toString().trim();
+                    if (input.isEmpty()) {
+                        context.showToast("No JSON provided");
+                        return;
+                    }
+                    applyPresetJson(input);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void applyPresetJson(String jsonText) {
+        try {
+            JSONObject json = new JSONObject(jsonText);
+
+            if (!json.has("preset_version") || !json.has("settings")) {
+                context.showToast("Invalid preset: missing required fields");
+                return;
+            }
+
+            JSONObject settings = json.getJSONObject("settings");
+            SharedPreferences.Editor editor = preferences.edit();
+            int applied = 0;
+
+            java.util.Iterator<String> keys = settings.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                if (!EXPORTABLE_KEYS.contains(key)) {
+                    continue; // Skip unknown or sensitive keys
+                }
+                if (BOOLEAN_KEYS.contains(key)) {
+                    editor.putBoolean(key, settings.getBoolean(key));
+                } else {
+                    editor.putString(key, settings.getString(key));
+                }
+                applied++;
+            }
+            editor.apply();
+            context.showToast("Restored " + applied + " settings — restart plugin to apply");
+        } catch (JSONException e) {
+            context.showToast("Import failed: invalid JSON — " + e.getMessage());
+        }
     }
 
     // ==================== Dashboard Dialog ====================

@@ -74,9 +74,16 @@ public class GeminiHttpUtils {
                     inputStream = conn.getInputStream();
                     return readStream(inputStream);
                 } else {
+                    // Read Retry-After header before disconnect
+                    String retryAfter = (responseCode == 429 || responseCode == 503)
+                            ? conn.getHeaderField("Retry-After") : null;
                     errorStream = conn.getErrorStream();
                     String errorBody = errorStream != null ? readStream(errorStream) : "";
-                    throw new IOException("HTTP " + responseCode + ": " + errorBody);
+                    String prefix = "HTTP " + responseCode;
+                    if (retryAfter != null && !retryAfter.isEmpty()) {
+                        prefix += " [Retry-After: " + retryAfter + "]";
+                    }
+                    throw new IOException(prefix + ": " + errorBody);
                 }
 
             } finally {

@@ -212,13 +212,20 @@ public class HttpUtils {
                     inputStream = conn.getInputStream();
                     return readStream(inputStream, charset);
                 } else {
+                    // Read Retry-After header before disconnect
+                    String retryAfter = (responseCode == 429 || responseCode == 503)
+                            ? conn.getHeaderField("Retry-After") : null;
                     // Error response - try to read error body
                     errorStream = conn.getErrorStream();
                     String errorBody = errorStream != null ? readStream(errorStream, charset) : "";
 
                     // Try to parse error as JSON for better error messages
                     String errorMessage = extractErrorMessage(errorBody, responseCode);
-                    throw new IOException("HTTP " + responseCode + ": " + errorMessage);
+                    String prefix = "HTTP " + responseCode;
+                    if (retryAfter != null && !retryAfter.isEmpty()) {
+                        prefix += " [Retry-After: " + retryAfter + "]";
+                    }
+                    throw new IOException(prefix + ": " + errorMessage);
                 }
 
             } finally {

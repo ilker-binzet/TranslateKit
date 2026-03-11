@@ -52,7 +52,8 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     /**
      * Pattern for detecting placeholders in Android strings.
      * Covers printf (%s, %1$s, %d), ICU ({0}, {name}), template ({{value}}),
-     * HTML tags, and shell/template variables ($PATH, ${var}).
+     * HTML tags, shell/template variables ($PATH, ${var}),
+     * Android escape sequences (\n, \t, \'), and HTML entities (&amp;, &#123;).
      */
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile(
         "(%(?:\\d+\\$)?[-+# 0,(]*\\d*\\.?\\d*[sdfiboxXeEgGcChHnAt%])" +
@@ -60,7 +61,9 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         "|(\\{[^}]*\\})" +
         "|(<[^>]+>)" +
         "|(\\$\\{[^}]+\\})" +
-        "|(\\$[A-Za-z_]\\w*)"
+        "|(\\$[A-Za-z_]\\w*)" +
+        "|(\\\\[nrt'\\\"\\\\])" +
+        "|(&(?:#\\d+|#x[0-9a-fA-F]+|[a-zA-Z]+);)"
     );
 
     /** Pattern for non-translatable strings (only symbols, numbers, whitespace) */
@@ -89,6 +92,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     private SharedPreferences preferences;
     private String userContextDirective = "";
     private TranslationDebugLogger debugLogger;
+    private boolean batchEnabled;
     private int batchSize;
     private int batchMaxChars;
 
@@ -201,12 +205,13 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
         userContextDirective = buildUserContextDirective(prefs);
 
-        // Load batch size configuration
+        // Load batch configuration
+        batchEnabled = prefs.getBoolean(GeminiConstants.PREF_BATCH_ENABLED, GeminiConstants.DEFAULT_BATCH_ENABLED);
         batchSize = readIntPreference(prefs, GeminiConstants.PREF_BATCH_SIZE, GeminiConstants.DEFAULT_BATCH_SIZE);
         batchMaxChars = readIntPreference(prefs, GeminiConstants.PREF_BATCH_MAX_CHARS, GeminiConstants.DEFAULT_BATCH_MAX_CHARS);
         if (batchSize < 1) batchSize = GeminiConstants.DEFAULT_BATCH_SIZE;
         if (batchMaxChars < 100) batchMaxChars = GeminiConstants.DEFAULT_BATCH_MAX_CHARS;
-        logInfo("Batch config: size=" + batchSize + ", maxChars=" + batchMaxChars);
+        logInfo("Batch config: enabled=" + batchEnabled + ", size=" + batchSize + ", maxChars=" + batchMaxChars);
     }
 
     /**
@@ -218,6 +223,9 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
      */
     @Override
     public BatchTranslationEngine.BatchingStrategy createBatchingStrategy() {
+        if (!batchEnabled) {
+            return new BatchTranslationEngine.DefaultBatchingStrategy(1, batchMaxChars);
+        }
         return new BatchTranslationEngine.DefaultBatchingStrategy(batchSize, batchMaxChars);
     }
 
@@ -233,9 +241,27 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
      * @return Translated text
      * @throws IOException If translation fails
      */
+    /**
+     * Normalizes legacy Java Locale language codes to modern ISO 639-1.
+     * Java's Locale.getLanguage() returns obsolete codes for some languages:
+     * "iw" (Hebrew) → "he", "in" (Indonesian) → "id", "ji" (Yiddish) → "yi".
+     */
+    private static String normalizeLanguageCode(String code) {
+        if (code == null) return code;
+        switch (code) {
+            case "iw": return "he";
+            case "in": return "id";
+            case "ji": return "yi";
+            default: return code;
+        }
+    }
+
     @NonNull
     @Override
     public String translate(String text, String sourceLanguage, String targetLanguage) throws IOException {
+        sourceLanguage = normalizeLanguageCode(sourceLanguage);
+        targetLanguage = normalizeLanguageCode(targetLanguage);
+
         // Input validation
         if (text == null || text.trim().isEmpty()) {
             return text;
@@ -299,6 +325,9 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     @NonNull
     @Override
     public String[] batchTranslate(@NonNull String[] texts, String sourceLanguage, String targetLanguage) throws IOException {
+        sourceLanguage = normalizeLanguageCode(sourceLanguage);
+        targetLanguage = normalizeLanguageCode(targetLanguage);
+
         if (texts.length == 0) return new String[0];
 
         // Single text optimization: use direct prompt (more precise, no parsing overhead)
@@ -332,23 +361,29 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
         // Build tokenized texts array for batch (only translatable items)
         String[] tokenizedTexts = new String[translatableIndices.size()];
+        int totalChars = 0;
         for (int j = 0; j < translatableIndices.size(); j++) {
             int idx = translatableIndices.get(j);
             tokenizedTexts[j] = phResults[idx].tokenizedText;
+            if (tokenizedTexts[j] != null) totalChars += tokenizedTexts[j].length();
         }
+
+        // Create batch span for structured debug logging
+        TranslationDebugLogger.BatchSpan batchSpan = debugLogger.newBatchSpan(
+                selectedEngine, modelName,
+                sourceLanguage, targetLanguage,
+                count, translatableIndices.size(), totalChars);
+        batchSpan.logPreprocess(count - translatableIndices.size());
 
         try {
             // Build batch prompt with tokenized texts
             String prompt = buildBatchTranslationPrompt(tokenizedTexts, sourceLanguage, targetLanguage);
-            int totalChars = 0;
-            for (String t : tokenizedTexts) {
-                if (t != null) totalChars += t.length();
-            }
             String preview = "[batch:" + tokenizedTexts.length + "] " + totalChars + " chars";
 
             logInfo("Batch translate via " + selectedEngine + " | count=" + tokenizedTexts.length
                     + " | src=" + sourceLanguage + " -> " + targetLanguage
                     + " | totalChars=" + totalChars);
+            batchSpan.logApiCall(prompt.length());
 
             String rawResponse;
             switch (selectedEngine) {
@@ -364,7 +399,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
                     break;
             }
 
-            String[] batchResults = parseBatchResponse(rawResponse, tokenizedTexts);
+            String[] batchResults = parseBatchResponse(rawResponse, tokenizedTexts, batchSpan);
 
             // Map batch results back to original indices and restore placeholders
             for (int j = 0; j < translatableIndices.size(); j++) {
@@ -374,7 +409,9 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
                 // Restore placeholders
                 if (phResults[idx].hasPlaceholders()) {
                     translated = restorePlaceholders(translated, phResults[idx].placeholders);
-                    if (!validatePlaceholders(texts[idx], translated)) {
+                    boolean valid = validatePlaceholders(texts[idx], translated);
+                    batchSpan.logPlaceholderRestore(j + 1, valid, valid ? null : "validation failed, keeping original");
+                    if (!valid) {
                         logWarn("Placeholder validation failed for batch item " + (j + 1) + ", keeping original");
                         translated = texts[idx];
                     }
@@ -383,11 +420,14 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
                 results[idx] = translated;
             }
 
+            batchSpan.markSuccess(translatableIndices.size());
             logSuccess("Batch translate complete: " + texts.length + " texts in single API call");
             return results;
 
         } catch (IOException e) {
             // Batch failed entirely — fall back to translating each text individually
+            batchSpan.markFailure(e.getMessage());
+            batchSpan.logFallbackToIndividual(e.getMessage());
             logWarn("Batch translation failed (" + e.getMessage() + "), falling back to individual translation");
 
             for (int idx : translatableIndices) {
@@ -427,7 +467,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         }
         prompt.append("IMPORTANT: Return ONLY the translated text, without any explanations, notes, or additional formatting.\n");
         prompt.append("Keep emojis exactly as they appear.\n");
-        prompt.append("Tokens like __PH0__, __PH1__ etc. are protected placeholders — keep them EXACTLY as-is, do not translate, modify, reorder, or remove them.\n");
+        prompt.append("Tokens like __PH0__, __PH1__ etc. are protected placeholders — keep them EXACTLY as-is (case-sensitive, including double underscores), do not translate, modify, reorder, or remove them.\n");
         prompt.append("Translate only the human-readable words around them.\n");
         prompt.append("Do not add quotes, prefixes, or suffixes. Just the pure translation.\n\n");
         prompt.append("Text to translate:\n");
@@ -468,8 +508,8 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         prompt.append("- Return ONLY the translations in the EXACT same numbered format: [N] translated text\n");
         prompt.append("- You MUST translate ALL ").append(texts.length).append(" items. Do not skip, merge, or reorder any.\n");
         prompt.append("- Each translation MUST be on its own line starting with [N] where N is the item number.\n");
-        prompt.append("- Tokens like __PH0__, __PH1__ etc. are protected placeholders — keep them EXACTLY as-is.\n");
-        prompt.append("- Do NOT translate, modify, reorder, or remove __PH*__ tokens.\n");
+        prompt.append("- Tokens like __PH0__, __PH1__ etc. are protected placeholders — keep them EXACTLY as-is (case-sensitive, including double underscores).\n");
+        prompt.append("- Do NOT translate, modify, reorder, or remove __PH*__ tokens. Their count and order must match the input.\n");
         prompt.append("- Keep emojis exactly as they appear.\n");
         prompt.append("- Do not add quotes, explanations, notes, or any extra text.\n\n");
 
@@ -497,7 +537,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
      * @return Array of translated texts in the same order
      * @throws IOException If response is completely unparseable
      */
-    private String[] parseBatchResponse(String response, String[] originalTexts) throws IOException {
+    private String[] parseBatchResponse(String response, String[] originalTexts, TranslationDebugLogger.BatchSpan batchSpan) throws IOException {
         int count = originalTexts.length;
         String[] results = new String[count];
 
@@ -567,9 +607,15 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
             }
         }
 
+        // Determine which format was used for logging
+        String formatUsed = bestFound == 0 ? "none" : "numbered";
+        batchSpan.logParseResult(formatUsed, bestFound, count);
+
         if (bestFound == 0) {
-            logWarn("Batch response could not be parsed, falling back to originals");
+            batchSpan.logParseWarning(count, "No format matched, all kept as originals");
+            throw new IOException("Batch response could not be parsed: no numbered format matched (expected " + count + " items)");
         } else if (missing > 0) {
+            batchSpan.logParseWarning(missing, missing + "/" + count + " translations missing, kept originals");
             logWarn("Batch parse: " + missing + "/" + count + " translations missing, kept originals");
         }
 
@@ -610,7 +656,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         sys.append("You are a professional translation engine working on Android application strings. ")
                 .append("Translate from ").append(sourceLangName).append(" to ").append(targetLangName).append(". ")
                 .append("ABSOLUTE RULES: ")
-                .append("1) Tokens like __PH0__, __PH1__ etc. are protected placeholders — keep them EXACTLY as-is in the translation. Do NOT translate, modify, reorder, or remove them. ")
+                .append("1) Tokens like __PH0__, __PH1__ etc. are protected placeholders — keep them EXACTLY as-is (case-sensitive, including double underscores) in the translation. Do NOT translate, modify, reorder, or remove them. Their count and order must match. ")
                 .append("2) Keep emojis exactly as they appear. ")
                 .append("3) Return ONLY the translated text — no quotes, explanations, or commentary. ")
                 .append("4) Keep the translation natural and appropriate for a mobile app UI.");
@@ -646,7 +692,9 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         try {
             JSONObject request = new JSONObject();
             request.put("model", claudeModel);
-            request.put("max_tokens", 1024);
+            // Dynamic max_tokens: scale with prompt size (~1 token per 3-4 chars), minimum 2048
+            int estimatedTokens = Math.max(2048, prompt.length() / 3);
+            request.put("max_tokens", estimatedTokens);
             request.put("system", buildSystemPrompt(sourceLanguage, targetLanguage));
 
             JSONArray messages = new JSONArray();
@@ -855,7 +903,12 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
                 }
 
                 try {
-                    Thread.sleep((long) Math.pow(2, attempt) * 1000L);
+                    long waitMs = parseRetryAfterMs(e.getMessage());
+                    if (waitMs <= 0) {
+                        waitMs = (long) Math.pow(2, attempt) * 1000L;
+                    }
+                    logInfo("Waiting " + waitMs + "ms before retry");
+                    Thread.sleep(waitMs);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     throw new IOException("Translation interrupted", ie);
@@ -864,6 +917,26 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         }
 
         throw lastException != null ? lastException : new IOException("Translation failed");
+    }
+
+    /**
+     * Parse Retry-After value from error message.
+     * Looks for pattern [Retry-After: N] embedded by GeminiHttpUtils.
+     *
+     * @param message Error message
+     * @return Wait time in milliseconds, or -1 if not found
+     */
+    private long parseRetryAfterMs(String message) {
+        if (message == null) return -1;
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\\[Retry-After: (\\d+)\\]")
+                .matcher(message);
+        if (m.find()) {
+            try {
+                return Long.parseLong(m.group(1)) * 1000L;
+            } catch (NumberFormatException ignored) {}
+        }
+        return -1;
     }
 
     /**
@@ -1065,6 +1138,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     /**
      * Restore placeholder tokens (__PH0__, __PH1__, ...) back to the original
      * placeholder strings captured during tokenization.
+     * Uses case-insensitive matching to handle AI models that may alter token casing.
      */
     private String restorePlaceholders(String translatedText, List<String> placeholders) {
         String result = translatedText;
@@ -1072,6 +1146,10 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
             String token = "__PH" + i + "__";
             if (result.contains(token)) {
                 result = result.replace(token, placeholders.get(i));
+            } else {
+                // Case-insensitive fallback: AI may output __ph0__ or __Ph0__
+                Pattern ciPattern = Pattern.compile(Pattern.quote(token), Pattern.CASE_INSENSITIVE);
+                result = ciPattern.matcher(result).replaceAll(Matcher.quoteReplacement(placeholders.get(i)));
             }
         }
         return result;
@@ -1100,6 +1178,10 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
             int actualCount = countOccurrences(translated, ph);
             if (actualCount < expectedCount) {
                 logWarn("Missing placeholder '" + ph + "': expected " + expectedCount + ", found " + actualCount);
+                return false;
+            }
+            if (actualCount > expectedCount) {
+                logWarn("Extra placeholder '" + ph + "': expected " + expectedCount + ", found " + actualCount);
                 return false;
             }
         }

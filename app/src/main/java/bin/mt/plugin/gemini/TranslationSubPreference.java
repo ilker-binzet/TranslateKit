@@ -44,6 +44,23 @@ public class TranslationSubPreference implements PluginPreference {
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_NUMBER);
 
+        // ==================== Batch Translation ====================
+        builder.addSwitch(localString.get("pref_batch_enabled"), GeminiConstants.PREF_BATCH_ENABLED)
+                .defaultValue(GeminiConstants.DEFAULT_BATCH_ENABLED)
+                .summary(localString.get("pref_batch_enabled_summary"));
+
+        builder.addInput(localString.get("pref_batch_size"), GeminiConstants.PREF_BATCH_SIZE)
+                .defaultValue(String.valueOf(GeminiConstants.DEFAULT_BATCH_SIZE))
+                .summary(localString.get("pref_batch_size_summary"))
+                .valueAsSummary()
+                .inputType(InputType.TYPE_CLASS_NUMBER);
+
+        builder.addInput(localString.get("pref_batch_max_chars"), GeminiConstants.PREF_BATCH_MAX_CHARS)
+                .defaultValue(String.valueOf(GeminiConstants.DEFAULT_BATCH_MAX_CHARS))
+                .summary(localString.get("pref_batch_max_chars_summary"))
+                .valueAsSummary()
+                .inputType(InputType.TYPE_CLASS_NUMBER);
+
         // Preference change callback
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
             String key = preferenceItem.getKey();
