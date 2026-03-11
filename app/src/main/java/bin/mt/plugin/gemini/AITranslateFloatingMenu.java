@@ -102,7 +102,9 @@ public class AITranslateFloatingMenu extends BaseTextEditorFloatingMenu {
                 }
                 
                 if (translatedText != null && !translatedText.isEmpty()) {
-                    editor.replaceText(selStart, selEnd, translatedText);
+                    boolean bilingualMode = prefs.getBoolean(GeminiConstants.PREF_BILINGUAL_MODE, GeminiConstants.DEFAULT_BILINGUAL_MODE);
+                    String finalText = bilingualMode ? selectedText + "\n" + translatedText : translatedText;
+                    editor.replaceText(selStart, selEnd, finalText);
                     pluginUI.showToast(localString != null 
                         ? localString.get("translation_complete")
                         : "Translation complete");
@@ -261,7 +263,7 @@ public class AITranslateFloatingMenu extends BaseTextEditorFloatingMenu {
         org.json.JSONObject request = new org.json.JSONObject();
         try {
             request.put("model", model);
-            request.put("max_tokens", 1024);
+            request.put("max_tokens", 2048);
             request.put("system", "You are a professional translator. Translate text accurately and return only the translation.");
             
             org.json.JSONArray messages = new org.json.JSONArray();

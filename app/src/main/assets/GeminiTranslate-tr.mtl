@@ -92,6 +92,15 @@ model_legacy: Gemini 2.0 Flash (Eski)
 pref_rate_limits: 🎁 Ücretsiz Katman Limitleri
 pref_rate_limits_summary: 2000 istek/gün (Flash) | 100 istek/gün (Pro) - Tamamen ÜCRETSİZ!
 
+pref_batch_enabled: Toplu Çeviri
+pref_batch_enabled_summary: Daha hızlı çeviri için birden fazla metni tek API çağrısında gönder
+pref_batch_size: Toplu İşlem Boyutu
+pref_batch_size_summary: Toplu istek başına maksimum metin sayısı (1-100)
+pref_batch_max_chars: Maks. Toplu Karakter
+pref_batch_max_chars_summary: Toplu istek başına maksimum toplam karakter sayısı (500-50000)
+pref_bilingual_mode: İki Dilli Çıktı
+pref_bilingual_mode_summary: Orijinal metni koru ve çeviriyi altına ekle
+
 pref_header_performance: ⚡ Performans Ayarları 💨━━━━━━━━━━━━
 pref_timeout: İstek Zaman Aşımı (ms)
 pref_timeout_summary: API yanıtı için maksimum bekleme süresi (5000-120000 ms)

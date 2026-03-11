@@ -8,9 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.2-alpha] - 2026-02-18
 
 ### Added
+- Bilingual output mode: keep original text with translation below it
 - User-configurable batch size via SharedPreferences (gemini_batch_size, google_batch_size)
 - Batch max characters preference for both engines
 - Input validation with safe fallback to defaults for invalid batch config values
+
+### Changed
+- Upgraded MT Plugin SDK from v3 beta3 to v3 beta5
+- Adapted to new SDK API: translate() is now final, engines use translateSingle() internally
+- Custom SimpleBatchingStrategy replaces package-private DefaultBatchingStrategy
+- Fixed potential infinite recursion between translate() and batchTranslate() in SDK beta5
 
 ### Fixed
 - Placeholder corruption during translation (%s, %1$s, {0} etc. now protected via tokenization)
