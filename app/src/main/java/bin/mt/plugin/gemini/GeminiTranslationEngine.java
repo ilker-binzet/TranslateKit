@@ -224,9 +224,9 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     @Override
     public BatchTranslationEngine.BatchingStrategy createBatchingStrategy() {
         if (!batchEnabled) {
-            return new BatchTranslationEngine.DefaultBatchingStrategy(1, batchMaxChars);
+            return new SimpleBatchingStrategy(1, batchMaxChars);
         }
-        return new BatchTranslationEngine.DefaultBatchingStrategy(batchSize, batchMaxChars);
+        return new SimpleBatchingStrategy(batchSize, batchMaxChars);
     }
 
     /**
@@ -256,9 +256,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         }
     }
 
-    @NonNull
-    @Override
-    public String translate(String text, String sourceLanguage, String targetLanguage) throws IOException {
+    private String translateSingle(String text, String sourceLanguage, String targetLanguage) throws IOException {
         sourceLanguage = normalizeLanguageCode(sourceLanguage);
         targetLanguage = normalizeLanguageCode(targetLanguage);
 
@@ -332,7 +330,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
         // Single text optimization: use direct prompt (more precise, no parsing overhead)
         if (texts.length == 1) {
-            return new String[]{ translate(texts[0], sourceLanguage, targetLanguage) };
+            return new String[]{ translateSingle(texts[0], sourceLanguage, targetLanguage) };
         }
 
         int count = texts.length;
@@ -432,7 +430,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
             for (int idx : translatableIndices) {
                 try {
-                    results[idx] = translate(texts[idx], sourceLanguage, targetLanguage);
+                    results[idx] = translateSingle(texts[idx], sourceLanguage, targetLanguage);
                 } catch (IOException singleError) {
                     logWarn("Individual fallback failed for item " + (idx + 1) + ": " + singleError.getMessage());
                     results[idx] = texts[idx]; // keep original
@@ -1374,6 +1372,37 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
             pluginContext.log(entry);
         } else {
             System.out.println(entry);
+        }
+    }
+
+    /**
+     * Simple batching strategy that limits batch by count and total text length.
+     */
+    private static class SimpleBatchingStrategy implements BatchTranslationEngine.BatchingStrategy {
+        private final int maxCount;
+        private final int maxTextLength;
+        private int count;
+        private int totalTextLength;
+
+        SimpleBatchingStrategy(int maxCount, int maxTextLength) {
+            this.maxCount = maxCount;
+            this.maxTextLength = maxTextLength;
+        }
+
+        @Override
+        public void reset() {
+            count = 0;
+            totalTextLength = 0;
+        }
+
+        @Override
+        public boolean tryAdd(String text) {
+            if (maxCount > 0 && count >= maxCount) return false;
+            int len = text.length();
+            if (maxTextLength > 0 && totalTextLength + len > maxTextLength) return false;
+            count++;
+            totalTextLength += len;
+            return true;
         }
     }
 }

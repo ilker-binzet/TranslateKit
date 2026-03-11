@@ -5,7 +5,7 @@ package bin.mt.plugin.gemini;
  *
  * @author MT Manager Plugin Developer
  * @version 0.2.2-alpha
- * @updated February 2026 - BaseBatchTranslationEngine, latest AI models & SDK beta3
+ * @updated February 2026 - BaseBatchTranslationEngine, latest AI models & SDK beta5
  */
 public class GeminiConstants {
 
