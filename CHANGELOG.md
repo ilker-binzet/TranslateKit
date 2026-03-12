@@ -5,6 +5,26 @@ All notable changes to TranslateKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-alpha] - 2026-03-11
+
+### Added
+- Bilingual output mode: keep original text with translation below it
+- User-configurable batch size and max characters preferences
+- Placeholder hardening for %s, %1$s, {0} patterns
+- Rate limit Retry-After header support
+- Preset import/export for translation settings
+- Batch debug logging and parse count validation
+- Hebrew language code fix (he → iw)
+- Claude max_tokens parameter fix
+- Batch-to-individual fallback on IOException
+
+### Changed
+- Upgraded MT Plugin SDK from v3 beta3 to v3 beta5
+- Custom SimpleBatchingStrategy replaces DefaultBatchingStrategy
+- Multi-format batch response parser with [N], N., N) support
+
+---
+
 ## [0.2.2-alpha] - 2026-02-18
 
 ### Added
