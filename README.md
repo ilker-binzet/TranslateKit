@@ -32,8 +32,8 @@ The plugin supports three AI providers and Google Cloud Translation, with built-
 | Provider                   | Models                                             | Free Tier             |
 | -------------------------- | -------------------------------------------------- | --------------------- |
 | **Google Gemini**    | Gemini 3 Pro/Flash, 2.5 Flash/Pro, 2.5 Flash-Lite  | 2000 req/day (Flash)  |
-| **OpenAI**           | GPT-4o, GPT-4o Mini, o3 Mini                       | Pay-as-you-go         |
-| **Anthropic Claude** | Claude 4.5 Sonnet, 4 Opus/Sonnet, 3.5 Sonnet/Haiku | Pay-as-you-go         |
+| **OpenAI**           | GPT-5.2/5.1/5, GPT-4.1, GPT-4o, o3/o4 Mini         | Pay-as-you-go         |
+| **Anthropic Claude** | Claude Opus 4.6/4.5, Sonnet 4.5, Haiku 4.5         | Pay-as-you-go         |
 | **Google Cloud**     | Neural Machine Translation                         | 500K chars/month free |
 
 > Dynamic model catalog — the plugin fetches the latest available models from each provider's API automatically.
