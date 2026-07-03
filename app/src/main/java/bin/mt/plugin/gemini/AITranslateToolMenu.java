@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.drawable.MaterialIcons;
 import bin.mt.plugin.api.editor.BaseTextEditorToolMenu;
 import bin.mt.plugin.api.editor.TextEditor;
@@ -56,16 +55,11 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
         GeminiConstants.ENGINE_OPENAI,
         GeminiConstants.ENGINE_CLAUDE
     );
-    
-    private LocalString localString;
-    
+
     @NonNull
     @Override
     public String name() {
-        if (localString == null) {
-            localString = getContext().getAssetLocalString("GeminiTranslate");
-        }
-        return localString != null ? localString.get("tool_menu_ai_translate") : "AI Translate";
+        return getContext().getString("{tool_menu_ai_translate}");
     }
 
     @NonNull
@@ -81,10 +75,6 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
 
     @Override
     public void onMenuClick(@NonNull PluginUI pluginUI, @NonNull TextEditor editor) {
-        if (localString == null) {
-            localString = getContext().getAssetLocalString("GeminiTranslate");
-        }
-        
         int selStart = editor.getSelectionStart();
         int selEnd = editor.getSelectionEnd();
         String selectedText = editor.subText(selStart, selEnd);
@@ -120,35 +110,35 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
                 .paddingTop(pluginUI.dialogPaddingVertical() / 2)
                 
                 // Source text input
-                .addTextView().text(localString != null ? localString.get("source_text") : "Source Text")
+                .addTextView().text(getContext().getString("{source_text}"))
                 .addEditBox("inputText").text(hasSelection ? selectedText : "")
                 
                 // Language selection row
                 .addHorizontalLayout().gravity(Gravity.CENTER_VERTICAL).marginTopDp(8).children(layout -> layout
-                        .addTextView().text(localString != null ? localString.get("from") : "From:")
+                        .addTextView().text(getContext().getString("{from}"))
                         .addSpinner("sourceLang").items(languageNames).selection(savedSourceLang).width(0).layoutWeight(1).marginLeftDp(4)
                         .addTextView().text("→").marginLeftDp(8).marginRightDp(8)
-                        .addTextView().text(localString != null ? localString.get("to") : "To:")
+                        .addTextView().text(getContext().getString("{to}"))
                         .addSpinner("targetLang").items(languageNames.subList(1, languageNames.size())).selection(Math.max(0, savedTargetLang - 1)).width(0).layoutWeight(1).marginLeftDp(4)
                 )
                 
                 // Engine selection row
                 .addHorizontalLayout().gravity(Gravity.CENTER_VERTICAL).marginTopDp(8).children(layout -> layout
-                        .addTextView().text(localString != null ? localString.get("engine") : "Engine:")
+                        .addTextView().text(getContext().getString("{engine}"))
                         .addSpinner("engine").items(engineNames).selection(savedEngine).width(0).layoutWeight(1).marginLeftDp(4)
                         .addButton("engineOptions").text("⚙").marginLeftDp(4)
                 )
                 
                 // Translate button
-                .addButton("translate").text(localString != null ? localString.get("translate") : "Translate").widthMatchParent().marginTopDp(12)
+                .addButton("translate").text(getContext().getString("{translate}")).widthMatchParent().marginTopDp(12)
                 
                 // Output text
-                .addTextView().text(localString != null ? localString.get("translated_text") : "Translated Text").marginTopDp(12)
+                .addTextView().text(getContext().getString("{translated_text}")).marginTopDp(12)
                 .addEditBox("outputText");
         
         // Add replace button if text was selected
         if (hasSelection) {
-            builder.addButton("replace").text(localString != null ? localString.get("replace_original") : "Replace Original").widthMatchParent().enable(false).marginTopDp(8);
+            builder.addButton("replace").text(getContext().getString("{replace_original}")).widthMatchParent().enable(false).marginTopDp(8);
         }
         
         PluginView view = builder.build();
@@ -156,7 +146,7 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
         PluginDialog dialog = pluginUI.buildDialog()
                 .setTitle(name())
                 .setView(view)
-                .setPositiveButton(localString != null ? localString.get("close") : "Close", null)
+                .setPositiveButton(getContext().getString("{close}"), null)
                 .show();
         
         PluginEditText inputText = view.requireViewById("inputText");
@@ -175,7 +165,7 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
         translateButton.setOnClickListener(button -> {
             String text = inputText.getText().toString();
             if (TextUtils.isEmpty(text)) {
-                pluginUI.showToast(localString != null ? localString.get("error_no_text") : "Please enter text to translate");
+                pluginUI.showToast(getContext().getString("{error_no_text}"));
                 return;
             }
             
@@ -214,7 +204,7 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
                     String finalText = bilingualMode ? selectedText + "\n" + translation : translation;
                     editor.replaceText(selStart, selEnd, finalText);
                     dialog.dismiss();
-                    pluginUI.showToast(localString != null ? localString.get("text_replaced") : "Text replaced");
+                    pluginUI.showToast(getContext().getString("{text_replaced}"));
                 }
             });
         }
@@ -222,7 +212,7 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
     
     private List<String> buildLanguageNames() {
         return Arrays.asList(
-            localString != null ? localString.get("lang_auto") : "Auto Detect",
+            getContext().getString("{lang_auto}"),
             "English", "Türkçe", "Deutsch", "Français", "Español", 
             "Italiano", "Português", "Русский", "日本語", "한국어",
             "简体中文", "繁體中文", "العربية", "हिन्दी", "Nederlands", 
@@ -278,9 +268,7 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
             @Override
             protected void beforeThread() throws Exception {
                 loadingDialog = new LoadingDialog(pluginUI)
-                        .setMessage(localString != null 
-                            ? localString.get("translating") + "..."
-                            : "Translating...")
+                        .setMessage(getContext().getString("{translating}") + "...")
                         .showDelay(100);
             }
             
@@ -312,9 +300,7 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
             @Override
             protected void afterThread() throws Exception {
                 if (error != null) {
-                    pluginUI.showToast(localString != null 
-                        ? localString.get("error_translation_failed") + ": " + error.getMessage()
-                        : "Translation failed: " + error.getMessage());
+                    pluginUI.showToast(getContext().getString("{error_translation_failed}") + ": " + error.getMessage());
                     return;
                 }
                 
@@ -357,175 +343,191 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
     private String translateWithGemini(String prompt, SharedPreferences prefs, int timeout) throws IOException {
         String apiKey = prefs.getString(GeminiConstants.PREF_API_KEY, "");
         String modelName = prefs.getString(GeminiConstants.PREF_MODEL_NAME, GeminiConstants.DEFAULT_MODEL);
-        
+
         if (apiKey == null || apiKey.trim().isEmpty()) {
             throw new IOException("Gemini API key not configured");
         }
-        
-        org.json.JSONObject request = new org.json.JSONObject();
+
+        bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
         try {
-            org.json.JSONArray contents = new org.json.JSONArray();
-            org.json.JSONObject content = new org.json.JSONObject();
-            org.json.JSONArray parts = new org.json.JSONArray();
-            org.json.JSONObject part = new org.json.JSONObject();
+            bin.mt.json.JSONArray contents = new bin.mt.json.JSONArray();
+            bin.mt.json.JSONObject content = new bin.mt.json.JSONObject();
+            bin.mt.json.JSONArray parts = new bin.mt.json.JSONArray();
+            bin.mt.json.JSONObject part = new bin.mt.json.JSONObject();
             part.put("text", prompt);
-            parts.put(part);
+            parts.add(part);
             content.put("parts", parts);
-            contents.put(content);
+            contents.add(content);
             request.put("contents", contents);
-            
-            org.json.JSONObject generationConfig = new org.json.JSONObject();
+
+            bin.mt.json.JSONObject generationConfig = new bin.mt.json.JSONObject();
             generationConfig.put("temperature", 0.1);
             generationConfig.put("maxOutputTokens", 2048);
             request.put("generationConfig", generationConfig);
-        } catch (org.json.JSONException e) {
+        } catch (Exception e) {
             throw new IOException("Failed to build request", e);
         }
-        
+
         String apiUrl = String.format("%s/%s:generateContent?key=%s",
             GeminiConstants.API_BASE_URL, modelName, apiKey);
-        
-        GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(apiUrl);
-        httpRequest.setTimeout(timeout);
-        httpRequest.jsonBody(request);
-        
-        org.json.JSONObject response = httpRequest.executeToJson();
+
+        bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(apiUrl, null, request.toString());
         return parseGeminiResponse(response);
     }
-    
+
     private String translateWithOpenAI(String prompt, SharedPreferences prefs, int timeout) throws IOException {
         String apiKey = prefs.getString(GeminiConstants.PREF_OPENAI_API_KEY, "");
         String model = prefs.getString(GeminiConstants.PREF_OPENAI_MODEL, GeminiConstants.DEFAULT_OPENAI_MODEL);
         String endpoint = prefs.getString(GeminiConstants.PREF_OPENAI_ENDPOINT, GeminiConstants.DEFAULT_OPENAI_ENDPOINT);
-        
+
         if (apiKey == null || apiKey.trim().isEmpty()) {
             throw new IOException("OpenAI API key not configured");
         }
-        
-        org.json.JSONObject request = new org.json.JSONObject();
+
+        bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
         try {
             request.put("model", model);
-            org.json.JSONArray messages = new org.json.JSONArray();
-            messages.put(new org.json.JSONObject()
+            bin.mt.json.JSONArray messages = new bin.mt.json.JSONArray();
+            messages.add(new bin.mt.json.JSONObject()
                     .put("role", "system")
                     .put("content", "You are a professional translator. Return only the translation."));
-            messages.put(new org.json.JSONObject()
+            messages.add(new bin.mt.json.JSONObject()
                     .put("role", "user")
                     .put("content", prompt));
             request.put("messages", messages);
             request.put("temperature", 0.1);
             request.put("max_tokens", 2048);
-        } catch (org.json.JSONException e) {
+        } catch (Exception e) {
             throw new IOException("Failed to build request", e);
         }
-        
-        GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(endpoint);
-        httpRequest.header("Authorization", "Bearer " + apiKey);
-        httpRequest.setTimeout(timeout);
-        httpRequest.jsonBody(request);
-        
-        org.json.JSONObject response = httpRequest.executeToJson();
+
+        java.util.Map<String, String> headers = new java.util.HashMap<>();
+        headers.put("Authorization", "Bearer " + apiKey);
+        bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(endpoint, headers, request.toString());
         return parseOpenAIResponse(response);
     }
-    
+
     private String translateWithClaude(String prompt, SharedPreferences prefs, int timeout) throws IOException {
         String apiKey = prefs.getString(GeminiConstants.PREF_CLAUDE_API_KEY, "");
         String model = prefs.getString(GeminiConstants.PREF_CLAUDE_MODEL, GeminiConstants.DEFAULT_CLAUDE_MODEL);
         String endpoint = prefs.getString(GeminiConstants.PREF_CLAUDE_ENDPOINT, GeminiConstants.DEFAULT_CLAUDE_ENDPOINT);
-        
+
         if (apiKey == null || apiKey.trim().isEmpty()) {
             throw new IOException("Claude API key not configured");
         }
-        
-        org.json.JSONObject request = new org.json.JSONObject();
+
+        bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
         try {
             request.put("model", model);
             request.put("max_tokens", 2048);
             request.put("system", "You are a professional translator. Return only the translation.");
-            
-            org.json.JSONArray messages = new org.json.JSONArray();
-            org.json.JSONObject userMessage = new org.json.JSONObject();
+
+            bin.mt.json.JSONArray messages = new bin.mt.json.JSONArray();
+            bin.mt.json.JSONObject userMessage = new bin.mt.json.JSONObject();
             userMessage.put("role", "user");
-            org.json.JSONArray content = new org.json.JSONArray();
-            org.json.JSONObject textBlock = new org.json.JSONObject();
+            bin.mt.json.JSONArray content = new bin.mt.json.JSONArray();
+            bin.mt.json.JSONObject textBlock = new bin.mt.json.JSONObject();
             textBlock.put("type", "text");
             textBlock.put("text", prompt);
-            content.put(textBlock);
+            content.add(textBlock);
             userMessage.put("content", content);
-            messages.put(userMessage);
+            messages.add(userMessage);
             request.put("messages", messages);
-        } catch (org.json.JSONException e) {
+        } catch (Exception e) {
             throw new IOException("Failed to build request", e);
         }
-        
-        GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(endpoint);
-        httpRequest.header("x-api-key", apiKey);
-        httpRequest.header("anthropic-version", GeminiConstants.CLAUDE_API_VERSION);
-        httpRequest.setTimeout(timeout);
-        httpRequest.jsonBody(request);
-        
-        org.json.JSONObject response = httpRequest.executeToJson();
+
+        java.util.Map<String, String> headers = new java.util.HashMap<>();
+        headers.put("x-api-key", apiKey);
+        headers.put("anthropic-version", GeminiConstants.CLAUDE_API_VERSION);
+        bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(endpoint, headers, request.toString());
         return parseClaudeResponse(response);
     }
-    
-    private String parseGeminiResponse(org.json.JSONObject json) throws IOException {
+
+    private String parseGeminiResponse(bin.mt.json.JSONObject json) throws IOException {
         try {
-            if (json.has("error")) {
-                org.json.JSONObject error = json.getJSONObject("error");
-                throw new IOException("API Error: " + error.optString("message", "Unknown error"));
+            if (json.contains("error")) {
+                bin.mt.json.JSONObject error = json.getJSONObject("error");
+                throw new IOException("API Error: " + bin.mt.plugin.common.JSONCompat.optString(error, "message", "Unknown error"));
             }
-            
-            org.json.JSONArray candidates = json.optJSONArray("candidates");
-            if (candidates == null || candidates.length() == 0) {
+
+            bin.mt.json.JSONArray candidates = bin.mt.plugin.common.JSONCompat.optJSONArray(json, "candidates");
+            if (candidates == null || bin.mt.plugin.common.JSONCompat.size(candidates) == 0) {
                 throw new IOException("No translation returned");
             }
-            
-            org.json.JSONObject candidate = candidates.getJSONObject(0);
-            org.json.JSONObject content = candidate.getJSONObject("content");
-            org.json.JSONArray parts = content.getJSONArray("parts");
-            
-            if (parts.length() == 0) {
+
+            bin.mt.json.JSONObject candidate = bin.mt.plugin.common.JSONCompat.optJSONObject(candidates, 0);
+            if (candidate == null) {
+                throw new IOException("Invalid candidate");
+            }
+            bin.mt.json.JSONObject content = candidate.getJSONObject("content");
+            bin.mt.json.JSONArray parts = content.getJSONArray("parts");
+
+            if (bin.mt.plugin.common.JSONCompat.size(parts) == 0) {
                 throw new IOException("Empty translation response");
             }
-            
-            return parts.getJSONObject(0).getString("text").trim();
-        } catch (org.json.JSONException e) {
+
+            return bin.mt.plugin.common.JSONCompat.optJSONObject(parts, 0).getString("text").trim();
+        } catch (Exception e) {
             throw new IOException("Failed to parse response", e);
         }
     }
-    
-    private String parseOpenAIResponse(org.json.JSONObject response) throws IOException {
+
+    private String parseOpenAIResponse(bin.mt.json.JSONObject response) throws IOException {
         try {
-            org.json.JSONArray choices = response.optJSONArray("choices");
-            if (choices == null || choices.length() == 0) {
+            bin.mt.json.JSONArray choices = bin.mt.plugin.common.JSONCompat.optJSONArray(response, "choices");
+            if (choices == null || bin.mt.plugin.common.JSONCompat.size(choices) == 0) {
                 throw new IOException("No response from OpenAI");
             }
-            
-            org.json.JSONObject message = choices.getJSONObject(0).optJSONObject("message");
+
+            bin.mt.json.JSONObject message = bin.mt.plugin.common.JSONCompat.optJSONObject(choices, 0);
+            if (message != null) {
+                message = bin.mt.plugin.common.JSONCompat.optJSONObject(message, "message");
+            }
             if (message == null) {
                 throw new IOException("Invalid OpenAI response");
             }
-            
-            return message.optString("content", "").trim();
-        } catch (org.json.JSONException e) {
+
+            String translation;
+            try {
+                translation = message.getString("content").trim();
+            } catch (Exception stringFail) {
+                bin.mt.json.JSONArray contentArr = bin.mt.plugin.common.JSONCompat.optJSONArray(message, "content");
+                if (contentArr == null) {
+                    throw new IOException("OpenAI message content missing");
+                }
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < bin.mt.plugin.common.JSONCompat.size(contentArr); i++) {
+                    bin.mt.json.JSONObject block = bin.mt.plugin.common.JSONCompat.optJSONObject(contentArr, i);
+                    if (block != null) {
+                        sb.append(bin.mt.plugin.common.JSONCompat.optString(block, "text", ""));
+                    }
+                }
+                translation = sb.toString().trim();
+            }
+            return translation;
+        } catch (Exception e) {
             throw new IOException("Failed to parse OpenAI response", e);
         }
     }
-    
-    private String parseClaudeResponse(org.json.JSONObject response) throws IOException {
-        org.json.JSONArray contentArray = response.optJSONArray("content");
-        if (contentArray == null || contentArray.length() == 0) {
+
+    private String parseClaudeResponse(bin.mt.json.JSONObject response) throws IOException {
+        bin.mt.json.JSONArray contentArray = bin.mt.plugin.common.JSONCompat.optJSONArray(response, "content");
+        if (contentArray == null || bin.mt.plugin.common.JSONCompat.size(contentArray) == 0) {
             throw new IOException("No response from Claude");
         }
-        
+
         StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < contentArray.length(); i++) {
-            org.json.JSONObject block = contentArray.optJSONObject(i);
-            if (block != null && block.has("text")) {
-                builder.append(block.optString("text"));
+        for (int i = 0; i < bin.mt.plugin.common.JSONCompat.size(contentArray); i++) {
+            bin.mt.json.JSONObject block = bin.mt.plugin.common.JSONCompat.optJSONObject(contentArray, i);
+            if (block != null) {
+                String text = bin.mt.plugin.common.JSONCompat.optString(block, "text", "");
+                if (!text.isEmpty()) {
+                    builder.append(text);
+                }
             }
         }
-        
+
         return builder.toString().trim();
     }
     

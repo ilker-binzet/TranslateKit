@@ -2,7 +2,6 @@ package bin.mt.plugin.gemini;
 
 import android.text.InputType;
 
-import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.PluginContext;
 import bin.mt.plugin.api.preference.PluginPreference;
 
@@ -17,11 +16,6 @@ public class TranslationSubPreference implements PluginPreference {
     @Override
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
-        LocalString localString = context.getAssetLocalString("GeminiTranslate");
-        if (localString == null) {
-            localString = context.getLocalString();
-        }
-        builder.setLocalString(localString);
 
         // ==================== Default AI Engine ====================
         builder.addList("Default AI Engine", GeminiConstants.PREF_DEFAULT_ENGINE)
@@ -45,26 +39,26 @@ public class TranslationSubPreference implements PluginPreference {
                 .inputType(InputType.TYPE_CLASS_NUMBER);
 
         // ==================== Batch Translation ====================
-        builder.addSwitch(localString.get("pref_batch_enabled"), GeminiConstants.PREF_BATCH_ENABLED)
+        builder.addSwitch(context.getString("{pref_batch_enabled}"), GeminiConstants.PREF_BATCH_ENABLED)
                 .defaultValue(GeminiConstants.DEFAULT_BATCH_ENABLED)
-                .summary(localString.get("pref_batch_enabled_summary"));
+                .summary(context.getString("{pref_batch_enabled_summary}"));
 
-        builder.addInput(localString.get("pref_batch_size"), GeminiConstants.PREF_BATCH_SIZE)
+        builder.addInput(context.getString("{pref_batch_size}"), GeminiConstants.PREF_BATCH_SIZE)
                 .defaultValue(String.valueOf(GeminiConstants.DEFAULT_BATCH_SIZE))
-                .summary(localString.get("pref_batch_size_summary"))
+                .summary(context.getString("{pref_batch_size_summary}"))
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_NUMBER);
 
-        builder.addInput(localString.get("pref_batch_max_chars"), GeminiConstants.PREF_BATCH_MAX_CHARS)
+        builder.addInput(context.getString("{pref_batch_max_chars}"), GeminiConstants.PREF_BATCH_MAX_CHARS)
                 .defaultValue(String.valueOf(GeminiConstants.DEFAULT_BATCH_MAX_CHARS))
-                .summary(localString.get("pref_batch_max_chars_summary"))
+                .summary(context.getString("{pref_batch_max_chars_summary}"))
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_NUMBER);
 
         // Bilingual output mode
-        builder.addSwitch(localString.get("pref_bilingual_mode"), GeminiConstants.PREF_BILINGUAL_MODE)
+        builder.addSwitch(context.getString("{pref_bilingual_mode}"), GeminiConstants.PREF_BILINGUAL_MODE)
                 .defaultValue(GeminiConstants.DEFAULT_BILINGUAL_MODE)
-                .summary(localString.get("pref_bilingual_mode_summary"));
+                .summary(context.getString("{pref_bilingual_mode_summary}"));
 
         // Preference change callback
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {

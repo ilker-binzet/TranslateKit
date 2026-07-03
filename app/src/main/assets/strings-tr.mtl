@@ -1,4 +1,6 @@
 # TranslateKit - Türkçe Dizeler
+# Türkçe dil dosyası (MT Plugin SDK v3 stabil düzeni).
+# gc_ önekli anahtarlar Google Cloud Translation motoruna aittir.
 
 # Eklenti Bilgileri
 plugin_name: TranslateKit
@@ -269,3 +271,85 @@ translation_complete: Çeviri tamamlandı
 error_no_text_selected: Metin seçilmedi
 error_no_text: Lütfen çevrilecek metin girin
 error_translation_failed: Çeviri başarısız
+
+# ==================== Google Cloud Çeviri (gc_) ====================
+gc_plugin_name: Google Cloud Çeviri
+gc_plugin_description: Google Cloud Translation API ile profesyonel çeviri motoru
+
+gc_pref_header_main: Google Cloud Çeviri
+gc_pref_plugin_name: Eklenti Adı
+gc_pref_plugin_description: Google'ın Sinir Ağı Makine Çevirisi ile gelişmiş çeviri
+
+gc_pref_header_api_config: API Yapılandırması
+gc_pref_api_key_title: API Anahtarı
+gc_pref_api_key_summary: Google Cloud Translation API anahtarınızı girin.\nconsole.cloud.google.com adresinden alabilirsiniz
+gc_pref_test_api_key: API Anahtarını Test Et
+gc_pref_test_api_key_summary: API anahtarınızın doğru çalıştığını doğrulayın
+gc_pref_get_api_key: API Anahtarı Al
+gc_pref_get_api_key_summary: API anahtarı oluşturmak için Google Cloud Console'u açın
+
+gc_pref_header_translation_settings: Çeviri Ayarları
+gc_pref_default_target_lang: Varsayılan Hedef Dil
+gc_pref_default_target_lang_summary: Çeviriler için tercih edilen dil
+gc_pref_use_advanced_model: Gelişmiş NMT Modeli Kullan
+gc_pref_use_advanced_model_summary: Google'ın premium Sinir Ağı Çeviri modelini etkinleştir (daha yüksek maliyet oluşturabilir)
+
+gc_pref_header_performance: Performans Ayarları
+gc_pref_timeout: İstek Zaman Aşımı (ms)
+gc_pref_timeout_summary: API yanıtı için maksimum bekleme süresi (5000-120000 ms)
+gc_pref_max_retries: Maksimum Yeniden Deneme
+gc_pref_max_retries_summary: Geçici hatalarda yeniden deneme sayısı (0-5)
+
+gc_pref_header_advanced: Gelişmiş Özellikler
+gc_pref_enable_cache: Çeviri Önbelleğini Etkinleştir
+gc_pref_enable_cache_summary: API çağrılarını azaltmak ve hızı artırmak için çevirileri önbelleğe al
+gc_pref_cache_expiration: Önbellek Süresi (dakika)
+gc_pref_cache_expiration_summary: Çevirilerin önbellekte ne kadar süre tutulacağı
+gc_pref_clear_cache: Önbelleği Temizle
+gc_pref_clear_cache_summary: Tüm önbelleğe alınmış çevirileri kaldır
+
+gc_pref_header_statistics: İstatistikler
+gc_pref_stats_cache_hits: Önbellek İsabeti
+gc_pref_stats_cache_misses: Önbellek Kaybı
+gc_pref_stats_value: %d
+gc_pref_reset_stats: İstatistikleri Sıfırla
+gc_pref_reset_stats_summary: Tüm kullanım istatistiklerini temizle
+
+gc_pref_header_info: Bilgi ve Yardım
+gc_pref_version: Eklenti Sürümü
+gc_pref_api_docs: API Dokümantasyonu
+gc_pref_api_docs_summary: Google Cloud Translation API dokümantasyonunu görüntüle
+gc_pref_pricing: Fiyatlandırma Bilgisi
+gc_pref_pricing_summary: Çeviri maliyetlerini ve ücretsiz katman limitlerini kontrol et
+gc_pref_github: GitHub Deposu
+gc_pref_github_summary: Kaynak kodunu görüntüle ve sorun bildir
+
+gc_lang_auto: Otomatik Algıla
+gc_lang_en: İngilizce
+gc_lang_zh-CN: Çince (Basitleştirilmiş)
+gc_lang_zh-TW: Çince (Geleneksel)
+gc_lang_tr: Türkçe
+gc_lang_de: Almanca
+gc_lang_fr: Fransızca
+gc_lang_es: İspanyolca
+gc_lang_ja: Japonca
+gc_lang_ko: Korece
+
+gc_error_no_api_key: API anahtarı yapılandırılmamış. Lütfen ayarlardan API anahtarınızı girin.
+gc_error_invalid_api_key_format: Geçersiz API anahtarı formatı. Google API anahtarları "AIzaSy" ile başlamalı ve 39 karakter uzunluğunda olmalıdır.
+gc_error_api_key_invalid: API anahtarı doğrulaması başarısız. Lütfen anahtarınızı kontrol edip tekrar deneyin.
+gc_error_api_test_failed: API anahtarı testi başarısız oldu
+gc_error_text_too_long: Metin 5000 karakter sınırını aşıyor. Lütfen daha küçük parçalara bölün.
+gc_error_api: API Hatası
+gc_error_timeout_range: Zaman aşımı 5000 ile 120000 milisaniye arasında olmalıdır
+gc_error_retries_range: Yeniden deneme sayısı 0 ile 5 arasında olmalıdır
+gc_error_invalid_number: Lütfen geçerli bir sayı girin
+
+gc_msg_api_key_valid: API anahtarı geçerli ve doğru çalışıyor!
+gc_msg_cache_cleared: Çeviri önbelleği temizlendi
+gc_msg_stats_reset: İstatistikler sıfırlandı
+
+gc_status_translating: Çevriliyor...
+gc_status_retrying: Çeviri yeniden deneniyor (deneme %d)...
+gc_status_cached: Önbellekteki çeviri kullanılıyor
+gc_status_complete: Çeviri tamamlandı

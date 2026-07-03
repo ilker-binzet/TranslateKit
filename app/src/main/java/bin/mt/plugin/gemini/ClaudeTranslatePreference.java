@@ -2,10 +2,10 @@ package bin.mt.plugin.gemini;
 
 import android.content.SharedPreferences;
 import android.text.InputType;
+import android.text.TextUtils;
 
 import java.util.regex.Pattern;
 
-import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.PluginContext;
 import bin.mt.plugin.api.preference.PluginPreference;
 
@@ -14,21 +14,15 @@ import bin.mt.plugin.api.preference.PluginPreference;
  */
 public class ClaudeTranslatePreference implements PluginPreference {
 
-    private LocalString localString;
     private PluginContext context;
 
     @Override
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
-        this.localString = context.getAssetLocalString("GeminiTranslate");
-        if (this.localString == null) {
-            this.localString = context.getLocalString();
-        }
         SharedPreferences preferences = context.getPreferences();
 
-        builder.setLocalString(localString);
-        builder.title(localString.get("pref_claude_title"))
-                .subtitle(localString.get("pref_claude_subtitle"));
+        builder.title(context.getString("{pref_claude_title}"))
+                .subtitle(context.getString("{pref_claude_subtitle}"));
 
         // Overview
         builder.addText("{pref_claude_header_overview}").summary("");
@@ -59,22 +53,44 @@ public class ClaudeTranslatePreference implements PluginPreference {
 
         // Model & endpoint selection
         builder.addHeader("{pref_claude_header_model}");
-        builder.addList("{pref_claude_model_title}", GeminiConstants.PREF_CLAUDE_MODEL)
-                .summary("{pref_claude_model_summary}")
-                .addItem("⭐ Sonnet 4.5 (Recommended)", GeminiConstants.CLAUDE_MODEL_SONNET_45)
-                .addItem("Opus 4.6 (Newest)", GeminiConstants.CLAUDE_MODEL_OPUS_46)
-                .addItem("Haiku 4.5 (Fast)", GeminiConstants.CLAUDE_MODEL_HAIKU_45)
-                .addItem("Opus 4.5", GeminiConstants.CLAUDE_MODEL_OPUS_45)
-                .addItem("Sonnet 4", GeminiConstants.CLAUDE_MODEL_SONNET_4)
-                .addItem("Opus 4", GeminiConstants.CLAUDE_MODEL_OPUS_4);
+
+        // The model choice is an implementation detail. The default is the
+        // recommended Claude model; the user can override via Custom Model.
+        String customClaudeKey = ProviderCatalogRefresher.customPrefKeyFor(GeminiConstants.PREF_CLAUDE_MODEL);
+        String effectiveClaudeModel = ProviderCatalogRefresher.resolveSelectedModel(
+                preferences, GeminiConstants.PREF_CLAUDE_MODEL, GeminiConstants.DEFAULT_CLAUDE_MODEL);
+        boolean isCustomClaude = !TextUtils.isEmpty(preferences.getString(customClaudeKey, ""));
+
+        builder.addText("{pref_claude_model_title}")
+                .summary(isCustomClaude
+                        ? effectiveClaudeModel + "  (custom override)"
+                        : effectiveClaudeModel + "  (default)");
+
+        builder.addText("Model Catalog")
+                .summary(ModelCatalogManager.formatLastRefreshed(
+                        preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS))
+                .onClick((pluginUI, item) -> showModelCatalog(pluginUI));
 
         builder.addText("{pref_claude_model_fallback_note}")
                 .summary("{pref_claude_model_fallback_note}");
+
+        builder.addInput("Custom Model (optional)", customClaudeKey)
+                .defaultValue("")
+                .summary("Overrides the default model above when non-empty. Use for any model name.")
+                .hint("e.g. claude-opus-5-latest")
+                .valueAsSummary()
+                .inputType(InputType.TYPE_CLASS_TEXT);
 
         builder.addInput("{pref_claude_endpoint_title}", GeminiConstants.PREF_CLAUDE_ENDPOINT)
                 .defaultValue(GeminiConstants.DEFAULT_CLAUDE_ENDPOINT)
                 .summary("{pref_claude_endpoint_summary}")
                 .valueAsSummary();
+
+        ProviderCatalogRefresher.scheduleAutoRefresh(
+                preferences,
+                GeminiConstants.PREF_CACHE_CLAUDE_MODELS,
+                preferences.getString(GeminiConstants.PREF_CLAUDE_API_KEY, ""),
+                ModelCatalogManager.Provider.CLAUDE);
 
         // Helpful resources
         builder.addHeader("{pref_claude_header_docs}");
@@ -87,19 +103,54 @@ public class ClaudeTranslatePreference implements PluginPreference {
                 .url(GeminiConstants.URL_CLAUDE_PRICING);
     }
 
+    /**
+     * Show the merged (cached + curated) model catalog in a dialog.
+     * Pure local read — never touches the network, so it opens instantly.
+     */
+    private void showModelCatalog(bin.mt.plugin.api.ui.PluginUI pluginUI) {
+        SharedPreferences preferences = context.getPreferences();
+        java.util.List<ModelCatalogManager.ModelInfo> models = ProviderCatalogRefresher.composeList(
+                preferences,
+                GeminiConstants.PREF_CACHE_CLAUDE_MODELS,
+                ModelCatalogManager.getDefaultSeedClaude());
+
+        String effectiveModel = ProviderCatalogRefresher.resolveSelectedModel(
+                preferences, GeminiConstants.PREF_CLAUDE_MODEL, GeminiConstants.DEFAULT_CLAUDE_MODEL);
+
+        StringBuilder message = new StringBuilder();
+        message.append(ModelCatalogManager.formatLastRefreshed(
+                preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS)).append("\n\n");
+        for (ModelCatalogManager.ModelInfo info : models) {
+            message.append(info.id.equals(effectiveModel) ? "▶ " : "• ");
+            message.append(info.displayName).append("\n   ").append(info.id);
+            if (info.recommended) {
+                message.append("  ⭐");
+            }
+            message.append('\n');
+        }
+        message.append("\n▶ = active model, ⭐ = recommended.\n")
+               .append("Use 'Custom Model' below to switch.");
+
+        pluginUI.buildDialog()
+                .setTitle("📚 Model Catalog (" + models.size() + ")")
+                .setMessage(message.toString())
+                .setPositiveButton("{ok}", null)
+                .show();
+    }
+
     private void validateApiKey() {
         SharedPreferences prefs = context.getPreferences();
         String apiKey = prefs.getString(GeminiConstants.PREF_CLAUDE_API_KEY, "");
         if (apiKey != null) apiKey = apiKey.trim();
         if (apiKey == null || apiKey.isEmpty()) {
-            context.showToast(localString.get("error_claude_no_api_key"));
+            context.showToast(context.getString("{error_claude_no_api_key}"));
             return;
         }
 
         if (isValidApiKey(apiKey)) {
-            context.showToast(localString.get("msg_claude_key_valid_format"));
+            context.showToast(context.getString("{msg_claude_key_valid_format}"));
         } else {
-            context.showToast(localString.get("error_claude_invalid_key_format"));
+            context.showToast(context.getString("{error_claude_invalid_key_format}"));
         }
     }
 
@@ -109,11 +160,11 @@ public class ClaudeTranslatePreference implements PluginPreference {
 
     private String describeKeyStatus(String apiKey) {
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            return localString.get("pref_status_missing");
+            return context.getString("{pref_status_missing}");
         }
         if (!isValidApiKey(apiKey)) {
-            return localString.get("pref_status_invalid_format");
+            return context.getString("{pref_status_invalid_format}");
         }
-        return localString.get("pref_status_ready");
+        return context.getString("{pref_status_ready}");
     }
 }

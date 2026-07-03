@@ -3,23 +3,23 @@ package bin.mt.plugin.google;
 import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import bin.mt.plugin.api.LocalString;
+import bin.mt.json.JSONArray;
+import bin.mt.json.JSONObject;
 import bin.mt.plugin.api.translation.BaseBatchTranslationEngine;
 import bin.mt.plugin.api.translation.BatchTranslationEngine;
+import bin.mt.plugin.common.HttpUtils;
+import bin.mt.plugin.common.JSONCompat;
 
 /**
  * Google Cloud Translation API Engine for MT Manager
@@ -78,7 +78,6 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
         "^[\\p{Punct}\\p{Symbol}\\d\\s]*$"
     );
 
-    private LocalString localString;
     private String apiKey;
     private int maxRetries;
     private int requestTimeout;
@@ -87,22 +86,33 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
     private int batchMaxChars;
 
     /**
-     * Constructor with default configuration
-     * Sets force translation mode to ensure all texts are processed
+     * Constructor with default configuration.
+     * Configuration is now set in onBuildConfiguration() override to follow the
+     * v3 SDK's recommended pattern and to inherit autoRepairFormatSpecifiersError = true.
      */
     public GoogleCloudTranslationEngine() {
-        super(new ConfigurationBuilder()
-                .setForceNotToSkipTranslated(false) // Allow skipping already translated entries
-                .build());
+        super();
+    }
+
+    /**
+     * Configure the engine: enable separator-based batching, set max text length per call,
+     * and keep the parent's defaults (notably autoRepairFormatSpecifiersError = true).
+     */
+    @Override
+    protected void onBuildConfiguration(ConfigurationBuilder builder) {
+        super.onBuildConfiguration(builder);
+        builder.setAllowBatchTranslationBySeparator(true);
+        // Google Cloud v2 recommend max 5000 chars per request, but our
+        // batchTranslate() further chunks by user-configured limits, so 10k is a safe ceiling.
+        builder.setMaxTranslationTextLength(10000);
+        builder.setForceNotToSkipTranslated(false);
     }
 
     /**
      * Initialize the translation engine
-     * Loads localized strings and validates configuration
      */
     @Override
     protected void init() {
-        localString = getContext().getAssetLocalString("GoogleTranslate");
     }
 
     /**
@@ -113,7 +123,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
     @NonNull
     @Override
     public String name() {
-        return localString != null ? localString.get("plugin_name") : "Google Cloud Translate";
+        return "{gc_plugin_name}";
     }
 
     /**
@@ -150,7 +160,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
     @Override
     public String getLanguageDisplayName(String language) {
         if ("auto".equals(language)) {
-            return localString != null ? localString.get("lang_auto") : "Auto Detect";
+            return getContext().getString("{gc_lang_auto}");
         }
         return super.getLanguageDisplayName(language);
     }
@@ -175,7 +185,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
         // Validate API key
         if (apiKey.isEmpty()) {
             throw new RuntimeException(
-                localString != null ? localString.get("error_no_api_key") : "API key not configured"
+                getContext().getString("{gc_error_no_api_key}")
             );
         }
         if (!java.util.regex.Pattern.matches(GoogleConstants.API_KEY_PATTERN, apiKey)) {
@@ -234,7 +244,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
         // Check character limit (Google recommends max 5000 chars per request)
         if (text.length() > 5000) {
             throw new IOException(
-                localString != null ? localString.get("error_text_too_long") : "Text exceeds 5000 character limit"
+                getContext().getString("{gc_error_text_too_long}")
             );
         }
 
@@ -377,7 +387,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
 
             JSONArray qArray = new JSONArray();
             for (String text : texts) {
-                qArray.put(text != null ? text : "");
+                qArray.add(text != null ? text : "");
             }
             body.put("q", qArray);
             body.put("target", targetLanguage);
@@ -393,7 +403,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
             }
 
             return body;
-        } catch (JSONException e) {
+        } catch (Exception e) {
             throw new IOException("Failed to build batch request body: " + e.getMessage(), e);
         }
     }
@@ -407,12 +417,10 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
 
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-                HttpUtils.Request request = HttpUtils.post(apiUrl);
-                request.setTimeout(requestTimeout);
-                request.jsonBody(body);
-
-                String responseBody = request.execute();
-                return parseBatchTranslationResponse(responseBody, originalTexts.length);
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Content-Type", "application/json; charset=UTF-8");
+                JSONObject responseJson = HttpUtils.postJson(apiUrl, headers, body.toString());
+                return parseBatchTranslationResponse(responseJson.toString(), originalTexts.length);
 
             } catch (IOException e) {
                 lastException = e;
@@ -462,10 +470,10 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
         try {
             JSONObject json = new JSONObject(responseBody);
 
-            if (json.has("error")) {
-                JSONObject error = json.getJSONObject("error");
-                int code = error.optInt("code", -1);
-                String message = error.optString("message", "Unknown error");
+            JSONObject error = JSONCompat.optJSONObject(json, "error");
+            if (error != null) {
+                int code = JSONCompat.optInt(error, "code", -1);
+                String message = JSONCompat.optString(error, "message", "Unknown error");
                 throw new IOException(formatApiError(code, message));
             }
 
@@ -473,18 +481,18 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
             JSONArray translations = data.getJSONArray("translations");
 
             String[] results = new String[expectedCount];
-            for (int i = 0; i < expectedCount && i < translations.length(); i++) {
+            for (int i = 0; i < expectedCount && i < translations.size(); i++) {
                 JSONObject translation = translations.getJSONObject(i);
                 results[i] = translation.getString("translatedText");
             }
 
             // Fill any missing entries with empty string
-            for (int i = translations.length(); i < expectedCount; i++) {
+            for (int i = translations.size(); i < expectedCount; i++) {
                 results[i] = "";
             }
 
             return results;
-        } catch (JSONException e) {
+        } catch (Exception e) {
             throw new IOException("Failed to parse batch API response: " + e.getMessage(), e);
         }
     }
@@ -538,13 +546,8 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
             try {
                 // Perform HTTP GET request
-                HttpUtils.Request request = HttpUtils.get(apiUrl);
-                request.setTimeout(requestTimeout);
-
-                String responseBody = request.execute();
-
-                // Parse and return result
-                return parseTranslationResponse(responseBody);
+                JSONObject responseJson = HttpUtils.getJson(apiUrl, null);
+                return parseTranslationResponse(responseJson.toString());
 
             } catch (IOException e) {
                 lastException = e;
@@ -604,10 +607,10 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
             JSONObject json = new JSONObject(responseBody);
 
             // Check for API error
-            if (json.has("error")) {
-                JSONObject error = json.getJSONObject("error");
-                int code = error.optInt("code", -1);
-                String message = error.optString("message", "Unknown error");
+            JSONObject error = JSONCompat.optJSONObject(json, "error");
+            if (error != null) {
+                int code = JSONCompat.optInt(error, "code", -1);
+                String message = JSONCompat.optString(error, "message", "Unknown error");
 
                 throw new IOException(formatApiError(code, message));
             }
@@ -616,14 +619,14 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
             JSONObject data = json.getJSONObject("data");
             JSONArray translations = data.getJSONArray("translations");
 
-            if (translations.length() == 0) {
+            if (translations.size() == 0) {
                 throw new IOException("No translation returned from API");
             }
 
             JSONObject translation = translations.getJSONObject(0);
             return translation.getString("translatedText");
 
-        } catch (JSONException e) {
+        } catch (Exception e) {
             throw new IOException("Failed to parse API response: " + e.getMessage(), e);
         }
     }
@@ -727,7 +730,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
      * @return Formatted, user-friendly error message
      */
     private String formatApiError(int errorCode, String message) {
-        String prefix = localString != null ? localString.get("error_api") : "API Error";
+        String prefix = getContext().getString("{gc_error_api}");
 
         switch (errorCode) {
             case 400:
@@ -768,7 +771,7 @@ public class GoogleCloudTranslationEngine extends BaseBatchTranslationEngine {
 
     /**
      * Parse Retry-After value from error message.
-     * Looks for pattern [Retry-After: N] embedded by HttpUtils.
+     * Looks for pattern [Retry-After: N] embedded by HttpUtils (now in bin.mt.plugin.common).
      *
      * @param message Error message
      * @return Wait time in milliseconds, or -1 if not found

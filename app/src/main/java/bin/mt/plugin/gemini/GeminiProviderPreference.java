@@ -6,23 +6,18 @@ import android.os.Looper;
 import android.text.InputType;
 import android.text.TextUtils;
 
-import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.PluginContext;
 import bin.mt.plugin.api.preference.PluginPreference;
-
-import java.io.IOException;
-import java.util.Collections;
 
 /**
  * Gemini AI Provider Settings
  * Dedicated settings page for Gemini configuration
- * 
+ *
  * @author Ilker Binzet
- * @version 0.7.0-MODERN
+ * @version 0.4.0-beta - Auto-refreshing model catalog + custom model override
  */
 public class GeminiProviderPreference implements PluginPreference {
 
-    private LocalString localString;
     private PluginContext context;
     private SharedPreferences preferences;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -30,13 +25,7 @@ public class GeminiProviderPreference implements PluginPreference {
     @Override
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
-        this.localString = context.getAssetLocalString("GeminiTranslate");
-        if (this.localString == null) {
-            this.localString = context.getLocalString();
-        }
         this.preferences = context.getPreferences();
-
-        builder.setLocalString(localString);
 
         // ==================== API Configuration ====================
         builder.addText("🔑 API Configuration")
@@ -65,28 +54,46 @@ public class GeminiProviderPreference implements PluginPreference {
         builder.addText("✨ Model Selection")
                 .summary("");
 
-        var geminiModelList = builder.addList("Gemini Model", GeminiConstants.PREF_MODEL_NAME)
-                .summary("Choose AI model (Gemini 2.5 Flash recommended)");
+        // The model choice is now an implementation detail. The default is the
+        // recommended Gemini model; the user can override via the Custom Model
+        // field below. The list is intentionally removed — the user is in the
+        // Gemini provider preference, so the provider name is already implied.
+        String customGeminiKey = ProviderCatalogRefresher.customPrefKeyFor(GeminiConstants.PREF_MODEL_NAME);
+        String effectiveGeminiModel = ProviderCatalogRefresher.resolveSelectedModel(
+                preferences, GeminiConstants.PREF_MODEL_NAME, GeminiConstants.DEFAULT_MODEL);
+        boolean isCustomGemini = !TextUtils.isEmpty(preferences.getString(customGeminiKey, ""));
 
-        boolean disableCache = preferences.getBoolean(GeminiConstants.PREF_DEBUG_DISABLE_MODEL_CACHE, false);
-        java.util.List<ModelCatalogManager.ModelInfo> cachedGeminiModels = disableCache
-                ? Collections.emptyList()
-                : ModelCatalogManager.loadModelCache(preferences, GeminiConstants.PREF_CACHE_GEMINI_MODELS);
-        if (cachedGeminiModels == null || cachedGeminiModels.isEmpty()) {
-            geminiModelList.addItem("Gemini 2.5 Flash ⭐ (Stable, Recommended)", GeminiConstants.MODEL_GEMINI_25_FLASH)
-                    .addItem("Gemini 3 Flash (Preview, Pro-level)", GeminiConstants.MODEL_GEMINI_3_FLASH)
-                    .addItem("Gemini 3 Pro (Preview, Most Powerful)", GeminiConstants.MODEL_GEMINI_3_PRO)
-                    .addItem("Gemini 2.5 Pro (Advanced Reasoning)", GeminiConstants.MODEL_GEMINI_25_PRO)
-                    .addItem("Gemini 2.5 Flash-Lite (Ultra Fast)", GeminiConstants.MODEL_GEMINI_25_FLASH_LITE);
-        } else {
-            for (ModelCatalogManager.ModelInfo info : cachedGeminiModels) {
-                geminiModelList.addItem(formatModelLabel(info), info.id);
-            }
-        }
+        builder.addText("Provider")
+                .summary("Gemini");
+        builder.addText("Model")
+                .summary(isCustomGemini
+                        ? effectiveGeminiModel + "  (custom override)"
+                        : effectiveGeminiModel + "  (default)");
+
+        // Catalog viewer + manual refresh
+        builder.addText("Model Catalog")
+                .summary(ModelCatalogManager.formatLastRefreshed(
+                        preferences, GeminiConstants.PREF_CACHE_GEMINI_MODELS))
+                .onClick((pluginUI, item) -> showModelCatalog(pluginUI));
 
         builder.addText("Refresh Model List")
                 .summary("Fetch the latest Gemini models from Google API")
                 .onClick((pluginUI, item) -> refreshGeminiModels(pluginUI));
+
+        // Custom model name (forward-compat for any model name)
+        builder.addInput("Custom Model (optional)", customGeminiKey)
+                .defaultValue("")
+                .summary("Overrides the default model above when non-empty. Use for any model name.")
+                .hint("e.g. gemini-2.0-flash-exp")
+                .valueAsSummary()
+                .inputType(InputType.TYPE_CLASS_TEXT);
+
+        // Trigger silent background refresh on first open
+        ProviderCatalogRefresher.scheduleAutoRefresh(
+                preferences,
+                GeminiConstants.PREF_CACHE_GEMINI_MODELS,
+                preferences.getString(GeminiConstants.PREF_API_KEY, ""),
+                ModelCatalogManager.Provider.GEMINI);
 
         // ==================== Usage & Limits ====================
         builder.addText("📊 Usage & Limits")
@@ -154,23 +161,20 @@ public class GeminiProviderPreference implements PluginPreference {
                 String text = "Hello";
                 String prompt = "Translate this text to Turkish: " + text;
 
-                org.json.JSONObject request = new org.json.JSONObject();
-                org.json.JSONArray contents = new org.json.JSONArray();
-                org.json.JSONObject part = new org.json.JSONObject();
+                bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
+                bin.mt.json.JSONArray contents = new bin.mt.json.JSONArray();
+                bin.mt.json.JSONObject part = new bin.mt.json.JSONObject();
                 part.put("text", prompt);
-                org.json.JSONObject content = new org.json.JSONObject();
-                content.put("parts", new org.json.JSONArray().put(part));
-                contents.put(content);
+                bin.mt.json.JSONObject content = new bin.mt.json.JSONObject();
+                content.put("parts", new bin.mt.json.JSONArray().add(part));
+                contents.add(content);
                 request.put("contents", contents);
 
                 String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model
                         + ":generateContent?key=" + apiKey;
-                GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(url);
-                httpRequest.setTimeout(10000);
-                httpRequest.jsonBody(request);
-                org.json.JSONObject response = httpRequest.executeToJson();
+                bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(url, null, request.toString());
 
-                if (response.has("candidates")) {
+                if (response.contains("candidates")) {
                     String result = response.getJSONArray("candidates")
                             .getJSONObject(0)
                             .getJSONObject("content")
@@ -190,7 +194,7 @@ public class GeminiProviderPreference implements PluginPreference {
                             .setPositiveButton("{ok}", null)
                             .show());
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) { // Throwable: an Error escaping this thread would crash MT Manager
                 runOnMainThread(() -> pluginUI.buildDialog()
                         .setTitle("❌ Test Failed")
                         .setMessage("Error: " + e.getMessage())
@@ -220,36 +224,32 @@ public class GeminiProviderPreference implements PluginPreference {
         new Thread(() -> {
             try {
                 // Build test request
-                org.json.JSONObject request = new org.json.JSONObject();
-                org.json.JSONArray contents = new org.json.JSONArray();
-                org.json.JSONObject content = new org.json.JSONObject();
-                org.json.JSONArray parts = new org.json.JSONArray();
-                org.json.JSONObject part = new org.json.JSONObject();
+                bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
+                bin.mt.json.JSONArray contents = new bin.mt.json.JSONArray();
+                bin.mt.json.JSONObject content = new bin.mt.json.JSONObject();
+                bin.mt.json.JSONArray parts = new bin.mt.json.JSONArray();
+                bin.mt.json.JSONObject part = new bin.mt.json.JSONObject();
                 part.put("text", "Translate to Turkish: Hello");
-                parts.put(part);
+                parts.add(part);
                 content.put("parts", parts);
-                contents.put(content);
+                contents.add(content);
                 request.put("contents", contents);
 
                 // Test API
                 String apiUrl = String.format("%s/%s:generateContent?key=%s",
                         GeminiConstants.API_BASE_URL, model, apiKey);
 
-                GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(apiUrl);
-                httpRequest.setTimeout(10000);
-                httpRequest.jsonBody(request);
+                bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(apiUrl, null, request.toString());
 
-                org.json.JSONObject response = httpRequest.executeToJson();
-
-                if (response.has("candidates")) {
+                if (response.contains("candidates")) {
                     runOnMainThread(() -> pluginUI.buildDialog()
                             .setTitle("✅ API Key Valid")
                             .setMessage("Your Gemini API key is working correctly!\n\nModel: " + model)
                             .setPositiveButton("{ok}", null)
                             .show());
-                } else if (response.has("error")) {
-                    org.json.JSONObject error = response.getJSONObject("error");
-                    String errorMsg = error.optString("message", "Unknown error");
+                } else if (response.contains("error")) {
+                    bin.mt.json.JSONObject error = response.getJSONObject("error");
+                    String errorMsg = bin.mt.plugin.common.JSONCompat.optString(error, "message", "Unknown error");
 
                     runOnMainThread(() -> pluginUI.buildDialog()
                             .setTitle("❌ API Error")
@@ -265,7 +265,7 @@ public class GeminiProviderPreference implements PluginPreference {
                             .show());
                 }
 
-            } catch (Exception e) {
+            } catch (Throwable e) { // Throwable: an Error escaping this thread would crash MT Manager
                 runOnMainThread(() -> pluginUI.buildDialog()
                         .setTitle("❌ Test Failed")
                         .setMessage("Error: " + e.getMessage())
@@ -275,75 +275,91 @@ public class GeminiProviderPreference implements PluginPreference {
         }).start();
     }
 
-    private void refreshGeminiModels(bin.mt.plugin.api.ui.PluginUI pluginUI) {
-        // Show toast instead of LoadingDialog to avoid SDK compatibility issues
-        context.showToast("🔄 Refreshing Gemini models...");
+    /**
+     * Show the merged (cached + curated) model catalog in a dialog.
+     * Pure local read — never touches the network, so it opens instantly.
+     */
+    private void showModelCatalog(bin.mt.plugin.api.ui.PluginUI pluginUI) {
+        java.util.List<ModelCatalogManager.ModelInfo> models = ProviderCatalogRefresher.composeList(
+                preferences,
+                GeminiConstants.PREF_CACHE_GEMINI_MODELS,
+                ModelCatalogManager.getDefaultSeedGemini());
 
-        String apiKey = preferences.getString(GeminiConstants.PREF_API_KEY, "");
-        new Thread(() -> {
-            try {
-                java.util.List<ModelCatalogManager.ModelInfo> models = ModelCatalogManager.fetchGeminiModels(apiKey);
-                ModelCatalogManager.saveModelCache(preferences, GeminiConstants.PREF_CACHE_GEMINI_MODELS, models);
-                runOnMainThread(() -> {
-                    if (models == null || models.isEmpty()) {
-                        pluginUI.buildDialog()
-                                .setTitle("⚠️ No Models Found")
-                                .setMessage(
-                                        "Google API did not return any eligible Gemini models. Please try again later.")
-                                .setPositiveButton("{ok}", null)
-                                .show();
-                    } else {
-                        context.showToast("✅ Found " + models.size() + " models");
-                        showModelSelectionDialog(pluginUI, "Select Gemini Model", models,
-                                GeminiConstants.PREF_MODEL_NAME, GeminiConstants.DEFAULT_MODEL);
-                    }
-                });
-            } catch (IOException e) {
-                runOnMainThread(() -> {
-                    pluginUI.buildDialog()
-                            .setTitle("❌ Refresh Failed")
-                            .setMessage("Could not fetch Gemini models:\n" + e.getMessage())
-                            .setPositiveButton("{ok}", null)
-                            .show();
-                });
+        String effectiveModel = ProviderCatalogRefresher.resolveSelectedModel(
+                preferences, GeminiConstants.PREF_MODEL_NAME, GeminiConstants.DEFAULT_MODEL);
+
+        StringBuilder message = new StringBuilder();
+        message.append(ModelCatalogManager.formatLastRefreshed(
+                preferences, GeminiConstants.PREF_CACHE_GEMINI_MODELS)).append("\n\n");
+        for (ModelCatalogManager.ModelInfo info : models) {
+            if (info.id.equals(effectiveModel)) {
+                message.append("▶ ");
+            } else {
+                message.append("• ");
             }
-        }).start();
-    }
-
-    private void showModelSelectionDialog(bin.mt.plugin.api.ui.PluginUI pluginUI,
-            String title,
-            java.util.List<ModelCatalogManager.ModelInfo> models,
-            String prefKey,
-            String defaultValue) {
-        CharSequence[] labels = new CharSequence[models.size()];
-        for (int i = 0; i < models.size(); i++) {
-            labels[i] = formatModelLabel(models.get(i));
+            message.append(info.displayName).append("\n   ").append(info.id);
+            if (info.recommended) {
+                message.append("  ⭐");
+            }
+            message.append('\n');
         }
+        message.append("\n▶ = active model, ⭐ = recommended.\n")
+               .append("Use 'Custom Model' below to switch; 'Refresh Model List' fetches the live catalog.");
+
         pluginUI.buildDialog()
-                .setTitle(title)
-                .setItems(labels, (dialog, which) -> {
-                    ModelCatalogManager.ModelInfo selected = models.get(which);
-                    preferences.edit().putString(prefKey, selected.id).apply();
-                    if (context != null) {
-                        context.showToast("Gemini model switched to " + selected.displayName);
-                    }
-                    dialog.dismiss();
-                })
-                .setNegativeButton("{cancel}", null)
+                .setTitle("📚 Model Catalog (" + models.size() + ")")
+                .setMessage(message.toString())
+                .setPositiveButton("{ok}", null)
                 .show();
     }
 
-    private String formatModelLabel(ModelCatalogManager.ModelInfo info) {
-        StringBuilder label = new StringBuilder();
-        String name = TextUtils.isEmpty(info.displayName) ? info.id : info.displayName;
-        label.append(name);
-        if (info.recommended) {
-            label.append(" ⭐");
+    private void refreshGeminiModels(bin.mt.plugin.api.ui.PluginUI pluginUI) {
+        String apiKey = preferences.getString(GeminiConstants.PREF_API_KEY, "");
+        if (TextUtils.isEmpty(apiKey)) {
+            pluginUI.buildDialog()
+                    .setTitle("⚠️ No API Key")
+                    .setMessage("Add your Gemini API key first, then refresh.")
+                    .setPositiveButton("{ok}", null)
+                    .show();
+            return;
         }
-        if (!TextUtils.isEmpty(info.detail)) {
-            label.append("\n").append(info.detail);
-        }
-        return label.toString();
+        // Progress indicator: without it a slow network reads as a hang.
+        bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog =
+                new bin.mt.plugin.api.ui.dialog.LoadingDialog(pluginUI)
+                        .setMessage("Fetching Gemini models…");
+        loadingDialog.show();
+        ModelCatalogManager.forceRefresh(
+                preferences,
+                GeminiConstants.PREF_CACHE_GEMINI_MODELS,
+                apiKey,
+                ModelCatalogManager.Provider.GEMINI,
+                (models, error) -> runOnMainThread(() -> {
+                    loadingDialog.dismiss();
+                    if (error != null) {
+                        pluginUI.buildDialog()
+                                .setTitle("❌ Refresh Failed")
+                                .setMessage("Could not fetch Gemini models:\n" + error.getMessage())
+                                .setPositiveButton("{ok}", null)
+                                .show();
+                        return;
+                    }
+                    if (models == null || models.isEmpty()) {
+                        pluginUI.buildDialog()
+                                .setTitle("⚠️ No Models Found")
+                                .setMessage("Google API did not return any eligible Gemini models. " +
+                                        "Check your API key permissions or try again later.")
+                                .setPositiveButton("{ok}", null)
+                                .show();
+                        return;
+                    }
+                    int merged = ProviderCatalogRefresher.composeList(
+                            preferences,
+                            GeminiConstants.PREF_CACHE_GEMINI_MODELS,
+                            ModelCatalogManager.getDefaultSeedGemini()).size();
+                    context.showToast("✅ " + models.size() + " live models cached, " + merged
+                            + " total available — reopen to apply");
+                })
+        );
     }
 
     private void runOnMainThread(Runnable runnable) {

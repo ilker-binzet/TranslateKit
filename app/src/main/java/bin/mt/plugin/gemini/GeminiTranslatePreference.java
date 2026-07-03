@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.PluginContext;
 import bin.mt.plugin.api.preference.PluginPreference;
 
@@ -18,7 +17,6 @@ import bin.mt.plugin.api.preference.PluginPreference;
  */
 public class GeminiTranslatePreference implements PluginPreference {
 
-    private LocalString localString;
     private PluginContext context;
     private SharedPreferences preferences;
     private final Map<String, ProviderStatus> providerStatusCache = new HashMap<>();
@@ -53,17 +51,11 @@ public class GeminiTranslatePreference implements PluginPreference {
     @Override
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
-        this.localString = context.getAssetLocalString("GeminiTranslate");
-        if (this.localString == null) {
-            this.localString = context.getLocalString();
-        }
         this.preferences = context.getPreferences();
         synchronized (providerStatusCache) {
             providerStatusCache.clear();
         }
         ensurePreferenceListenerRegistered();
-
-        builder.setLocalString(localString);
 
         // ==================== 1. AI Providers ====================
         builder.addText("AI Providers")
@@ -107,9 +99,9 @@ public class GeminiTranslatePreference implements PluginPreference {
     }
 
     private String buildTranslationSummary() {
-        String engine = getActiveEngineName();
+        String provider = getActiveEngineName();
         String timeout = preferences.getString(GeminiConstants.PREF_TIMEOUT, String.valueOf(GeminiConstants.DEFAULT_TIMEOUT));
-        return "Engine: " + engine + " \u2022 Timeout: " + timeout + "ms";
+        return "Provider: " + provider + " • Timeout: " + timeout + "ms";
     }
 
     private String buildContextSummary() {

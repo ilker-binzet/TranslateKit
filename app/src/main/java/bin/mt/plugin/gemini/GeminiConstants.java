@@ -4,8 +4,8 @@ package bin.mt.plugin.gemini;
  * Constants for TranslateKit plugin
  *
  * @author MT Manager Plugin Developer
- * @version 0.3.0-alpha
- * @updated March 2026 - Bilingual mode, placeholder hardening, SDK beta5
+ * @version 0.4.0-beta
+ * @updated June 2026 - Migrated to MT Plugin SDK v3 (3.0.0), fixed configuration builder
  */
 public class GeminiConstants {
 
@@ -139,6 +139,49 @@ public class GeminiConstants {
     public static final String CLAUDE_MODEL_SONNET_4 = "claude-sonnet-4-latest";
     public static final String DEFAULT_CLAUDE_ENDPOINT = "https://api.anthropic.com/v1/messages";
 
+    // ==================== Default Model Seeds ====================
+    // Single source of truth for "what models do we know about as of v0.4.0".
+    // Used when no cache is present (first install, offline) and as fallback
+    // when a live API fetch returns nothing. Columns:
+    //   {id, displayName, description, recommended("true"/"false"), priority(int)}
+    // Higher priority = sorted earlier in the UI. Live-fetched models are
+    // merged with these by id; the live list always wins on conflict.
+    // Declared here (after the model id constants) to avoid illegal forward
+    // references in Java's static initialiser order.
+
+    public static final String[][] GEMINI_SEED = {
+            {MODEL_GEMINI_25_FLASH,      "Gemini 2.5 Flash",        "Stable, Recommended",         "true",  "130"},
+            {MODEL_GEMINI_3_FLASH,       "Gemini 3 Flash (Preview)", "Pro-level at Flash speed",    "false", "115"},
+            {MODEL_GEMINI_25_FLASH_LITE, "Gemini 2.5 Flash-Lite",   "Ultra Fast, Cost-efficient",  "false", "110"},
+            {MODEL_GEMINI_3_PRO,         "Gemini 3 Pro (Preview)",  "Most Powerful, Multimodal",   "false", "108"},
+            {MODEL_GEMINI_25_PRO,        "Gemini 2.5 Pro",          "Advanced reasoning, STEM",    "false", "100"},
+    };
+
+    public static final String[][] OPENAI_SEED = {
+            {OPENAI_MODEL_GPT41_MINI, "GPT-4.1 Mini", "Fast, Recommended",   "true",  "120"},
+            {OPENAI_MODEL_GPT52,      "GPT-5.2",      "Most Powerful",       "false", "115"},
+            {OPENAI_MODEL_GPT51,      "GPT-5.1",      "Flagship",            "false", "110"},
+            {OPENAI_MODEL_GPT5,       "GPT-5",        "High-end",            "false", "108"},
+            {OPENAI_MODEL_GPT41,      "GPT-4.1",      "1M Context",          "false", "100"},
+            {OPENAI_MODEL_GPT4O,      "GPT-4o",       "Omni, Multimodal",    "false",  "90"},
+            {OPENAI_MODEL_GPT4O_MINI, "GPT-4o Mini",  "Economical",          "false",  "85"},
+            {OPENAI_MODEL_O3,         "o3",           "Advanced Reasoning",  "false",  "80"},
+            {OPENAI_MODEL_O4_MINI,    "o4-mini",      "Reasoning, Fast",     "false",  "78"},
+            {OPENAI_MODEL_O3_MINI,    "o3-mini",      "Reasoning, Compact",  "false",  "75"},
+    };
+
+    public static final String[][] CLAUDE_SEED = {
+            {CLAUDE_MODEL_SONNET_45, "Claude Sonnet 4.5",     "Balanced, Recommended",   "true",  "130"},
+            {CLAUDE_MODEL_OPUS_46,   "Claude Opus 4.6",       "Most Powerful (Feb 2026)", "false", "125"},
+            {CLAUDE_MODEL_HAIKU_45,  "Claude Haiku 4.5",      "Fast, Economical",        "false", "110"},
+            {CLAUDE_MODEL_OPUS_45,   "Claude Opus 4.5",       "Previous Most Powerful",  "false", "100"},
+            {CLAUDE_MODEL_SONNET_4,  "Claude Sonnet 4",       "Previous Balanced",       "false",  "90"},
+            {CLAUDE_MODEL_OPUS_4,    "Claude Opus 4",         "Legacy",                  "false",  "80"},
+    };
+
+    /** Custom model override preference key suffix (per provider). */
+    public static final String PREF_CUSTOM_MODEL = "_custom_model";
+
     // ==================== Engine Identifiers ====================
 
     public static final String ENGINE_GEMINI = "gemini";
@@ -179,8 +222,8 @@ public class GeminiConstants {
     // ==================== Plugin Metadata ====================
 
     public static final String PLUGIN_ID = "mt.plugin.translatekit";
-    public static final int PLUGIN_VERSION_CODE = 5;
-    public static final String PLUGIN_VERSION_NAME = "0.3.0-alpha";
+    public static final int PLUGIN_VERSION_CODE = 9;
+    public static final String PLUGIN_VERSION_NAME = "0.4.0-beta4";
 
     // ==================== API Key Pattern ====================
 

@@ -3,23 +3,23 @@ package bin.mt.plugin.gemini;
 import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import bin.mt.plugin.api.LocalString;
+import bin.mt.json.JSONArray;
+import bin.mt.json.JSONObject;
 import bin.mt.plugin.api.PluginContext;
 import bin.mt.plugin.api.translation.BaseBatchTranslationEngine;
 import bin.mt.plugin.api.translation.BatchTranslationEngine;
+import bin.mt.plugin.common.HttpUtils;
+import bin.mt.plugin.common.JSONCompat;
 
 /**
  * Gemini API Translation Engine for MT Manager
@@ -71,7 +71,6 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         "^[\\p{Punct}\\p{Symbol}\\d\\s]*$"
     );
 
-    private LocalString localString;
     private String apiKey;
     private int maxRetries;
     private int requestTimeout;
@@ -100,9 +99,28 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
      * Constructor with default configuration
      */
     public GeminiTranslationEngine() {
-        super(new ConfigurationBuilder()
-                .setForceNotToSkipTranslated(false)
-                .build());
+        super();
+    }
+
+    /**
+     * Configure the engine: enable separator-based batching, set max text length per call,
+     * and keep the parent's defaults (notably autoRepairFormatSpecifiersError = true).
+     *
+     * Called automatically by the SDK when constructing the engine; the super() call
+     * preserves the SDK's safe defaults (autoRepairFormatSpecifiersError = true).
+     */
+    @Override
+    protected void onBuildConfiguration(ConfigurationBuilder builder) {
+        super.onBuildConfiguration(builder);
+        // MT will join multiple strings with a separator and send them in one
+        // translate() call, then split the result. Our translate() is already
+        // prompt-safe (preserves separators), so we can use this optimisation.
+        builder.setAllowBatchTranslationBySeparator(true);
+        // 10k chars per call matches our batch_max_chars default and keeps us
+        // safely under every supported provider's input limit.
+        builder.setMaxTranslationTextLength(10000);
+        // Users may want to keep already-translated entries; respect that.
+        builder.setForceNotToSkipTranslated(false);
     }
 
     /**
@@ -110,7 +128,6 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
      */
     @Override
     protected void init() {
-        localString = getContext().getAssetLocalString("GeminiTranslate");
     }
 
     /**
@@ -119,7 +136,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     @NonNull
     @Override
     public String name() {
-        return localString != null ? localString.get("plugin_name") : "TranslateKit";
+        return "{plugin_name}";
     }
 
     /**
@@ -147,7 +164,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     @Override
     public String getLanguageDisplayName(String language) {
         if ("auto".equals(language)) {
-            return localString != null ? localString.get("lang_auto") : "Auto Detect";
+            return getContext().getString("{lang_auto}");
         }
         return super.getLanguageDisplayName(language);
     }
@@ -162,7 +179,9 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
         maxRetries = readIntPreference(prefs, GeminiConstants.PREF_MAX_RETRIES, GeminiConstants.DEFAULT_MAX_RETRIES);
         requestTimeout = readIntPreference(prefs, GeminiConstants.PREF_TIMEOUT, GeminiConstants.DEFAULT_TIMEOUT);
-        modelName = prefs.getString(GeminiConstants.PREF_MODEL_NAME, GeminiConstants.DEFAULT_MODEL);
+        // Resolve model name: custom override > saved selection > provider default.
+        modelName = ProviderCatalogRefresher.resolveSelectedModel(
+                prefs, GeminiConstants.PREF_MODEL_NAME, GeminiConstants.DEFAULT_MODEL);
         selectedEngine = prefs.getString(GeminiConstants.PREF_DEFAULT_ENGINE, GeminiConstants.DEFAULT_ENGINE);
         debugLogging = prefs.getBoolean(GeminiConstants.PREF_ENABLE_DEBUG, GeminiConstants.DEFAULT_ENABLE_DEBUG);
         debugLogger = new TranslationDebugLogger(getContext(), debugLogging);
@@ -173,7 +192,8 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         switch (selectedEngine) {
             case GeminiConstants.ENGINE_OPENAI:
                 openAiApiKey = trimKey(prefs.getString(GeminiConstants.PREF_OPENAI_API_KEY, ""));
-                openAiModel = prefs.getString(GeminiConstants.PREF_OPENAI_MODEL, GeminiConstants.DEFAULT_OPENAI_MODEL);
+                openAiModel = ProviderCatalogRefresher.resolveSelectedModel(
+                        prefs, GeminiConstants.PREF_OPENAI_MODEL, GeminiConstants.DEFAULT_OPENAI_MODEL);
                 openAiEndpoint = prefs.getString(GeminiConstants.PREF_OPENAI_ENDPOINT, GeminiConstants.DEFAULT_OPENAI_ENDPOINT);
                 if (isNullOrEmpty(openAiApiKey)) {
                     notifyAndFallbackToGemini(prefs, "error_openai_no_api_key");
@@ -185,7 +205,8 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
                 break;
             case GeminiConstants.ENGINE_CLAUDE:
                 claudeApiKey = trimKey(prefs.getString(GeminiConstants.PREF_CLAUDE_API_KEY, ""));
-                claudeModel = prefs.getString(GeminiConstants.PREF_CLAUDE_MODEL, GeminiConstants.DEFAULT_CLAUDE_MODEL);
+                claudeModel = ProviderCatalogRefresher.resolveSelectedModel(
+                        prefs, GeminiConstants.PREF_CLAUDE_MODEL, GeminiConstants.DEFAULT_CLAUDE_MODEL);
                 claudeEndpoint = prefs.getString(GeminiConstants.PREF_CLAUDE_ENDPOINT, GeminiConstants.DEFAULT_CLAUDE_ENDPOINT);
                 if (isNullOrEmpty(claudeApiKey)) {
                     notifyAndFallbackToGemini(prefs, "error_claude_no_api_key");
@@ -399,27 +420,55 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
             String[] batchResults = parseBatchResponse(rawResponse, tokenizedTexts, batchSpan);
 
-            // Map batch results back to original indices and restore placeholders
+            // Map batch results back to original indices and restore placeholders.
+            // Items the model dropped (null) or whose placeholders failed
+            // validation are RETRIED INDIVIDUALLY — never silently kept as
+            // originals, which the user perceives as "skipped strings".
+            List<Integer> retryIndices = new ArrayList<>();
             for (int j = 0; j < translatableIndices.size(); j++) {
                 int idx = translatableIndices.get(j);
                 String translated = batchResults[j];
+
+                if (translated == null || translated.isEmpty()) {
+                    retryIndices.add(idx);
+                    continue;
+                }
 
                 // Restore placeholders
                 if (phResults[idx].hasPlaceholders()) {
                     translated = restorePlaceholders(translated, phResults[idx].placeholders);
                     boolean valid = validatePlaceholders(texts[idx], translated);
-                    batchSpan.logPlaceholderRestore(j + 1, valid, valid ? null : "validation failed, keeping original");
+                    batchSpan.logPlaceholderRestore(j + 1, valid, valid ? null : "validation failed, retrying individually");
                     if (!valid) {
-                        logWarn("Placeholder validation failed for batch item " + (j + 1) + ", keeping original");
-                        translated = texts[idx];
+                        logWarn("Placeholder validation failed for batch item " + (j + 1) + ", retrying individually");
+                        retryIndices.add(idx);
+                        continue;
                     }
                 }
 
                 results[idx] = translated;
             }
 
-            batchSpan.markSuccess(translatableIndices.size());
-            logSuccess("Batch translate complete: " + texts.length + " texts in single API call");
+            if (!retryIndices.isEmpty()) {
+                logWarn("Batch incomplete: " + retryIndices.size() + "/" + translatableIndices.size()
+                        + " items missing or invalid — retrying each individually");
+                for (int i = 0; i < retryIndices.size(); i++) {
+                    int idx = retryIndices.get(i);
+                    logInfo("Individual retry " + (i + 1) + "/" + retryIndices.size());
+                    try {
+                        results[idx] = translateSingle(texts[idx], sourceLanguage, targetLanguage);
+                    } catch (IOException singleError) {
+                        logError("Individual retry failed, keeping original: "
+                                + TranslationDebugLogger.sanitizePreview(texts[idx])
+                                + " | " + singleError.getMessage());
+                        results[idx] = texts[idx]; // keep original
+                    }
+                }
+            }
+
+            batchSpan.markSuccess(translatableIndices.size() - retryIndices.size());
+            logSuccess("Batch translate complete: " + texts.length + " texts ("
+                    + retryIndices.size() + " retried individually)");
             return results;
 
         } catch (IOException e) {
@@ -528,11 +577,12 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
      * [2] Translation two
      * ...
      *
-     * Falls back to original text for any missing translation.
+     * Missing translations are left {@code null} so the caller can retry
+     * them individually.
      *
      * @param response Raw AI response
-     * @param originalTexts Original texts for fallback
-     * @return Array of translated texts in the same order
+     * @param originalTexts Original texts (used for count/logging only)
+     * @return Array of translated texts in the same order; {@code null} slots = missing
      * @throws IOException If response is completely unparseable
      */
     private String[] parseBatchResponse(String response, String[] originalTexts, TranslationDebugLogger.BatchSpan batchSpan) throws IOException {
@@ -596,11 +646,11 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
             }
         }
 
-        // Fill missing translations with originals
+        // Count missing translations — the caller retries them individually,
+        // so slots are left null here rather than filled with originals.
         int missing = 0;
         for (int i = 0; i < count; i++) {
             if (results[i] == null || results[i].isEmpty()) {
-                results[i] = originalTexts[i];
                 missing++;
             }
         }
@@ -610,11 +660,11 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         batchSpan.logParseResult(formatUsed, bestFound, count);
 
         if (bestFound == 0) {
-            batchSpan.logParseWarning(count, "No format matched, all kept as originals");
+            batchSpan.logParseWarning(count, "No format matched");
             throw new IOException("Batch response could not be parsed: no numbered format matched (expected " + count + " items)");
         } else if (missing > 0) {
-            batchSpan.logParseWarning(missing, missing + "/" + count + " translations missing, kept originals");
-            logWarn("Batch parse: " + missing + "/" + count + " translations missing, kept originals");
+            batchSpan.logParseWarning(missing, missing + "/" + count + " translations missing, will retry individually");
+            logWarn("Batch parse: " + missing + "/" + count + " translations missing, will retry individually");
         }
 
         return results;
@@ -646,7 +696,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
     private String buildSystemPrompt(String sourceLanguage, String targetLanguage) {
         String sourceLangName = "auto".equals(sourceLanguage)
-                ? (localString != null ? localString.get("lang_auto") : "Auto Detect")
+                ? getContext().getString("{lang_auto}")
                 : getLanguageDisplayName(sourceLanguage);
         String targetLangName = getLanguageDisplayName(targetLanguage);
 
@@ -670,29 +720,35 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
             request.put("model", openAiModel);
 
             JSONArray messages = new JSONArray();
-            messages.put(new JSONObject()
+            messages.add(new JSONObject()
                     .put("role", "system")
                     .put("content", buildSystemPrompt(sourceLanguage, targetLanguage)));
-            messages.put(new JSONObject()
+            messages.add(new JSONObject()
                     .put("role", "user")
                     .put("content", prompt));
             request.put("messages", messages);
             request.put("temperature", 0.1);
-            request.put("max_tokens", 2048);
+            // Scale with input size — a fixed 2048 truncates large batches.
+            request.put("max_tokens", clampTokens(prompt.length() / 2, 2048, 8192));
 
             return request;
-        } catch (JSONException e) {
+        } catch (Exception e) {
             throw new IOException("Failed to build OpenAI request: " + e.getMessage(), e);
         }
+    }
+
+    /** Clamp a token budget between min and max. */
+    private static int clampTokens(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private JSONObject buildClaudeRequest(String prompt, String sourceLanguage, String targetLanguage) throws IOException {
         try {
             JSONObject request = new JSONObject();
             request.put("model", claudeModel);
-            // Dynamic max_tokens: scale with prompt size (~1 token per 3-4 chars), minimum 2048
-            int estimatedTokens = Math.max(2048, prompt.length() / 3);
-            request.put("max_tokens", estimatedTokens);
+            // Dynamic max_tokens: scale with prompt size (~1 token per 3-4 chars),
+            // clamped so we never exceed a model's output ceiling.
+            request.put("max_tokens", clampTokens(prompt.length() / 3, 2048, 8192));
             request.put("system", buildSystemPrompt(sourceLanguage, targetLanguage));
 
             JSONArray messages = new JSONArray();
@@ -702,13 +758,13 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
             JSONObject textBlock = new JSONObject();
             textBlock.put("type", "text");
             textBlock.put("text", prompt);
-            content.put(textBlock);
+            content.add(textBlock);
             userMessage.put("content", content);
-            messages.put(userMessage);
+            messages.add(userMessage);
             request.put("messages", messages);
 
             return request;
-        } catch (JSONException e) {
+        } catch (Exception e) {
             throw new IOException("Failed to build Claude request: " + e.getMessage(), e);
         }
     }
@@ -730,11 +786,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
                 apiKey
             );
 
-            GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(apiUrl);
-            httpRequest.setTimeout(requestTimeout);
-            httpRequest.jsonBody(request);
-
-            JSONObject response = httpRequest.executeToJson();
+            JSONObject response = HttpUtils.postJson(apiUrl, null, request.toString(), requestTimeout);
             String translation = parseGeminiResponse(response);
             logSuccess("Gemini response parsed, chars=" + translation.length());
             return translation;
@@ -749,12 +801,9 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         return executeWithRetry("openai", openAiModel, sourceLanguage, targetLanguage, inputChars, preview, () -> {
             JSONObject request = buildOpenAiRequest(prompt, sourceLanguage, targetLanguage);
 
-            GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(openAiEndpoint);
-            httpRequest.header("Authorization", "Bearer " + openAiApiKey);
-            httpRequest.setTimeout(requestTimeout);
-            httpRequest.jsonBody(request);
-
-            JSONObject response = httpRequest.executeToJson();
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Authorization", "Bearer " + openAiApiKey);
+            JSONObject response = HttpUtils.postJson(openAiEndpoint, headers, request.toString(), requestTimeout);
             String translation = parseOpenAiResponse(response);
             logSuccess("OpenAI response parsed, chars=" + translation.length());
             return translation;
@@ -769,13 +818,10 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         return executeWithRetry("claude", claudeModel, sourceLanguage, targetLanguage, inputChars, preview, () -> {
             JSONObject request = buildClaudeRequest(prompt, sourceLanguage, targetLanguage);
 
-            GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(claudeEndpoint);
-            httpRequest.header("x-api-key", claudeApiKey);
-            httpRequest.header("anthropic-version", GeminiConstants.CLAUDE_API_VERSION);
-            httpRequest.setTimeout(requestTimeout);
-            httpRequest.jsonBody(request);
-
-            JSONObject response = httpRequest.executeToJson();
+            Map<String, String> headers = new HashMap<>();
+            headers.put("x-api-key", claudeApiKey);
+            headers.put("anthropic-version", GeminiConstants.CLAUDE_API_VERSION);
+            JSONObject response = HttpUtils.postJson(claudeEndpoint, headers, request.toString(), requestTimeout);
             String translation = parseClaudeResponse(response);
             logSuccess("Claude response parsed, chars=" + translation.length());
             return translation;
@@ -825,21 +871,26 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
             JSONArray parts = new JSONArray();
             JSONObject part = new JSONObject();
             part.put("text", prompt);
-            parts.put(part);
+            JSONCompat.put(parts, part);
             content.put("parts", parts);
-            contents.put(content);
+            JSONCompat.put(contents, content);
             request.put("contents", contents);
 
             // Generation config for better translation
             JSONObject generationConfig = new JSONObject();
             generationConfig.put("temperature", 0.1); // Low temperature for consistent translation
-            generationConfig.put("maxOutputTokens", 2048); // Allow longer responses
+            // Scale the output budget with the input: a fixed 2048 truncates
+            // large batches mid-list (every item after the cut is silently
+            // lost), and on "thinking" models (Gemini 2.5+) hidden reasoning
+            // tokens ALSO count against this cap. prompt chars ≈ 3x the tokens
+            // the translation needs, which leaves thinking headroom.
+            generationConfig.put("maxOutputTokens", clampTokens(prompt.length(), 4096, 32768));
             generationConfig.put("topP", 0.8);
             generationConfig.put("topK", 10);
             request.put("generationConfig", generationConfig);
 
             return request;
-        } catch (JSONException e) {
+        } catch (Exception e) {
             throw new IOException("Failed to build request: " + e.getMessage(), e);
         }
     }
@@ -854,12 +905,13 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         if (content instanceof JSONArray) {
             JSONArray array = (JSONArray) content;
             StringBuilder builder = new StringBuilder();
-            for (int i = 0; i < array.length(); i++) {
-                Object item = array.opt(i);
+            for (int i = 0; i < JSONCompat.size(array); i++) {
+                Object item = array.get(i);
                 if (item instanceof JSONObject) {
                     JSONObject obj = (JSONObject) item;
-                    if (obj.has("text")) {
-                        builder.append(obj.optString("text"));
+                    String text = JSONCompat.optString(obj, "text", null);
+                    if (text != null && !text.isEmpty()) {
+                        builder.append(text);
                     }
                 } else if (item instanceof String) {
                     builder.append((String) item);
@@ -905,7 +957,11 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
                     if (waitMs <= 0) {
                         waitMs = (long) Math.pow(2, attempt) * 1000L;
                     }
-                    logInfo("Waiting " + waitMs + "ms before retry");
+                    // Cap the wait: servers sometimes send Retry-After values of
+                    // many minutes — sleeping that long looks like a total hang.
+                    waitMs = Math.min(waitMs, 60_000L);
+                    logWarn("Attempt " + (attempt + 1) + " failed, retrying in "
+                            + waitMs + "ms (" + e.getMessage() + ")");
                     Thread.sleep(waitMs);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
@@ -919,7 +975,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
     /**
      * Parse Retry-After value from error message.
-     * Looks for pattern [Retry-After: N] embedded by GeminiHttpUtils.
+     * Looks for pattern [Retry-After: N] embedded by HttpUtils.
      *
      * @param message Error message
      * @return Wait time in milliseconds, or -1 if not found
@@ -952,28 +1008,31 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     private String parseGeminiResponse(JSONObject json) throws IOException {
         try {
             // Check for API error
-            if (json.has("error")) {
-                JSONObject error = json.getJSONObject("error");
-                int code = error.optInt("code", -1);
-                String message = error.optString("message", "Unknown error");
+            JSONObject error = JSONCompat.optJSONObject(json, "error");
+            if (error != null) {
+                int code = JSONCompat.optInt(error, "code", -1);
+                String message = JSONCompat.optString(error, "message", "Unknown error");
                 throw new IOException("❌ " + formatApiError(code, message));
             }
 
             // Extract translation
-            JSONArray candidates = json.optJSONArray("candidates");
-            if (candidates == null || candidates.length() == 0) {
+            JSONArray candidates = JSONCompat.optJSONArray(json, "candidates");
+            if (candidates == null || JSONCompat.size(candidates) == 0) {
                 throw new IOException("⚠️ No translation returned from API");
             }
 
-            JSONObject candidate = candidates.getJSONObject(0);
+            JSONObject candidate = JSONCompat.optJSONObject(candidates, 0);
+            if (candidate == null) {
+                throw new IOException("⚠️ Invalid candidate in response");
+            }
             JSONObject content = candidate.getJSONObject("content");
             JSONArray parts = content.getJSONArray("parts");
 
-            if (parts.length() == 0) {
+            if (JSONCompat.size(parts) == 0) {
                 throw new IOException("⚠️ Empty translation response");
             }
 
-            String translation = parts.getJSONObject(0).getString("text");
+            String translation = JSONCompat.optJSONObject(parts, 0).getString("text");
 
             translation = translation.trim();
             if (translation.startsWith("\"") && translation.endsWith("\"")) {
@@ -982,44 +1041,60 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
             return translation;
 
-        } catch (JSONException e) {
-            throw new IOException("❌ Failed to parse API response: " + e.getMessage(), e);
+        } catch (Exception e) {
+            logError("Failed to parse Gemini response: " + e.getMessage(), e);
+            throw new IOException("Failed to parse Gemini response: " + e.getMessage(), e);
         }
     }
 
     private String parseOpenAiResponse(JSONObject response) throws IOException {
         try {
-            JSONArray choices = response.optJSONArray("choices");
-            if (choices == null || choices.length() == 0) {
+            JSONArray choices = JSONCompat.optJSONArray(response, "choices");
+            if (choices == null || JSONCompat.size(choices) == 0) {
                 throw new IOException("⚠️ OpenAI response did not include choices");
             }
 
-            JSONObject message = choices.getJSONObject(0).optJSONObject("message");
+            JSONObject message = JSONCompat.optJSONObject(choices, 0);
+            if (message != null) {
+                message = JSONCompat.optJSONObject(message, "message");
+            }
             if (message == null) {
                 throw new IOException("⚠️ OpenAI response missing message payload");
             }
 
-            String translation = extractContentText(message.opt("content"));
+            // OpenAI's `content` may be a plain string or an array of content parts.
+            // Try string first; fall back to JSONArray.
+            String translation;
+            try {
+                translation = extractContentText(message.getString("content"));
+            } catch (Exception stringFail) {
+                JSONArray contentArr = JSONCompat.optJSONArray(message, "content");
+                translation = extractContentText(contentArr);
+            }
             if (translation.isEmpty()) {
                 throw new IOException("⚠️ OpenAI response was empty");
             }
             return translation;
-        } catch (JSONException e) {
-            throw new IOException("❌ Failed to parse OpenAI response: " + e.getMessage(), e);
+        } catch (Exception e) {
+            logError("Failed to parse OpenAI response: " + e.getMessage(), e);
+            throw new IOException("Failed to parse OpenAI response: " + e.getMessage(), e);
         }
     }
 
     private String parseClaudeResponse(JSONObject response) throws IOException {
-        JSONArray contentArray = response.optJSONArray("content");
-        if (contentArray == null || contentArray.length() == 0) {
+        JSONArray contentArray = JSONCompat.optJSONArray(response, "content");
+        if (contentArray == null || JSONCompat.size(contentArray) == 0) {
             throw new IOException("⚠️ Claude response did not include content");
         }
 
         StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < contentArray.length(); i++) {
-            JSONObject block = contentArray.optJSONObject(i);
-            if (block != null && block.has("text")) {
-                builder.append(block.optString("text"));
+        for (int i = 0; i < JSONCompat.size(contentArray); i++) {
+            JSONObject block = JSONCompat.optJSONObject(contentArray, i);
+            if (block != null) {
+                String text = JSONCompat.optString(block, "text", "");
+                if (!text.isEmpty()) {
+                    builder.append(text);
+                }
             }
         }
 
@@ -1034,7 +1109,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
      * Format API error messages
      */
     private String formatApiError(int errorCode, String message) {
-        String prefix = localString != null ? localString.get("error_api") : "API Error";
+        String prefix = getContext().getString("{error_api}");
 
         switch (errorCode) {
             case 400:
@@ -1080,7 +1155,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         if (pluginContext != null) {
             String message = e.getMessage();
             if (message == null || message.trim().isEmpty()) {
-                message = localString != null ? localString.get("error_api") : "Translation error";
+                message = getContext().getString("{error_api}");
             }
             pluginContext.showToast(message);
         }
@@ -1223,12 +1298,12 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
     private void notifyAndFallbackToGemini(SharedPreferences prefs, String messageKey) {
         PluginContext pluginContext = getContext();
-        if (pluginContext != null && localString != null) {
+        if (pluginContext != null) {
             StringBuilder toast = new StringBuilder();
             if (messageKey != null) {
-                toast.append(localString.get(messageKey)).append(" ");
+                toast.append(getContext().getString(messageKey)).append(" ");
             }
-            toast.append(localString.get("msg_fallback_gemini"));
+            toast.append(getContext().getString("{msg_fallback_gemini}"));
             pluginContext.showToast(toast.toString().trim());
         }
         logWarn("Falling back to Gemini due to " + messageKey);
@@ -1241,11 +1316,11 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         apiKey = trimKey(prefs.getString(GeminiConstants.PREF_API_KEY, ""));
         if (isNullOrEmpty(apiKey)) {
             PluginContext pluginContext = getContext();
-            if (pluginContext != null && localString != null) {
-                pluginContext.showToast(localString.get("error_no_api_key"));
+            if (pluginContext != null) {
+                pluginContext.showToast(getContext().getString("{error_no_api_key}"));
             }
             throw new RuntimeException(
-                localString != null ? localString.get("error_no_api_key") : "API key not configured"
+                getContext().getString("{error_no_api_key}")
             );
         }
     }
@@ -1281,8 +1356,8 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
             preferences.edit().putString(GeminiConstants.PREF_CLAUDE_MODEL, claudeModel).apply();
         }
         PluginContext pluginContext = getContext();
-        if (pluginContext != null && localString != null) {
-            pluginContext.showToast(localString.get("msg_claude_model_auto_selected") + " " + claudeModel);
+        if (pluginContext != null) {
+            pluginContext.showToast(getContext().getString("{msg_claude_model_auto_selected}") + " " + claudeModel);
         }
         logWarn("Claude model unavailable; auto-selected " + claudeModel);
         return true;
@@ -1351,15 +1426,28 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     }
 
     private void logWarn(String message) {
-        logDebug("⚠️", message);
+        // Warnings always reach the MT log — skipped/retried strings must be
+        // diagnosable even when verbose debug logging is off.
+        logDebug("⚠️", message, true);
     }
 
     private void logError(String message) {
-        logDebug("❌", message);
+        logDebug("❌", message, true);
+    }
+
+    private void logError(String message, Throwable error) {
+        logDebug("❌", message, true);
+        if (error != null && debugLogger != null && debugLogger.isEnabled()) {
+            debugLogger.logLine("  ", error.toString());
+        }
     }
 
     private void logDebug(String emoji, String message) {
-        if (!debugLogging || message == null) {
+        logDebug(emoji, message, false);
+    }
+
+    private void logDebug(String emoji, String message, boolean always) {
+        if (message == null || (!debugLogging && !always)) {
             return;
         }
         if (debugLogger != null && debugLogger.isEnabled()) {

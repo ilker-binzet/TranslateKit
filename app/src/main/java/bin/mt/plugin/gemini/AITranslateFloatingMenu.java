@@ -7,7 +7,6 @@ import androidx.annotation.NonNull;
 
 import java.io.IOException;
 
-import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.drawable.MaterialIcons;
 import bin.mt.plugin.api.editor.BaseTextEditorFloatingMenu;
 import bin.mt.plugin.api.editor.TextEditor;
@@ -25,16 +24,11 @@ import bin.mt.plugin.api.util.AsyncTask;
  * @version 1.0.0
  */
 public class AITranslateFloatingMenu extends BaseTextEditorFloatingMenu {
-    
-    private LocalString localString;
-    
+
     @NonNull
     @Override
     public String name() {
-        if (localString == null) {
-            localString = getContext().getAssetLocalString("GeminiTranslate");
-        }
-        return localString != null ? localString.get("floating_menu_translate") : "AI Translate";
+        return getContext().getString("{floating_menu_translate}");
     }
 
     @NonNull
@@ -51,16 +45,12 @@ public class AITranslateFloatingMenu extends BaseTextEditorFloatingMenu {
 
     @Override
     public void onMenuClick(@NonNull PluginUI pluginUI, @NonNull TextEditor editor) {
-        if (localString == null) {
-            localString = getContext().getAssetLocalString("GeminiTranslate");
-        }
-        
         int selStart = editor.getSelectionStart();
         int selEnd = editor.getSelectionEnd();
         String selectedText = editor.subText(selStart, selEnd);
         
         if (selectedText == null || selectedText.trim().isEmpty()) {
-            pluginUI.showToast(localString != null ? localString.get("error_no_text_selected") : "No text selected");
+            pluginUI.showToast(getContext().getString("{error_no_text_selected}"));
             return;
         }
         
@@ -77,9 +67,7 @@ public class AITranslateFloatingMenu extends BaseTextEditorFloatingMenu {
             protected void beforeThread() throws Exception {
                 String engineName = getEngineDisplayName(selectedEngine);
                 loadingDialog = new LoadingDialog(pluginUI)
-                        .setMessage(localString != null 
-                            ? localString.get("translating_with") + " " + engineName + "..."
-                            : "Translating with " + engineName + "...")
+                        .setMessage(getContext().getString("{translating_with}") + " " + engineName + "...")
                         .showDelay(200);
             }
             
@@ -95,9 +83,7 @@ public class AITranslateFloatingMenu extends BaseTextEditorFloatingMenu {
             @Override
             protected void afterThread() throws Exception {
                 if (error != null) {
-                    pluginUI.showToast(localString != null 
-                        ? localString.get("error_translation_failed") + ": " + error.getMessage()
-                        : "Translation failed: " + error.getMessage());
+                    pluginUI.showToast(getContext().getString("{error_translation_failed}") + ": " + error.getMessage());
                     return;
                 }
                 
@@ -105,17 +91,13 @@ public class AITranslateFloatingMenu extends BaseTextEditorFloatingMenu {
                     boolean bilingualMode = prefs.getBoolean(GeminiConstants.PREF_BILINGUAL_MODE, GeminiConstants.DEFAULT_BILINGUAL_MODE);
                     String finalText = bilingualMode ? selectedText + "\n" + translatedText : translatedText;
                     editor.replaceText(selStart, selEnd, finalText);
-                    pluginUI.showToast(localString != null 
-                        ? localString.get("translation_complete")
-                        : "Translation complete");
+                    pluginUI.showToast(getContext().getString("{translation_complete}"));
                 }
             }
             
             @Override
             protected void onException(Exception e) {
-                pluginUI.showToast(localString != null 
-                    ? localString.get("error_translation_failed") + ": " + e.getMessage()
-                    : "Translation failed: " + e.getMessage());
+                pluginUI.showToast(getContext().getString("{error_translation_failed}") + ": " + e.getMessage());
             }
             
             @Override
@@ -183,34 +165,30 @@ public class AITranslateFloatingMenu extends BaseTextEditorFloatingMenu {
             throw new IOException("Gemini API key not configured");
         }
         
-        org.json.JSONObject request = new org.json.JSONObject();
+        bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
         try {
-            org.json.JSONArray contents = new org.json.JSONArray();
-            org.json.JSONObject content = new org.json.JSONObject();
-            org.json.JSONArray parts = new org.json.JSONArray();
-            org.json.JSONObject part = new org.json.JSONObject();
+            bin.mt.json.JSONArray contents = new bin.mt.json.JSONArray();
+            bin.mt.json.JSONObject content = new bin.mt.json.JSONObject();
+            bin.mt.json.JSONArray parts = new bin.mt.json.JSONArray();
+            bin.mt.json.JSONObject part = new bin.mt.json.JSONObject();
             part.put("text", prompt);
-            parts.put(part);
+            parts.add(part);
             content.put("parts", parts);
-            contents.put(content);
+            contents.add(content);
             request.put("contents", contents);
-            
-            org.json.JSONObject generationConfig = new org.json.JSONObject();
+
+            bin.mt.json.JSONObject generationConfig = new bin.mt.json.JSONObject();
             generationConfig.put("temperature", 0.1);
             generationConfig.put("maxOutputTokens", 2048);
             request.put("generationConfig", generationConfig);
-        } catch (org.json.JSONException e) {
+        } catch (Exception e) {
             throw new IOException("Failed to build request", e);
         }
-        
+
         String apiUrl = String.format("%s/%s:generateContent?key=%s",
             GeminiConstants.API_BASE_URL, modelName, apiKey);
-        
-        GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(apiUrl);
-        httpRequest.setTimeout(timeout);
-        httpRequest.jsonBody(request);
-        
-        org.json.JSONObject response = httpRequest.executeToJson();
+
+        bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(apiUrl, null, request.toString());
         return parseGeminiResponse(response);
     }
     
@@ -224,29 +202,26 @@ public class AITranslateFloatingMenu extends BaseTextEditorFloatingMenu {
             throw new IOException("OpenAI API key not configured");
         }
         
-        org.json.JSONObject request = new org.json.JSONObject();
+        bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
         try {
             request.put("model", model);
-            org.json.JSONArray messages = new org.json.JSONArray();
-            messages.put(new org.json.JSONObject()
+            bin.mt.json.JSONArray messages = new bin.mt.json.JSONArray();
+            messages.add(new bin.mt.json.JSONObject()
                     .put("role", "system")
                     .put("content", "You are a professional translator. Translate text accurately and return only the translation."));
-            messages.put(new org.json.JSONObject()
+            messages.add(new bin.mt.json.JSONObject()
                     .put("role", "user")
                     .put("content", prompt));
             request.put("messages", messages);
             request.put("temperature", 0.1);
             request.put("max_tokens", 2048);
-        } catch (org.json.JSONException e) {
+        } catch (Exception e) {
             throw new IOException("Failed to build request", e);
         }
-        
-        GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(endpoint);
-        httpRequest.header("Authorization", "Bearer " + apiKey);
-        httpRequest.setTimeout(timeout);
-        httpRequest.jsonBody(request);
-        
-        org.json.JSONObject response = httpRequest.executeToJson();
+
+        java.util.Map<String, String> headers = new java.util.HashMap<>();
+        headers.put("Authorization", "Bearer " + apiKey);
+        bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(endpoint, headers, request.toString());
         return parseOpenAIResponse(response);
     }
     
@@ -260,95 +235,118 @@ public class AITranslateFloatingMenu extends BaseTextEditorFloatingMenu {
             throw new IOException("Claude API key not configured");
         }
         
-        org.json.JSONObject request = new org.json.JSONObject();
+        bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
         try {
             request.put("model", model);
             request.put("max_tokens", 2048);
             request.put("system", "You are a professional translator. Translate text accurately and return only the translation.");
-            
-            org.json.JSONArray messages = new org.json.JSONArray();
-            org.json.JSONObject userMessage = new org.json.JSONObject();
+
+            bin.mt.json.JSONArray messages = new bin.mt.json.JSONArray();
+            bin.mt.json.JSONObject userMessage = new bin.mt.json.JSONObject();
             userMessage.put("role", "user");
-            org.json.JSONArray content = new org.json.JSONArray();
-            org.json.JSONObject textBlock = new org.json.JSONObject();
+            bin.mt.json.JSONArray content = new bin.mt.json.JSONArray();
+            bin.mt.json.JSONObject textBlock = new bin.mt.json.JSONObject();
             textBlock.put("type", "text");
             textBlock.put("text", prompt);
-            content.put(textBlock);
+            content.add(textBlock);
             userMessage.put("content", content);
-            messages.put(userMessage);
+            messages.add(userMessage);
             request.put("messages", messages);
-        } catch (org.json.JSONException e) {
+        } catch (Exception e) {
             throw new IOException("Failed to build request", e);
         }
-        
-        GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post(endpoint);
-        httpRequest.header("x-api-key", apiKey);
-        httpRequest.header("anthropic-version", GeminiConstants.CLAUDE_API_VERSION);
-        httpRequest.setTimeout(timeout);
-        httpRequest.jsonBody(request);
-        
-        org.json.JSONObject response = httpRequest.executeToJson();
+
+        java.util.Map<String, String> headers = new java.util.HashMap<>();
+        headers.put("x-api-key", apiKey);
+        headers.put("anthropic-version", GeminiConstants.CLAUDE_API_VERSION);
+        bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(endpoint, headers, request.toString());
         return parseClaudeResponse(response);
     }
-    
-    private String parseGeminiResponse(org.json.JSONObject json) throws IOException {
+
+    private String parseGeminiResponse(bin.mt.json.JSONObject json) throws IOException {
         try {
-            if (json.has("error")) {
-                org.json.JSONObject error = json.getJSONObject("error");
-                throw new IOException("API Error: " + error.optString("message", "Unknown error"));
+            if (json.contains("error")) {
+                bin.mt.json.JSONObject error = json.getJSONObject("error");
+                throw new IOException("API Error: " + bin.mt.plugin.common.JSONCompat.optString(error, "message", "Unknown error"));
             }
-            
-            org.json.JSONArray candidates = json.optJSONArray("candidates");
-            if (candidates == null || candidates.length() == 0) {
+
+            bin.mt.json.JSONArray candidates = bin.mt.plugin.common.JSONCompat.optJSONArray(json, "candidates");
+            if (candidates == null || bin.mt.plugin.common.JSONCompat.size(candidates) == 0) {
                 throw new IOException("No translation returned");
             }
-            
-            org.json.JSONObject candidate = candidates.getJSONObject(0);
-            org.json.JSONObject content = candidate.getJSONObject("content");
-            org.json.JSONArray parts = content.getJSONArray("parts");
-            
-            if (parts.length() == 0) {
+
+            bin.mt.json.JSONObject candidate = bin.mt.plugin.common.JSONCompat.optJSONObject(candidates, 0);
+            if (candidate == null) {
+                throw new IOException("Invalid candidate");
+            }
+            bin.mt.json.JSONObject content = candidate.getJSONObject("content");
+            bin.mt.json.JSONArray parts = content.getJSONArray("parts");
+
+            if (bin.mt.plugin.common.JSONCompat.size(parts) == 0) {
                 throw new IOException("Empty translation response");
             }
-            
-            return parts.getJSONObject(0).getString("text").trim();
-        } catch (org.json.JSONException e) {
+
+            return bin.mt.plugin.common.JSONCompat.optJSONObject(parts, 0).getString("text").trim();
+        } catch (Exception e) {
             throw new IOException("Failed to parse response", e);
         }
     }
-    
-    private String parseOpenAIResponse(org.json.JSONObject response) throws IOException {
+
+    private String parseOpenAIResponse(bin.mt.json.JSONObject response) throws IOException {
         try {
-            org.json.JSONArray choices = response.optJSONArray("choices");
-            if (choices == null || choices.length() == 0) {
+            bin.mt.json.JSONArray choices = bin.mt.plugin.common.JSONCompat.optJSONArray(response, "choices");
+            if (choices == null || bin.mt.plugin.common.JSONCompat.size(choices) == 0) {
                 throw new IOException("No response from OpenAI");
             }
-            
-            org.json.JSONObject message = choices.getJSONObject(0).optJSONObject("message");
+
+            bin.mt.json.JSONObject message = bin.mt.plugin.common.JSONCompat.optJSONObject(choices, 0);
+            if (message != null) {
+                message = bin.mt.plugin.common.JSONCompat.optJSONObject(message, "message");
+            }
             if (message == null) {
                 throw new IOException("Invalid OpenAI response");
             }
-            
-            return message.optString("content", "").trim();
-        } catch (org.json.JSONException e) {
+
+            String translation;
+            try {
+                translation = message.getString("content").trim();
+            } catch (Exception stringFail) {
+                bin.mt.json.JSONArray contentArr = bin.mt.plugin.common.JSONCompat.optJSONArray(message, "content");
+                if (contentArr == null) {
+                    throw new IOException("OpenAI message content missing");
+                }
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < bin.mt.plugin.common.JSONCompat.size(contentArr); i++) {
+                    bin.mt.json.JSONObject block = bin.mt.plugin.common.JSONCompat.optJSONObject(contentArr, i);
+                    if (block != null) {
+                        sb.append(bin.mt.plugin.common.JSONCompat.optString(block, "text", ""));
+                    }
+                }
+                translation = sb.toString().trim();
+            }
+            return translation;
+        } catch (Exception e) {
             throw new IOException("Failed to parse OpenAI response", e);
         }
     }
-    
-    private String parseClaudeResponse(org.json.JSONObject response) throws IOException {
-        org.json.JSONArray contentArray = response.optJSONArray("content");
-        if (contentArray == null || contentArray.length() == 0) {
+
+    private String parseClaudeResponse(bin.mt.json.JSONObject response) throws IOException {
+        bin.mt.json.JSONArray contentArray = bin.mt.plugin.common.JSONCompat.optJSONArray(response, "content");
+        if (contentArray == null || bin.mt.plugin.common.JSONCompat.size(contentArray) == 0) {
             throw new IOException("No response from Claude");
         }
-        
+
         StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < contentArray.length(); i++) {
-            org.json.JSONObject block = contentArray.optJSONObject(i);
-            if (block != null && block.has("text")) {
-                builder.append(block.optString("text"));
+        for (int i = 0; i < bin.mt.plugin.common.JSONCompat.size(contentArray); i++) {
+            bin.mt.json.JSONObject block = bin.mt.plugin.common.JSONCompat.optJSONObject(contentArray, i);
+            if (block != null) {
+                String text = bin.mt.plugin.common.JSONCompat.optString(block, "text", "");
+                if (!text.isEmpty()) {
+                    builder.append(text);
+                }
             }
         }
-        
+
         return builder.toString().trim();
     }
     

@@ -6,23 +6,18 @@ import android.os.Looper;
 import android.text.InputType;
 import android.text.TextUtils;
 
-import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.PluginContext;
 import bin.mt.plugin.api.preference.PluginPreference;
-
-import java.io.IOException;
-import java.util.Collections;
 
 /**
  * Claude AI Provider Settings
  * Dedicated settings page for Anthropic Claude configuration
- * 
+ *
  * @author Ilker Binzet
- * @version 0.7.0-MODERN
+ * @version 0.4.0-beta - Auto-refreshing model catalog + custom model override
  */
 public class ClaudeProviderPreference implements PluginPreference {
 
-    private LocalString localString;
     private PluginContext context;
     private SharedPreferences preferences;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -30,13 +25,7 @@ public class ClaudeProviderPreference implements PluginPreference {
     @Override
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
-        this.localString = context.getAssetLocalString("GeminiTranslate");
-        if (this.localString == null) {
-            this.localString = context.getLocalString();
-        }
         this.preferences = context.getPreferences();
-
-        builder.setLocalString(localString);
 
         // ==================== API Configuration ====================
         builder.addText("🔑 API Configuration")
@@ -64,29 +53,41 @@ public class ClaudeProviderPreference implements PluginPreference {
         // ==================== Model Selection ====================
         builder.addText("🤖 Model Selection").summary("");
 
-        var claudeModelList = builder.addList("Claude Model", GeminiConstants.PREF_CLAUDE_MODEL)
-            .summary("Choose Claude model (Sonnet 4.5 recommended)");
+        // The model choice is an implementation detail. The default is the
+        // recommended Claude model; the user can override via Custom Model.
+        String customClaudeKey = ProviderCatalogRefresher.customPrefKeyFor(GeminiConstants.PREF_CLAUDE_MODEL);
+        String effectiveClaudeModel = ProviderCatalogRefresher.resolveSelectedModel(
+                preferences, GeminiConstants.PREF_CLAUDE_MODEL, GeminiConstants.DEFAULT_CLAUDE_MODEL);
+        boolean isCustomClaude = !TextUtils.isEmpty(preferences.getString(customClaudeKey, ""));
 
-        boolean disableCache = preferences.getBoolean(GeminiConstants.PREF_DEBUG_DISABLE_MODEL_CACHE, false);
-        java.util.List<ModelCatalogManager.ModelInfo> cachedClaudeModels = disableCache
-            ? Collections.emptyList()
-            : ModelCatalogManager.loadModelCache(preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS);
-        if (cachedClaudeModels == null || cachedClaudeModels.isEmpty()) {
-            claudeModelList.addItem("Claude Sonnet 4.5 ⭐ (Balanced, Recommended)", "claude-sonnet-4-5-latest")
-                    .addItem("Claude Opus 4.6 (Most Powerful, Feb 2026)", "claude-opus-4-6")
-                    .addItem("Claude Haiku 4.5 (Fast, Economical)", "claude-haiku-4-5-latest")
-                    .addItem("Claude Opus 4.5 (Previous Powerful)", "claude-opus-4-5-latest")
-                    .addItem("Claude Sonnet 4 (Previous Balanced)", "claude-sonnet-4-latest")
-                    .addItem("Claude Opus 4 (Legacy)", "claude-opus-4-latest");
-        } else {
-            for (ModelCatalogManager.ModelInfo info : cachedClaudeModels) {
-                claudeModelList.addItem(formatModelLabel(info), info.id);
-            }
-        }
+        builder.addText("Provider")
+            .summary("Claude");
+        builder.addText("Model")
+            .summary(isCustomClaude
+                    ? effectiveClaudeModel + "  (custom override)"
+                    : effectiveClaudeModel + "  (default)");
+
+        builder.addText("Model Catalog")
+            .summary(ModelCatalogManager.formatLastRefreshed(
+                    preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS))
+            .onClick((pluginUI, item) -> showModelCatalog(pluginUI));
 
         builder.addText("Refresh Model List")
-            .summary("Pull current Claude 3.x/3.5 availability")
+            .summary("Fetch the latest Claude models from Anthropic API")
             .onClick((pluginUI, item) -> refreshClaudeModels(pluginUI));
+
+        builder.addInput("Custom Model (optional)", customClaudeKey)
+                .defaultValue("")
+                .summary("Overrides the default model above when non-empty. Use for any model name.")
+                .hint("e.g. claude-opus-5-latest")
+                .valueAsSummary()
+                .inputType(InputType.TYPE_CLASS_TEXT);
+
+        ProviderCatalogRefresher.scheduleAutoRefresh(
+                preferences,
+                GeminiConstants.PREF_CACHE_CLAUDE_MODELS,
+                preferences.getString(GeminiConstants.PREF_CLAUDE_API_KEY, ""),
+                ModelCatalogManager.Provider.CLAUDE);
 
         // ==================== Usage & Limits ====================
         builder.addText("📊 Usage & Limits")
@@ -155,26 +156,25 @@ public class ClaudeProviderPreference implements PluginPreference {
         
         new Thread(() -> {
             try {
-                org.json.JSONObject request = new org.json.JSONObject();
+                bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
                 request.put("model", model);
                 request.put("max_tokens", 50);
-                org.json.JSONArray messages = new org.json.JSONArray();
-                org.json.JSONObject message = new org.json.JSONObject();
+                bin.mt.json.JSONArray messages = new bin.mt.json.JSONArray();
+                bin.mt.json.JSONObject message = new bin.mt.json.JSONObject();
                 message.put("role", "user");
                 message.put("content", "Translate to Turkish: Hello");
-                messages.put(message);
+                messages.add(message);
                 request.put("messages", messages);
 
-                GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post("https://api.anthropic.com/v1/messages");
-                httpRequest.setTimeout(10000);
-                httpRequest.header("x-api-key", apiKey);
-                httpRequest.header("anthropic-version", "2023-06-01");
-                httpRequest.jsonBody(request);
-                org.json.JSONObject response = httpRequest.executeToJson();
+                java.util.Map<String, String> headers = new java.util.HashMap<>();
+                headers.put("x-api-key", apiKey);
+                headers.put("anthropic-version", "2023-06-01");
+                bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(
+                        "https://api.anthropic.com/v1/messages", headers, request.toString());
 
                 runOnMainThread(loadingDialog::dismiss);
 
-                if (response.has("content")) {
+                if (response.contains("content")) {
                     String result = response.getJSONArray("content")
                         .getJSONObject(0)
                         .getString("text").trim();
@@ -201,7 +201,7 @@ public class ClaudeProviderPreference implements PluginPreference {
                         .setMessage("Error: " + e.getMessage())
                         .setPositiveButton("{ok}", null)
                         .show());
-            } catch (Exception e) {
+            } catch (Throwable e) { // Throwable: an Error escaping this thread would crash MT Manager
                 runOnMainThread(loadingDialog::dismiss);
                 runOnMainThread(() -> pluginUI.buildDialog()
                         .setTitle("❌ Test Failed")
@@ -245,31 +245,29 @@ public class ClaudeProviderPreference implements PluginPreference {
         new Thread(() -> {
             try {
                 // Build minimal test request
-                org.json.JSONObject request = new org.json.JSONObject();
+                bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
                 request.put("model", model);
                 request.put("max_tokens", 5);
-                
-                org.json.JSONArray messages = new org.json.JSONArray();
-                org.json.JSONObject message = new org.json.JSONObject();
+
+                bin.mt.json.JSONArray messages = new bin.mt.json.JSONArray();
+                bin.mt.json.JSONObject message = new bin.mt.json.JSONObject();
                 message.put("role", "user");
                 message.put("content", "Say 'test' in one word");
-                messages.put(message);
+                messages.add(message);
                 request.put("messages", messages);
 
                 // Test API
-                GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post("https://api.anthropic.com/v1/messages");
-                httpRequest.setTimeout(15000);
-                httpRequest.header("x-api-key", apiKey);
-                httpRequest.header("anthropic-version", "2023-06-01");
-                httpRequest.jsonBody(request);
-
-                org.json.JSONObject response = httpRequest.executeToJson();
+                java.util.Map<String, String> headers = new java.util.HashMap<>();
+                headers.put("x-api-key", apiKey);
+                headers.put("anthropic-version", "2023-06-01");
+                bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(
+                        "https://api.anthropic.com/v1/messages", headers, request.toString());
 
                 runOnMainThread(loadingDialog::dismiss);
 
-                if (response.has("content")) {
-                    org.json.JSONArray content = response.getJSONArray("content");
-                    if (content.length() > 0) {
+                if (response.contains("content")) {
+                    bin.mt.json.JSONArray content = response.getJSONArray("content");
+                    if (bin.mt.plugin.common.JSONCompat.size(content) > 0) {
                     runOnMainThread(() -> pluginUI.buildDialog()
                                 .setTitle("✅ API Key Valid")
                                 .setMessage("Your Claude API key is working correctly!\n\nModel: " + model)
@@ -282,14 +280,14 @@ public class ClaudeProviderPreference implements PluginPreference {
                                 .setPositiveButton("{ok}", null)
                         .show());
                     }
-                } else if (response.has("error")) {
-                    org.json.JSONObject error = response.getJSONObject("error");
-                    String errorType = error.optString("type", "");
-                    String errorMsg = error.optString("message", "Unknown error");
-                    
+                } else if (response.contains("error")) {
+                    bin.mt.json.JSONObject error = response.getJSONObject("error");
+                    String errorType = bin.mt.plugin.common.JSONCompat.optString(error, "type", "");
+                    String errorMsg = bin.mt.plugin.common.JSONCompat.optString(error, "message", "Unknown error");
+
                     String dialogTitle;
                     String dialogMessage;
-                    
+
                     if (errorType.contains("authentication_error")) {
                         dialogTitle = "❌ Authentication Failed";
                         dialogMessage = "Your API key is invalid.\n\nPlease check your API key at:\nconsole.anthropic.com/settings/keys";
@@ -348,7 +346,7 @@ public class ClaudeProviderPreference implements PluginPreference {
                         .setPositiveButton("{ok}", null)
                         .show());
                         
-            } catch (Exception e) {
+            } catch (Throwable e) { // Throwable: an Error escaping this thread would crash MT Manager
                 runOnMainThread(loadingDialog::dismiss);
                 runOnMainThread(() -> pluginUI.buildDialog()
                         .setTitle("❌ Test Failed")
@@ -365,11 +363,15 @@ public class ClaudeProviderPreference implements PluginPreference {
         }
 
         if (rawMessage.contains("404")) {
-            org.json.JSONObject errorPayload = parseErrorPayload(rawMessage);
+            bin.mt.json.JSONObject errorPayload = parseErrorPayload(rawMessage);
             if (errorPayload != null) {
-                org.json.JSONObject errorObject = errorPayload.optJSONObject("error");
-                String errorType = errorObject != null ? errorObject.optString("type") : errorPayload.optString("type");
-                String apiMessage = errorObject != null ? errorObject.optString("message") : errorPayload.optString("message");
+                bin.mt.json.JSONObject errorObject = bin.mt.plugin.common.JSONCompat.optJSONObject(errorPayload, "error");
+                String errorType = errorObject != null
+                        ? bin.mt.plugin.common.JSONCompat.optString(errorObject, "type", "")
+                        : bin.mt.plugin.common.JSONCompat.optString(errorPayload, "type", "");
+                String apiMessage = errorObject != null
+                        ? bin.mt.plugin.common.JSONCompat.optString(errorObject, "message", "")
+                        : bin.mt.plugin.common.JSONCompat.optString(errorPayload, "message", "");
 
                 if ("not_found_error".equalsIgnoreCase(errorType) || (apiMessage != null && apiMessage.contains("model"))) {
                     runOnMainThread(() -> showModelNotFoundDialog(pluginUI, model, apiMessage));
@@ -381,14 +383,14 @@ public class ClaudeProviderPreference implements PluginPreference {
         return false;
     }
 
-    private org.json.JSONObject parseErrorPayload(String rawMessage) {
+    private bin.mt.json.JSONObject parseErrorPayload(String rawMessage) {
         int jsonStart = rawMessage.indexOf('{');
         if (jsonStart == -1) {
             return null;
         }
         try {
-            return new org.json.JSONObject(rawMessage.substring(jsonStart));
-        } catch (org.json.JSONException ignored) {
+            return new bin.mt.json.JSONObject(rawMessage.substring(jsonStart));
+        } catch (Exception ignored) {
             return null;
         }
     }
@@ -430,6 +432,40 @@ public class ClaudeProviderPreference implements PluginPreference {
         }
     }
 
+    /**
+     * Show the merged (cached + curated) model catalog in a dialog.
+     * Pure local read — never touches the network, so it opens instantly.
+     */
+    private void showModelCatalog(bin.mt.plugin.api.ui.PluginUI pluginUI) {
+        java.util.List<ModelCatalogManager.ModelInfo> models = ProviderCatalogRefresher.composeList(
+                preferences,
+                GeminiConstants.PREF_CACHE_CLAUDE_MODELS,
+                ModelCatalogManager.getDefaultSeedClaude());
+
+        String effectiveModel = ProviderCatalogRefresher.resolveSelectedModel(
+                preferences, GeminiConstants.PREF_CLAUDE_MODEL, GeminiConstants.DEFAULT_CLAUDE_MODEL);
+
+        StringBuilder message = new StringBuilder();
+        message.append(ModelCatalogManager.formatLastRefreshed(
+                preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS)).append("\n\n");
+        for (ModelCatalogManager.ModelInfo info : models) {
+            message.append(info.id.equals(effectiveModel) ? "▶ " : "• ");
+            message.append(info.displayName).append("\n   ").append(info.id);
+            if (info.recommended) {
+                message.append("  ⭐");
+            }
+            message.append('\n');
+        }
+        message.append("\n▶ = active model, ⭐ = recommended.\n")
+               .append("Use 'Custom Model' below to switch; 'Refresh Model List' fetches the live catalog.");
+
+        pluginUI.buildDialog()
+                .setTitle("📚 Model Catalog (" + models.size() + ")")
+                .setMessage(message.toString())
+                .setPositiveButton("{ok}", null)
+                .show();
+    }
+
     private void refreshClaudeModels(bin.mt.plugin.api.ui.PluginUI pluginUI) {
         String apiKey = preferences.getString(GeminiConstants.PREF_CLAUDE_API_KEY, "");
         if (!ensureValidClaudeKey(pluginUI, apiKey)) {
@@ -441,35 +477,37 @@ public class ClaudeProviderPreference implements PluginPreference {
                         .setSecondaryMessage("Checking Anthropic availability")
                         .show();
 
-        new Thread(() -> {
-            try {
-                java.util.List<ModelCatalogManager.ModelInfo> models = ModelCatalogManager.fetchClaudeModels(apiKey);
-                ModelCatalogManager.saveModelCache(preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS, models);
-                runOnMainThread(() -> {
+        ModelCatalogManager.forceRefresh(
+                preferences,
+                GeminiConstants.PREF_CACHE_CLAUDE_MODELS,
+                apiKey,
+                ModelCatalogManager.Provider.CLAUDE,
+                (models, error) -> runOnMainThread(() -> {
                     loadingDialog.dismiss();
+                    if (error != null) {
+                        pluginUI.buildDialog()
+                                .setTitle("❌ Refresh Failed")
+                                .setMessage("Could not fetch Claude models:\n" + error.getMessage())
+                                .setPositiveButton("{ok}", null)
+                                .show();
+                        return;
+                    }
                     if (models == null || models.isEmpty()) {
                         pluginUI.buildDialog()
                                 .setTitle("⚠️ No Models Found")
-                                .setMessage("Anthropic returned no Claude 3.x models for this key.")
+                                .setMessage("Anthropic returned no Claude models for this key.")
                                 .setPositiveButton("{ok}", null)
                                 .show();
-                    } else {
-                        showModelSelectionDialog(pluginUI, "Select Claude Model", models,
-                                GeminiConstants.PREF_CLAUDE_MODEL, GeminiConstants.DEFAULT_CLAUDE_MODEL,
-                                "Claude model switched to ");
+                        return;
                     }
-                });
-            } catch (IOException e) {
-                runOnMainThread(() -> {
-                    loadingDialog.dismiss();
-                    pluginUI.buildDialog()
-                            .setTitle("❌ Refresh Failed")
-                            .setMessage("Could not fetch Claude models:\n" + e.getMessage())
-                            .setPositiveButton("{ok}", null)
-                            .show();
-                });
-            }
-        }).start();
+                    int merged = ProviderCatalogRefresher.composeList(
+                            preferences,
+                            GeminiConstants.PREF_CACHE_CLAUDE_MODELS,
+                            ModelCatalogManager.getDefaultSeedClaude()).size();
+                    context.showToast("✅ " + models.size() + " live models, " + merged
+                            + " total in list — reopen to see updates");
+                })
+        );
     }
 
     private boolean ensureValidClaudeKey(bin.mt.plugin.api.ui.PluginUI pluginUI, String apiKey) {
@@ -490,42 +528,5 @@ public class ClaudeProviderPreference implements PluginPreference {
             return false;
         }
         return true;
-    }
-
-    private void showModelSelectionDialog(bin.mt.plugin.api.ui.PluginUI pluginUI,
-                                          String title,
-                                          java.util.List<ModelCatalogManager.ModelInfo> models,
-                                          String prefKey,
-                                          String defaultValue,
-                                          String toastPrefix) {
-        CharSequence[] labels = new CharSequence[models.size()];
-        for (int i = 0; i < models.size(); i++) {
-            labels[i] = formatModelLabel(models.get(i));
-        }
-        pluginUI.buildDialog()
-                .setTitle(title)
-                .setItems(labels, (dialog, which) -> {
-                    ModelCatalogManager.ModelInfo selected = models.get(which);
-                    preferences.edit().putString(prefKey, selected.id).apply();
-                    if (context != null) {
-                        context.showToast(toastPrefix + selected.displayName);
-                    }
-                    dialog.dismiss();
-                })
-                .setNegativeButton("{cancel}", null)
-                .show();
-    }
-
-    private String formatModelLabel(ModelCatalogManager.ModelInfo info) {
-        StringBuilder label = new StringBuilder();
-        String name = TextUtils.isEmpty(info.displayName) ? info.id : info.displayName;
-        label.append(name);
-        if (info.recommended) {
-            label.append(" ⭐");
-        }
-        if (!TextUtils.isEmpty(info.detail)) {
-            label.append("\n").append(info.detail);
-        }
-        return label.toString();
     }
 }

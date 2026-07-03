@@ -10,13 +10,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import bin.mt.json.PrettyPrint;
+import bin.mt.json.JSONObject;
 
 import bin.mt.plugin.api.ui.PluginEditText;
 import bin.mt.plugin.api.ui.PluginView;
 
-import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.PluginContext;
 import bin.mt.plugin.api.preference.PluginPreference;
 
@@ -69,11 +68,6 @@ public class ToolsSubPreference implements PluginPreference {
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
         this.preferences = context.getPreferences();
-        LocalString localString = context.getAssetLocalString("GeminiTranslate");
-        if (localString == null) {
-            localString = context.getLocalString();
-        }
-        builder.setLocalString(localString);
 
         synchronized (providerStatusCache) {
             providerStatusCache.clear();
@@ -184,12 +178,24 @@ public class ToolsSubPreference implements PluginPreference {
             }
             json.put("settings", settings);
 
-            String jsonText = json.toString(2);
+            String jsonText = json.toString(PrettyPrint.indentWithSpaces(2));
+
+            // Also copy to clipboard automatically — the user can paste anywhere
+            // (file, email, etc.) without first opening the dialog.
+            // setClipboardText(text, null) suppresses the default success toast;
+            // we show our own so the user knows the export succeeded.
+            try {
+                context.setClipboardText(jsonText, null);
+                context.showToast("✅ " + count + " settings copied to clipboard");
+            } catch (Exception clipErr) {
+                // Fallback: just open the dialog so the user can copy manually
+                context.showToast("⚠️ Clipboard copy failed — please copy from dialog");
+            }
 
             pluginUI.buildDialog()
                     .setTitle("Export Settings (" + count + " items)")
                     .setView(pluginUI.buildVerticalLayout()
-                            .addTextView().text("Long\u2011press the text below to select and copy:")
+                            .addTextView().text("Copied to clipboard. You can also long‑press the text below:")
                             .textColor(GeminiColorTokens.getSecondaryTextColor(pluginUI))
                             .textSize(13)
                             .addEditBox("exportJson").text(jsonText)
@@ -198,7 +204,7 @@ public class ToolsSubPreference implements PluginPreference {
                             .build())
                     .setPositiveButton("Done", null)
                     .show();
-        } catch (JSONException e) {
+        } catch (Exception e) {
             context.showToast("Export failed: " + e.getMessage());
         }
     }
@@ -234,7 +240,7 @@ public class ToolsSubPreference implements PluginPreference {
         try {
             JSONObject json = new JSONObject(jsonText);
 
-            if (!json.has("preset_version") || !json.has("settings")) {
+            if (!json.contains("preset_version") || !json.contains("settings")) {
                 context.showToast("Invalid preset: missing required fields");
                 return;
             }
@@ -243,7 +249,7 @@ public class ToolsSubPreference implements PluginPreference {
             SharedPreferences.Editor editor = preferences.edit();
             int applied = 0;
 
-            java.util.Iterator<String> keys = settings.keys();
+            java.util.Iterator<String> keys = settings.names().iterator();
             while (keys.hasNext()) {
                 String key = keys.next();
                 if (!EXPORTABLE_KEYS.contains(key)) {
@@ -258,7 +264,7 @@ public class ToolsSubPreference implements PluginPreference {
             }
             editor.apply();
             context.showToast("Restored " + applied + " settings — restart plugin to apply");
-        } catch (JSONException e) {
+        } catch (Exception e) {
             context.showToast("Import failed: invalid JSON — " + e.getMessage());
         }
     }

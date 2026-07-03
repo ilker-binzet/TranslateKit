@@ -6,23 +6,18 @@ import android.os.Looper;
 import android.text.InputType;
 import android.text.TextUtils;
 
-import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.PluginContext;
 import bin.mt.plugin.api.preference.PluginPreference;
-
-import java.io.IOException;
-import java.util.Collections;
 
 /**
  * OpenAI GPT Provider Settings
  * Dedicated settings page for OpenAI GPT configuration
- * 
+ *
  * @author Ilker Binzet
- * @version 0.7.0-MODERN
+ * @version 0.4.0-beta - Auto-refreshing model catalog + custom model override
  */
 public class OpenAIProviderPreference implements PluginPreference {
 
-    private LocalString localString;
     private PluginContext context;
     private SharedPreferences preferences;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -30,13 +25,7 @@ public class OpenAIProviderPreference implements PluginPreference {
     @Override
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
-        this.localString = context.getAssetLocalString("GeminiTranslate");
-        if (this.localString == null) {
-            this.localString = context.getLocalString();
-        }
         this.preferences = context.getPreferences();
-
-        builder.setLocalString(localString);
 
         // ==================== API Configuration ====================
         builder.addText("🔑 API Configuration")
@@ -64,31 +53,41 @@ public class OpenAIProviderPreference implements PluginPreference {
         // ==================== Model Selection ====================
         builder.addText("🧠 Model Selection").summary("");
 
-        var openAiModelList = builder.addList("GPT Model", GeminiConstants.PREF_OPENAI_MODEL)
-            .summary("Choose GPT model (GPT-4.1 Mini recommended)");
+        // The model choice is an implementation detail. The default is the
+        // recommended OpenAI model; the user can override via Custom Model.
+        String customOpenAiKey = ProviderCatalogRefresher.customPrefKeyFor(GeminiConstants.PREF_OPENAI_MODEL);
+        String effectiveOpenAiModel = ProviderCatalogRefresher.resolveSelectedModel(
+                preferences, GeminiConstants.PREF_OPENAI_MODEL, GeminiConstants.DEFAULT_OPENAI_MODEL);
+        boolean isCustomOpenAi = !TextUtils.isEmpty(preferences.getString(customOpenAiKey, ""));
 
-        boolean disableCache = preferences.getBoolean(GeminiConstants.PREF_DEBUG_DISABLE_MODEL_CACHE, false);
-        java.util.List<ModelCatalogManager.ModelInfo> cachedOpenAiModels = disableCache
-            ? Collections.emptyList()
-            : ModelCatalogManager.loadModelCache(preferences, GeminiConstants.PREF_CACHE_OPENAI_MODELS);
-        if (cachedOpenAiModels == null || cachedOpenAiModels.isEmpty()) {
-            openAiModelList.addItem("GPT-4.1 Mini ⭐ (Fast, Recommended)", "gpt-4.1-mini")
-                    .addItem("GPT-5.2 (Most Powerful)", "gpt-5.2")
-                    .addItem("GPT-5.1 (Flagship)", "gpt-5.1")
-                    .addItem("GPT-4.1 (1M Context)", "gpt-4.1")
-                    .addItem("GPT-4o (Omni, Multimodal)", "gpt-4o")
-                    .addItem("GPT-4o Mini (Economical)", "gpt-4o-mini")
-                    .addItem("o3 (Advanced Reasoning)", "o3")
-                    .addItem("o4-mini (Reasoning, Fast)", "o4-mini");
-        } else {
-            for (ModelCatalogManager.ModelInfo info : cachedOpenAiModels) {
-                openAiModelList.addItem(formatModelLabel(info), info.id);
-            }
-        }
+        builder.addText("Provider")
+            .summary("OpenAI");
+        builder.addText("Model")
+            .summary(isCustomOpenAi
+                    ? effectiveOpenAiModel + "  (custom override)"
+                    : effectiveOpenAiModel + "  (default)");
+
+        builder.addText("Model Catalog")
+            .summary(ModelCatalogManager.formatLastRefreshed(
+                    preferences, GeminiConstants.PREF_CACHE_OPENAI_MODELS))
+            .onClick((pluginUI, item) -> showModelCatalog(pluginUI));
 
         builder.addText("Refresh Model List")
             .summary("Fetch all available Chat Completions models")
             .onClick((pluginUI, item) -> refreshOpenAiModels(pluginUI));
+
+        builder.addInput("Custom Model (optional)", customOpenAiKey)
+                .defaultValue("")
+                .summary("Overrides the default model above when non-empty. Use for any model name.")
+                .hint("e.g. gpt-5.3-nano")
+                .valueAsSummary()
+                .inputType(InputType.TYPE_CLASS_TEXT);
+
+        ProviderCatalogRefresher.scheduleAutoRefresh(
+                preferences,
+                GeminiConstants.PREF_CACHE_OPENAI_MODELS,
+                preferences.getString(GeminiConstants.PREF_OPENAI_API_KEY, ""),
+                ModelCatalogManager.Provider.OPENAI);
 
         // ==================== Usage & Limits ====================
         builder.addText("📊 Usage & Limits")
@@ -153,23 +152,22 @@ public class OpenAIProviderPreference implements PluginPreference {
         
         new Thread(() -> {
             try {
-                org.json.JSONObject request = new org.json.JSONObject();
+                bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
                 request.put("model", model);
-                org.json.JSONArray messages = new org.json.JSONArray();
-                org.json.JSONObject message = new org.json.JSONObject();
+                bin.mt.json.JSONArray messages = new bin.mt.json.JSONArray();
+                bin.mt.json.JSONObject message = new bin.mt.json.JSONObject();
                 message.put("role", "user");
                 message.put("content", "Translate to Turkish: Hello");
-                messages.put(message);
+                messages.add(message);
                 request.put("messages", messages);
                 request.put("max_tokens", 50);
 
-                GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post("https://api.openai.com/v1/chat/completions");
-                httpRequest.setTimeout(10000);
-                httpRequest.header("Authorization", "Bearer " + apiKey);
-                httpRequest.jsonBody(request);
-                org.json.JSONObject response = httpRequest.executeToJson();
+                java.util.Map<String, String> headers = new java.util.HashMap<>();
+                headers.put("Authorization", "Bearer " + apiKey);
+                bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(
+                        "https://api.openai.com/v1/chat/completions", headers, request.toString());
 
-                if (response.has("choices")) {
+                if (response.contains("choices")) {
                     String result = response.getJSONArray("choices")
                         .getJSONObject(0)
                         .getJSONObject("message")
@@ -187,7 +185,7 @@ public class OpenAIProviderPreference implements PluginPreference {
                             .setPositiveButton("{ok}", null)
                             .show());
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) { // Throwable: an Error escaping this thread would crash MT Manager
                 runOnMainThread(() -> pluginUI.buildDialog()
                         .setTitle("❌ Test Failed")
                         .setMessage("Error: " + e.getMessage())
@@ -230,31 +228,29 @@ public class OpenAIProviderPreference implements PluginPreference {
         new Thread(() -> {
             try {
                 // Build minimal test request
-                org.json.JSONObject request = new org.json.JSONObject();
+                bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
                 request.put("model", model);
-                
-                org.json.JSONArray messages = new org.json.JSONArray();
-                org.json.JSONObject message = new org.json.JSONObject();
+
+                bin.mt.json.JSONArray messages = new bin.mt.json.JSONArray();
+                bin.mt.json.JSONObject message = new bin.mt.json.JSONObject();
                 message.put("role", "user");
                 message.put("content", "Say 'test' in one word");
-                messages.put(message);
+                messages.add(message);
                 request.put("messages", messages);
                 request.put("max_tokens", 5);
                 request.put("temperature", 0);
 
                 // Test API
-                GeminiHttpUtils.Request httpRequest = GeminiHttpUtils.post("https://api.openai.com/v1/chat/completions");
-                httpRequest.setTimeout(15000);
-                httpRequest.header("Authorization", "Bearer " + apiKey);
-                httpRequest.jsonBody(request);
-
-                org.json.JSONObject response = httpRequest.executeToJson();
+                java.util.Map<String, String> headers = new java.util.HashMap<>();
+                headers.put("Authorization", "Bearer " + apiKey);
+                bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(
+                        "https://api.openai.com/v1/chat/completions", headers, request.toString());
 
                 runOnMainThread(loadingDialog::dismiss);
 
-                if (response.has("choices")) {
-                    org.json.JSONArray choices = response.getJSONArray("choices");
-                    if (choices.length() > 0) {
+                if (response.contains("choices")) {
+                    bin.mt.json.JSONArray choices = response.getJSONArray("choices");
+                    if (bin.mt.plugin.common.JSONCompat.size(choices) > 0) {
                     runOnMainThread(() -> pluginUI.buildDialog()
                                 .setTitle("✅ API Key Valid")
                                 .setMessage("Your OpenAI API key is working correctly!\n\nModel: " + model)
@@ -267,11 +263,11 @@ public class OpenAIProviderPreference implements PluginPreference {
                                 .setPositiveButton("{ok}", null)
                         .show());
                     }
-                } else if (response.has("error")) {
-                    org.json.JSONObject error = response.getJSONObject("error");
-                    String errorMsg = error.optString("message", "Unknown error");
-                    String errorType = error.optString("type", "");
-                    
+                } else if (response.contains("error")) {
+                    bin.mt.json.JSONObject error = response.getJSONObject("error");
+                    String errorMsg = bin.mt.plugin.common.JSONCompat.optString(error, "message", "Unknown error");
+                    String errorType = bin.mt.plugin.common.JSONCompat.optString(error, "type", "");
+
                     String dialogTitle;
                     String dialogMessage;
                     
@@ -322,7 +318,7 @@ public class OpenAIProviderPreference implements PluginPreference {
                         .setPositiveButton("{ok}", null)
                         .show());
                         
-            } catch (Exception e) {
+            } catch (Throwable e) { // Throwable: an Error escaping this thread would crash MT Manager
                 runOnMainThread(loadingDialog::dismiss);
                 runOnMainThread(() -> pluginUI.buildDialog()
                         .setTitle("❌ Test Failed")
@@ -331,6 +327,40 @@ public class OpenAIProviderPreference implements PluginPreference {
                         .show());
             }
         }).start();
+    }
+
+    /**
+     * Show the merged (cached + curated) model catalog in a dialog.
+     * Pure local read — never touches the network, so it opens instantly.
+     */
+    private void showModelCatalog(bin.mt.plugin.api.ui.PluginUI pluginUI) {
+        java.util.List<ModelCatalogManager.ModelInfo> models = ProviderCatalogRefresher.composeList(
+                preferences,
+                GeminiConstants.PREF_CACHE_OPENAI_MODELS,
+                ModelCatalogManager.getDefaultSeedOpenAi());
+
+        String effectiveModel = ProviderCatalogRefresher.resolveSelectedModel(
+                preferences, GeminiConstants.PREF_OPENAI_MODEL, GeminiConstants.DEFAULT_OPENAI_MODEL);
+
+        StringBuilder message = new StringBuilder();
+        message.append(ModelCatalogManager.formatLastRefreshed(
+                preferences, GeminiConstants.PREF_CACHE_OPENAI_MODELS)).append("\n\n");
+        for (ModelCatalogManager.ModelInfo info : models) {
+            message.append(info.id.equals(effectiveModel) ? "▶ " : "• ");
+            message.append(info.displayName).append("\n   ").append(info.id);
+            if (info.recommended) {
+                message.append("  ⭐");
+            }
+            message.append('\n');
+        }
+        message.append("\n▶ = active model, ⭐ = recommended.\n")
+               .append("Use 'Custom Model' below to switch; 'Refresh Model List' fetches the live catalog.");
+
+        pluginUI.buildDialog()
+                .setTitle("📚 Model Catalog (" + models.size() + ")")
+                .setMessage(message.toString())
+                .setPositiveButton("{ok}", null)
+                .show();
     }
 
     private void refreshOpenAiModels(bin.mt.plugin.api.ui.PluginUI pluginUI) {
@@ -344,35 +374,37 @@ public class OpenAIProviderPreference implements PluginPreference {
                         .setSecondaryMessage("Listing chat.completions capabilities")
                         .show();
 
-        new Thread(() -> {
-            try {
-                java.util.List<ModelCatalogManager.ModelInfo> models = ModelCatalogManager.fetchOpenAiModels(apiKey);
-                ModelCatalogManager.saveModelCache(preferences, GeminiConstants.PREF_CACHE_OPENAI_MODELS, models);
-                runOnMainThread(() -> {
+        ModelCatalogManager.forceRefresh(
+                preferences,
+                GeminiConstants.PREF_CACHE_OPENAI_MODELS,
+                apiKey,
+                ModelCatalogManager.Provider.OPENAI,
+                (models, error) -> runOnMainThread(() -> {
                     loadingDialog.dismiss();
+                    if (error != null) {
+                        pluginUI.buildDialog()
+                                .setTitle("❌ Refresh Failed")
+                                .setMessage("Could not fetch OpenAI models:\n" + error.getMessage())
+                                .setPositiveButton("{ok}", null)
+                                .show();
+                        return;
+                    }
                     if (models == null || models.isEmpty()) {
                         pluginUI.buildDialog()
                                 .setTitle("⚠️ No Models Found")
                                 .setMessage("Your account did not return any chat-capable models.")
                                 .setPositiveButton("{ok}", null)
                                 .show();
-                    } else {
-                        showModelSelectionDialog(pluginUI, "Select OpenAI Model", models,
-                                GeminiConstants.PREF_OPENAI_MODEL, GeminiConstants.DEFAULT_OPENAI_MODEL,
-                                "OpenAI model switched to ");
+                        return;
                     }
-                });
-            } catch (IOException e) {
-                runOnMainThread(() -> {
-                    loadingDialog.dismiss();
-                    pluginUI.buildDialog()
-                            .setTitle("❌ Refresh Failed")
-                            .setMessage("Could not fetch OpenAI models:\n" + e.getMessage())
-                            .setPositiveButton("{ok}", null)
-                            .show();
-                });
-            }
-        }).start();
+                    int merged = ProviderCatalogRefresher.composeList(
+                            preferences,
+                            GeminiConstants.PREF_CACHE_OPENAI_MODELS,
+                            ModelCatalogManager.getDefaultSeedOpenAi()).size();
+                    context.showToast("✅ " + models.size() + " live models, " + merged
+                            + " total in list — reopen to see updates");
+                })
+        );
     }
 
     private boolean ensureValidOpenAiKey(bin.mt.plugin.api.ui.PluginUI pluginUI, String apiKey) {
@@ -393,43 +425,6 @@ public class OpenAIProviderPreference implements PluginPreference {
             return false;
         }
         return true;
-    }
-
-    private void showModelSelectionDialog(bin.mt.plugin.api.ui.PluginUI pluginUI,
-                                          String title,
-                                          java.util.List<ModelCatalogManager.ModelInfo> models,
-                                          String prefKey,
-                                          String defaultValue,
-                                          String toastPrefix) {
-        CharSequence[] labels = new CharSequence[models.size()];
-        for (int i = 0; i < models.size(); i++) {
-            labels[i] = formatModelLabel(models.get(i));
-        }
-        pluginUI.buildDialog()
-                .setTitle(title)
-                .setItems(labels, (dialog, which) -> {
-                    ModelCatalogManager.ModelInfo selected = models.get(which);
-                    preferences.edit().putString(prefKey, selected.id).apply();
-                    if (context != null) {
-                        context.showToast(toastPrefix + selected.displayName);
-                    }
-                    dialog.dismiss();
-                })
-                .setNegativeButton("{cancel}", null)
-                .show();
-    }
-
-    private String formatModelLabel(ModelCatalogManager.ModelInfo info) {
-        StringBuilder label = new StringBuilder();
-        String name = TextUtils.isEmpty(info.displayName) ? info.id : info.displayName;
-        label.append(name);
-        if (info.recommended) {
-            label.append(" ⭐");
-        }
-        if (!TextUtils.isEmpty(info.detail)) {
-            label.append("\n").append(info.detail);
-        }
-        return label.toString();
     }
 
     private void runOnMainThread(Runnable runnable) {

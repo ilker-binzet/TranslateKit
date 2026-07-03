@@ -5,7 +5,6 @@ import android.text.InputType;
 
 import java.util.regex.Pattern;
 
-import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.PluginContext;
 import bin.mt.plugin.api.preference.PluginPreference;
 
@@ -18,21 +17,15 @@ import bin.mt.plugin.api.preference.PluginPreference;
  */
 public class OpenAITranslatePreference implements PluginPreference {
 
-    private LocalString localString;
     private PluginContext context;
 
     @Override
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
-        this.localString = context.getAssetLocalString("GeminiTranslate");
-        if (this.localString == null) {
-            this.localString = context.getLocalString();
-        }
         SharedPreferences preferences = context.getPreferences();
 
-        builder.setLocalString(localString);
-        builder.title(localString.get("pref_openai_title"))
-                .subtitle(localString.get("pref_openai_subtitle"));
+        builder.title(context.getString("{pref_openai_title}"))
+                .subtitle(context.getString("{pref_openai_subtitle}"));
 
         // Overview
         builder.addText("{pref_openai_header_overview}").summary("");
@@ -95,14 +88,14 @@ public class OpenAITranslatePreference implements PluginPreference {
         String apiKey = prefs.getString(GeminiConstants.PREF_OPENAI_API_KEY, "");
         if (apiKey != null) apiKey = apiKey.trim();
         if (apiKey == null || apiKey.isEmpty()) {
-            context.showToast(localString.get("error_openai_no_api_key"));
+            context.showToast(context.getString("{error_openai_no_api_key}"));
             return;
         }
 
         if (isValidApiKey(apiKey)) {
-            context.showToast(localString.get("msg_openai_key_valid_format"));
+            context.showToast(context.getString("{msg_openai_key_valid_format}"));
         } else {
-            context.showToast(localString.get("error_openai_invalid_key_format"));
+            context.showToast(context.getString("{error_openai_invalid_key_format}"));
         }
     }
 
@@ -112,11 +105,11 @@ public class OpenAITranslatePreference implements PluginPreference {
 
     private String describeKeyStatus(String apiKey) {
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            return localString.get("pref_status_missing");
+            return context.getString("{pref_status_missing}");
         }
         if (!isValidApiKey(apiKey)) {
-            return localString.get("pref_status_invalid_format");
+            return context.getString("{pref_status_invalid_format}");
         }
-        return localString.get("pref_status_ready");
+        return context.getString("{pref_status_ready}");
     }
 }

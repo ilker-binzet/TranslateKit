@@ -2,7 +2,6 @@ package bin.mt.plugin.gemini;
 
 import android.content.SharedPreferences;
 
-import bin.mt.plugin.api.LocalString;
 import bin.mt.plugin.api.PluginContext;
 import bin.mt.plugin.api.preference.PluginPreference;
 
@@ -162,11 +161,6 @@ public class ContextToneSubPreference implements PluginPreference {
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
         this.preferences = context.getPreferences();
-        LocalString localString = context.getAssetLocalString("GeminiTranslate");
-        if (localString == null) {
-            localString = context.getLocalString();
-        }
-        builder.setLocalString(localString);
 
         // ==================== Quick Presets ====================
         builder.addText("Quick Presets")

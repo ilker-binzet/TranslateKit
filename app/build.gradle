@@ -1,9 +1,3 @@
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
-import java.util.zip.ZipOutputStream
-
 plugins {
     alias(libs.plugins.android.application)
     // alias(libs.plugins.kotlin.android) // Disabled - not needed for Gemini plugin (Java only)
@@ -21,7 +15,7 @@ tasks.configureEach { task ->
 def javaVersion = JavaVersion.VERSION_17
 
 android {
-    namespace = 'bin.mt.plugin.demo'
+    namespace = 'bin.mt.plugin.pusher'
     compileSdk = 36
 
     defaultConfig {
@@ -33,7 +27,7 @@ android {
     buildTypes {
         release {
             minifyEnabled true
-            proguardFiles 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
@@ -51,6 +45,10 @@ android {
 
 dependencies {
     coreLibraryDesugaring libs.desugar.jdk.libs
+    // OkHttp intentionally NOT declared: the MT Plugin SDK provides
+    // okhttp 3.12.13 transitively — the same version MT Manager supplies
+    // at runtime. Declaring a newer version compiles against APIs the
+    // host doesn't have and crashes with NoSuchMethodError.
 }
 
 /**
@@ -79,22 +77,22 @@ mtPlugin {
     /**
      * 插件版本号，低版本插件无法覆盖安装高版本插件
      */
-    versionCode = 5
+    versionCode = 12
 
     /**
      * 插件版本名称
      */
-    versionName = "0.3.0-alpha"
+    versionName = "0.4.2"
 
     /**
      * 插件名称
      */
-    name = "TranslateKit"
+    name = "{plugin_name}"
 
     /**
      * 插件描述
      */
-    description = "Multi-provider translation plugin for MT Manager — Gemini, OpenAI, Claude, and Google Cloud Translation"
+    description = "{plugin_description}"
 
     /**
      * 主设置界面，可不填
@@ -110,65 +108,4 @@ mtPlugin {
             "bin.mt.plugin.gemini.AITranslateFloatingMenu",
             "bin.mt.plugin.gemini.AITranslateToolMenu",
     ]
-}
-
-def releaseApkProvider = layout.buildDirectory.file("outputs/apk/release/app-release-unsigned.apk")
-
-tasks.register("repackReleaseApk") {
-    dependsOn("packageRelease")
-    inputs.file(releaseApkProvider)
-    outputs.file(releaseApkProvider)
-    doLast {
-        def apkFile = releaseApkProvider.get().asFile
-        if (!apkFile.exists()) {
-            logger.warn("Release APK not found at ${apkFile}")
-            return
-        }
-
-        def tempFile = new File(apkFile.parentFile, "${apkFile.name}.repacked")
-        def buffer = new byte[8192]
-
-        new ZipFile(apkFile).withCloseable { zipFile ->
-            tempFile.withOutputStream { os ->
-                def zos = new ZipOutputStream(os)
-                zos.setLevel(java.util.zip.Deflater.BEST_COMPRESSION)
-
-                zipFile.entries().each { entry ->
-                    def newEntry = new ZipEntry(entry.name)
-                    newEntry.method = ZipEntry.DEFLATED
-                    newEntry.time = entry.time
-                    if (entry.comment) {
-                        newEntry.comment = entry.comment
-                    }
-                    if (entry.extra) {
-                        newEntry.extra = entry.extra
-                    }
-
-                    zos.putNextEntry(newEntry)
-                    if (!entry.isDirectory()) {
-                        zipFile.getInputStream(entry).withCloseable { is ->
-                            int read
-                            while ((read = is.read(buffer)) != -1) {
-                                zos.write(buffer, 0, read)
-                            }
-                        }
-                    }
-                    zos.closeEntry()
-                }
-
-                def sentinel = new ZipEntry("META-INF/mtplugin_dummy")
-                sentinel.method = ZipEntry.DEFLATED
-                sentinel.time = System.currentTimeMillis()
-                zos.putNextEntry(sentinel)
-                zos.closeEntry()
-                zos.close()
-            }
-        }
-
-        Files.move(tempFile.toPath(), apkFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
-    }
-}
-
-tasks.matching { it.name == "packageReleaseMtp" }.configureEach {
-    dependsOn(tasks.named("repackReleaseApk"))
 }
