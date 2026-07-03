@@ -6,7 +6,7 @@
 
 **Multi-provider AI translation plugin for [MT Manager](https://mt2.cn)**
 
-[![Version](https://img.shields.io/badge/version-0.4.0-blue?style=flat-square)](https://github.com/ilker-binzet/TranslateKit/releases)
+[![Version](https://img.shields.io/badge/version-0.4.2-blue?style=flat-square)](https://github.com/ilker-binzet/TranslateKit/releases)
 [![SDK](https://img.shields.io/badge/MT%20Plugin%20SDK-v3%20stable-purple?style=flat-square)](https://gitee.com/L-JINBIN/mt-plugin-v3-demo)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square)](#)
@@ -111,6 +111,9 @@ cd TranslateKit
 
 ```
 app/src/main/java/bin/mt/plugin/
+├── common/
+│   ├── HttpUtils.java                    # Shared HTTP client (all providers)
+│   └── JSONCompat.java                   # JSON helpers for MT runtime
 ├── gemini/
 │   ├── GeminiTranslatePreference.java    # Main settings (5-category nav)
 │   ├── TranslationSubPreference.java     # Engine, timeout, retries
@@ -123,6 +126,7 @@ app/src/main/java/bin/mt/plugin/
 │   ├── GeminiConstants.java              # All constants & model names
 │   ├── GeminiColorTokens.java            # Theme-aware UI colors
 │   ├── ModelCatalogManager.java          # Dynamic model fetching & cache
+│   ├── ProviderCatalogRefresher.java     # Background catalog refresh
 │   └── TranslationDebugLogger.java       # Structured debug logging
 └── google/
     └── GoogleCloudTranslationEngine.java # Google Cloud NMT fallback
