@@ -55,17 +55,3 @@ Desktop.ini
 *.jks
 *.env
 .env.*
-
-# ==================================
-# Internal documents
-# ==================================
-/plans/
-/docs/internal/
-/notes/
-*.draft.md
-
-# ==================================
-# SDK reference (local only)
-# ==================================
-/mt-plugin-v3-demo/
-/sdk-reference/
