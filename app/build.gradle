@@ -49,6 +49,8 @@ dependencies {
     // okhttp 3.12.13 transitively — the same version MT Manager supplies
     // at runtime. Declaring a newer version compiles against APIs the
     // host doesn't have and crashes with NoSuchMethodError.
+
+    testImplementation libs.junit
 }
 
 /**
