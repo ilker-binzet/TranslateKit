@@ -190,9 +190,9 @@ public class GoogleConstants {
     public static final String URL_PRICING = "https://cloud.google.com/translate/pricing";
 
     /**
-     * Plugin GitHub repository (replace with your actual repository)
+     * Plugin GitHub repository
      */
-    public static final String URL_PLUGIN_GITHUB = "https://github.com/yourusername/mt-google-translate-plugin";
+    public static final String URL_PLUGIN_GITHUB = "https://github.com/ilker-binzet/TranslateKit";
 
     // ==================== Plugin Metadata ====================
 

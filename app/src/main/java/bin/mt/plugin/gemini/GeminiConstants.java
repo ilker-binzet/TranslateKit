@@ -3,7 +3,7 @@ package bin.mt.plugin.gemini;
 /**
  * Constants for TranslateKit plugin
  *
- * @author MT Manager Plugin Developer
+ * @author Ilker Binzet
  * @version 0.4.0-beta
  * @updated June 2026 - Migrated to MT Plugin SDK v3 (3.0.0), fixed configuration builder
  */
@@ -240,90 +240,6 @@ public class GeminiConstants {
     public static final String DEVELOPER_NAME = "Ilker Binzet";
     public static final String DEVELOPER_GITHUB = "https://github.com/ilker-binzet";
     public static final String DEVELOPER_LINKEDIN = "https://www.linkedin.com/in/binzet-me";
-
-    // ==================== Material Icons (UI Modernization) ====================
-
-    // Dashboard & Navigation Icons
-    public static final String ICON_DASHBOARD = "dashboard";
-    public static final String ICON_SETTINGS = "settings";
-    public static final String ICON_INFO = "info";
-    public static final String ICON_HELP = "help";
-    public static final String ICON_HOME = "home";
-
-    // Provider & AI Icons
-    public static final String ICON_SMART_TOY = "smart_toy";          // AI/Bot icon
-    public static final String ICON_PSYCHOLOGY = "psychology";        // AI brain icon
-    public static final String ICON_ROBOT = "smart_toy";              // Robot icon (alias)
-
-    // Action Icons
-    public static final String ICON_REFRESH = "refresh";
-    public static final String ICON_COPY = "content_copy";
-    public static final String ICON_PASTE = "content_paste";
-    public static final String ICON_DOWNLOAD = "download";
-    public static final String ICON_UPLOAD = "upload";
-    public static final String ICON_SHARE = "share";
-    public static final String ICON_DELETE = "delete";
-    public static final String ICON_EDIT = "edit";
-    public static final String ICON_ADD = "add";
-    public static final String ICON_REMOVE = "remove";
-    public static final String ICON_CHECK = "check";
-    public static final String ICON_CLOSE = "close";
-
-    // Category Icons
-    public static final String ICON_KEY = "key";                      // API Configuration
-    public static final String ICON_STARS = "stars";                  // Model Selection
-    public static final String ICON_PALETTE = "palette";              // Context & Tone
-    public static final String ICON_BUILD = "build";                  // Debug & Advanced
-    public static final String ICON_TRANSLATE = "translate";          // Translation
-    public static final String ICON_LANGUAGE = "language";            // Language settings
-    public static final String ICON_CODE = "code";                    // Code/Technical
-    public static final String ICON_MENU_BOOK = "menu_book";          // Resources/Docs
-
-    // Status Icons
-    public static final String ICON_CHECK_CIRCLE = "check_circle";    // Success
-    public static final String ICON_ERROR = "error";                  // Error
-    public static final String ICON_WARNING = "warning";              // Warning
-    public static final String ICON_PENDING = "pending";              // Pending
-    public static final String ICON_SYNC = "sync";                    // Syncing
-    public static final String ICON_CLOUD_DONE = "cloud_done";        // Cloud success
-    public static final String ICON_CLOUD_OFF = "cloud_off";          // Cloud offline
-
-    // Feature Icons
-    public static final String ICON_SPEED = "speed";                  // Performance
-    public static final String ICON_TIMER = "timer";                  // Timeout
-    public static final String ICON_HISTORY = "history";              // History
-    public static final String ICON_SEARCH = "search";                // Search
-    public static final String ICON_FILTER = "filter_list";           // Filter
-    public static final String ICON_SORT = "sort";                    // Sort
-    public static final String ICON_VISIBILITY = "visibility";        // Show
-    public static final String ICON_VISIBILITY_OFF = "visibility_off";// Hide
-
-    // Document & Text Icons
-    public static final String ICON_TEXT_SNIPPET = "text_snippet";    // Text/Document
-    public static final String ICON_ARTICLE = "article";              // Article
-    public static final String ICON_NOTE = "note";                    // Note
-    public static final String ICON_FORMAT_SIZE = "format_size";      // Font size
-
-    // Network & API Icons
-    public static final String ICON_CLOUD = "cloud";                  // Cloud/API
-    public static final String ICON_CLOUD_UPLOAD = "cloud_upload";    // API upload
-    public static final String ICON_CLOUD_DOWNLOAD = "cloud_download";// API download
-    public static final String ICON_SIGNAL = "signal_cellular_alt";   // Signal strength
-
-    // Advanced Icons
-    public static final String ICON_BUG_REPORT = "bug_report";        // Debug
-    public static final String ICON_SCIENCE = "science";              // Experimental
-    public static final String ICON_TUNE = "tune";                    // Fine-tune
-    public static final String ICON_EXTENSION = "extension";          // Extensions/Plugins
-
-    // UI Layout Icons
-    public static final String ICON_ARROW_FORWARD = "arrow_forward";
-    public static final String ICON_ARROW_BACK = "arrow_back";
-    public static final String ICON_ARROW_DROP_DOWN = "arrow_drop_down";
-    public static final String ICON_EXPAND_MORE = "expand_more";
-    public static final String ICON_EXPAND_LESS = "expand_less";
-    public static final String ICON_MORE_VERT = "more_vert";          // Three dots vertical
-    public static final String ICON_MORE_HORIZ = "more_horiz";        // Three dots horizontal
 
     // Constructor
     private GeminiConstants() {

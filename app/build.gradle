@@ -15,7 +15,7 @@ tasks.configureEach { task ->
 def javaVersion = JavaVersion.VERSION_17
 
 android {
-    namespace = 'bin.mt.plugin.pusher'
+    namespace = 'bin.mt.plugin.translatekit'
     compileSdk = 36
 
     defaultConfig {
