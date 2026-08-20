@@ -243,6 +243,8 @@ error_openai_no_api_key: OpenAI API anahtarı eksik. platform.openai.com/api-key
 error_openai_invalid_key_format: Geçersiz OpenAI anahtarı formatı. Anahtar "sk-" ile başlamalıdır.
 error_claude_no_api_key: Claude API anahtarı eksik. console.anthropic.com üzerinden oluşturun
 error_claude_invalid_key_format: Geçersiz Claude anahtarı formatı. Anahtar "sk-ant-" ile başlamalıdır.
+error_openrouter_no_api_key: OpenRouter API anahtarı eksik. openrouter.ai/keys adresinden oluşturun
+error_openrouter_invalid_key_format: Geçersiz OpenRouter anahtarı formatı. Anahtar "sk-or-v1-" ile başlamalıdır.
 
 # Başarı Mesajları
 msg_api_key_valid: ✅ API anahtarı geçerli! Gemini AI çeviriye hazır.

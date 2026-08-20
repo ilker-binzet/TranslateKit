@@ -243,6 +243,8 @@ error_openai_no_api_key: OpenAI API key is missing. Create one at platform.opena
 error_openai_invalid_key_format: Invalid OpenAI key format. Keys should start with "sk-" and contain only letters and numbers.
 error_claude_no_api_key: Claude API key is missing. Generate one at console.anthropic.com
 error_claude_invalid_key_format: Invalid Claude key format. Keys should start with "sk-ant-".
+error_openrouter_no_api_key: OpenRouter API key is missing. Create one at openrouter.ai/keys
+error_openrouter_invalid_key_format: Invalid OpenRouter key format. Keys should start with "sk-or-v1-".
 
 # Success Messages
 msg_api_key_valid: ✅ API key is valid! Gemini AI is ready to translate.

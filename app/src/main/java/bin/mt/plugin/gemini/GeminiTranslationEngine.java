@@ -20,17 +20,21 @@ import bin.mt.plugin.api.translation.BaseBatchTranslationEngine;
 import bin.mt.plugin.api.translation.BatchTranslationEngine;
 import bin.mt.plugin.common.HttpUtils;
 import bin.mt.plugin.common.JSONCompat;
+import bin.mt.plugin.provider.Provider;
+import bin.mt.plugin.provider.ProviderClient;
+import bin.mt.plugin.provider.Providers;
 
 /**
- * Gemini API Translation Engine for MT Manager
+ * Multi-provider translation engine for MT Manager.
  *
- * Uses Google's Gemini AI model (gemini-pro) for translation via generative AI prompting.
- * This is similar to using ChatGPT or Claude for translation.
+ * Translates Android string resources by prompting a large language model.
+ * The active provider comes from {@link Providers}; this class owns the
+ * prompt, the batching, the placeholder protection and the retry budget,
+ * while {@link ProviderClient} owns the wire format.
  *
- * FREE TIER: 60 requests per minute, 1500 requests per day
  * API Documentation: https://ai.google.dev/gemini-api/docs
  *
- * @author MT Manager Plugin Developer
+ * @author Ilker Binzet
  * @version 1.0.0
  */
 public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
@@ -77,15 +81,8 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     private String modelName;
     private String selectedEngine;
 
-    // OpenAI configuration
-    private String openAiApiKey;
-    private String openAiModel;
-    private String openAiEndpoint;
-
-    // Claude configuration
-    private String claudeApiKey;
-    private String claudeModel;
-    private String claudeEndpoint;
+    /** The active provider: endpoint, credentials, model and wire format. */
+    private Provider provider;
 
     private boolean debugLogging;
     private SharedPreferences preferences;
@@ -179,50 +176,29 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
         maxRetries = readIntPreference(prefs, GeminiConstants.PREF_MAX_RETRIES, GeminiConstants.DEFAULT_MAX_RETRIES);
         requestTimeout = readIntPreference(prefs, GeminiConstants.PREF_TIMEOUT, GeminiConstants.DEFAULT_TIMEOUT);
-        // Resolve model name: custom override > saved selection > provider default.
-        modelName = ProviderCatalogRefresher.resolveSelectedModel(
-                prefs, GeminiConstants.PREF_MODEL_NAME, GeminiConstants.DEFAULT_MODEL);
-        selectedEngine = prefs.getString(GeminiConstants.PREF_DEFAULT_ENGINE, GeminiConstants.DEFAULT_ENGINE);
         debugLogging = prefs.getBoolean(GeminiConstants.PREF_ENABLE_DEBUG, GeminiConstants.DEFAULT_ENABLE_DEBUG);
         debugLogger = new TranslationDebugLogger(getContext(), debugLogging);
-        if (selectedEngine == null) {
-            selectedEngine = GeminiConstants.DEFAULT_ENGINE;
+
+        provider = Providers.selected(prefs);
+
+        // A non-Gemini provider that needs a key but has none falls back to
+        // Gemini, exactly as earlier versions did for OpenAI and Claude.
+        // Gemini itself has no fallback: loadGeminiConfig raises instead.
+        if (!Providers.ID_GEMINI.equals(provider.id)
+                && provider.requiresKey() && isNullOrEmpty(provider.apiKey)) {
+            notifyAndFallbackToGemini(prefs, keyMissingMessageKey(provider.id));
+        } else {
+            if (!provider.hasValidKeyFormat()) {
+                logWarn(provider.displayName + " API key format appears invalid");
+            }
+            if (Providers.ID_GEMINI.equals(provider.id)) {
+                loadGeminiConfig(prefs);
+            }
         }
 
-        switch (selectedEngine) {
-            case GeminiConstants.ENGINE_OPENAI:
-                openAiApiKey = trimKey(prefs.getString(GeminiConstants.PREF_OPENAI_API_KEY, ""));
-                openAiModel = ProviderCatalogRefresher.resolveSelectedModel(
-                        prefs, GeminiConstants.PREF_OPENAI_MODEL, GeminiConstants.DEFAULT_OPENAI_MODEL);
-                openAiEndpoint = prefs.getString(GeminiConstants.PREF_OPENAI_ENDPOINT, GeminiConstants.DEFAULT_OPENAI_ENDPOINT);
-                if (isNullOrEmpty(openAiApiKey)) {
-                    notifyAndFallbackToGemini(prefs, "error_openai_no_api_key");
-                } else if (!java.util.regex.Pattern.matches(GeminiConstants.OPENAI_API_KEY_PATTERN, openAiApiKey)) {
-                    logWarn("OpenAI API key format appears invalid (expected: sk-...)");
-                } else {
-                    logInfo("Using OpenAI engine (model=" + openAiModel + ")");
-                }
-                break;
-            case GeminiConstants.ENGINE_CLAUDE:
-                claudeApiKey = trimKey(prefs.getString(GeminiConstants.PREF_CLAUDE_API_KEY, ""));
-                claudeModel = ProviderCatalogRefresher.resolveSelectedModel(
-                        prefs, GeminiConstants.PREF_CLAUDE_MODEL, GeminiConstants.DEFAULT_CLAUDE_MODEL);
-                claudeEndpoint = prefs.getString(GeminiConstants.PREF_CLAUDE_ENDPOINT, GeminiConstants.DEFAULT_CLAUDE_ENDPOINT);
-                if (isNullOrEmpty(claudeApiKey)) {
-                    notifyAndFallbackToGemini(prefs, "error_claude_no_api_key");
-                } else if (!java.util.regex.Pattern.matches(GeminiConstants.CLAUDE_API_KEY_PATTERN, claudeApiKey)) {
-                    logWarn("Claude API key format appears invalid (expected: sk-ant-...)");
-                } else {
-                    logInfo("Using Claude engine (model=" + claudeModel + ")");
-                }
-                break;
-            case GeminiConstants.ENGINE_GEMINI:
-            default:
-                selectedEngine = GeminiConstants.ENGINE_GEMINI;
-                loadGeminiConfig(prefs);
-                logInfo("Using Gemini engine (model=" + modelName + ")");
-                break;
-        }
+        selectedEngine = provider.id;
+        modelName = provider.model;
+        logInfo("Using " + provider.displayName + " (model=" + provider.model + ")");
 
         userContextDirective = buildUserContextDirective(prefs);
 
@@ -302,19 +278,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         logInfo("Translate request via " + selectedEngine + " | src=" + sourceLanguage + " -> "
                 + targetLanguage + " | chars=" + text.length());
 
-        String result;
-        switch (selectedEngine) {
-            case GeminiConstants.ENGINE_OPENAI:
-                result = translateWithOpenAI(prompt, sourceLanguage, targetLanguage, inputChars, preview);
-                break;
-            case GeminiConstants.ENGINE_CLAUDE:
-                result = translateWithClaudeWithFallback(prompt, sourceLanguage, targetLanguage, inputChars, preview);
-                break;
-            case GeminiConstants.ENGINE_GEMINI:
-            default:
-                result = translateWithGemini(prompt, sourceLanguage, targetLanguage, inputChars, preview);
-                break;
-        }
+        String result = translateVia(prompt, sourceLanguage, targetLanguage, inputChars, preview);
 
         // Restore placeholders and validate integrity
         if (phResult.hasPlaceholders()) {
@@ -404,19 +368,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
                     + " | totalChars=" + totalChars);
             batchSpan.logApiCall(prompt.length());
 
-            String rawResponse;
-            switch (selectedEngine) {
-                case GeminiConstants.ENGINE_OPENAI:
-                    rawResponse = translateWithOpenAI(prompt, sourceLanguage, targetLanguage, totalChars, preview);
-                    break;
-                case GeminiConstants.ENGINE_CLAUDE:
-                    rawResponse = translateWithClaudeWithFallback(prompt, sourceLanguage, targetLanguage, totalChars, preview);
-                    break;
-                case GeminiConstants.ENGINE_GEMINI:
-                default:
-                    rawResponse = translateWithGemini(prompt, sourceLanguage, targetLanguage, totalChars, preview);
-                    break;
-            }
+            String rawResponse = translateVia(prompt, sourceLanguage, targetLanguage, totalChars, preview);
 
             String[] batchResults = parseBatchResponse(rawResponse, tokenizedTexts, batchSpan);
 
@@ -714,212 +666,49 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         return sys.toString();
     }
 
-    private JSONObject buildOpenAiRequest(String prompt, String sourceLanguage, String targetLanguage) throws IOException {
-        try {
-            JSONObject request = new JSONObject();
-            request.put("model", openAiModel);
-
-            JSONArray messages = new JSONArray();
-            messages.add(new JSONObject()
-                    .put("role", "system")
-                    .put("content", buildSystemPrompt(sourceLanguage, targetLanguage)));
-            messages.add(new JSONObject()
-                    .put("role", "user")
-                    .put("content", prompt));
-            request.put("messages", messages);
-            request.put("temperature", 0.1);
-            // Scale with input size — a fixed 2048 truncates large batches.
-            request.put("max_tokens", clampTokens(prompt.length() / 2, 2048, 8192));
-
-            return request;
-        } catch (Exception e) {
-            throw new IOException("Failed to build OpenAI request: " + e.getMessage(), e);
-        }
-    }
-
-    /** Clamp a token budget between min and max. */
-    private static int clampTokens(int value, int min, int max) {
-        return Math.max(min, Math.min(max, value));
-    }
-
-    private JSONObject buildClaudeRequest(String prompt, String sourceLanguage, String targetLanguage) throws IOException {
-        try {
-            JSONObject request = new JSONObject();
-            request.put("model", claudeModel);
-            // Dynamic max_tokens: scale with prompt size (~1 token per 3-4 chars),
-            // clamped so we never exceed a model's output ceiling.
-            request.put("max_tokens", clampTokens(prompt.length() / 3, 2048, 8192));
-            request.put("system", buildSystemPrompt(sourceLanguage, targetLanguage));
-
-            JSONArray messages = new JSONArray();
-            JSONObject userMessage = new JSONObject();
-            userMessage.put("role", "user");
-            JSONArray content = new JSONArray();
-            JSONObject textBlock = new JSONObject();
-            textBlock.put("type", "text");
-            textBlock.put("text", prompt);
-            content.add(textBlock);
-            userMessage.put("content", content);
-            messages.add(userMessage);
-            request.put("messages", messages);
-
-            return request;
-        } catch (Exception e) {
-            throw new IOException("Failed to build Claude request: " + e.getMessage(), e);
-        }
-    }
-
     /**
-     * Perform translation with automatic retry
+     * Sends one prompt to the active provider.
+     *
+     * Wraps {@link #executeWithRetry} so the retry budget, the rate-limit
+     * backoff and the debug spans are unchanged, and retries once against a
+     * fallback model when the configured one has been retired.
      */
-    private String translateWithGemini(String prompt,
-                                       String sourceLanguage,
-                                       String targetLanguage,
-                                       int inputChars,
-                                       String preview) throws IOException {
-        return executeWithRetry("gemini", modelName, sourceLanguage, targetLanguage, inputChars, preview, () -> {
-            JSONObject request = buildGeminiRequest(prompt);
-
-            String apiUrl = String.format("%s/%s:generateContent?key=%s",
-                GeminiConstants.API_BASE_URL,
-                modelName,
-                apiKey
-            );
-
-            JSONObject response = HttpUtils.postJson(apiUrl, null, request.toString(), requestTimeout);
-            String translation = parseGeminiResponse(response);
-            logSuccess("Gemini response parsed, chars=" + translation.length());
-            return translation;
-        });
-    }
-
-    private String translateWithOpenAI(String prompt,
-                                       String sourceLanguage,
-                                       String targetLanguage,
-                                       int inputChars,
-                                       String preview) throws IOException {
-        return executeWithRetry("openai", openAiModel, sourceLanguage, targetLanguage, inputChars, preview, () -> {
-            JSONObject request = buildOpenAiRequest(prompt, sourceLanguage, targetLanguage);
-
-            Map<String, String> headers = new HashMap<>();
-            headers.put("Authorization", "Bearer " + openAiApiKey);
-            JSONObject response = HttpUtils.postJson(openAiEndpoint, headers, request.toString(), requestTimeout);
-            String translation = parseOpenAiResponse(response);
-            logSuccess("OpenAI response parsed, chars=" + translation.length());
-            return translation;
-        });
-    }
-
-    private String translateWithClaude(String prompt,
-                                       String sourceLanguage,
-                                       String targetLanguage,
-                                       int inputChars,
-                                       String preview) throws IOException {
-        return executeWithRetry("claude", claudeModel, sourceLanguage, targetLanguage, inputChars, preview, () -> {
-            JSONObject request = buildClaudeRequest(prompt, sourceLanguage, targetLanguage);
-
-            Map<String, String> headers = new HashMap<>();
-            headers.put("x-api-key", claudeApiKey);
-            headers.put("anthropic-version", GeminiConstants.CLAUDE_API_VERSION);
-            JSONObject response = HttpUtils.postJson(claudeEndpoint, headers, request.toString(), requestTimeout);
-            String translation = parseClaudeResponse(response);
-            logSuccess("Claude response parsed, chars=" + translation.length());
-            return translation;
-        });
-    }
-
-    private String translateWithClaudeWithFallback(String prompt,
-                                                   String sourceLanguage,
-                                                   String targetLanguage,
-                                                   int inputChars,
-                                                   String preview) throws IOException {
+    private String translateVia(String prompt,
+                                String sourceLanguage,
+                                String targetLanguage,
+                                int inputChars,
+                                String preview) throws IOException {
         boolean retriedWithFallback = false;
         while (true) {
             try {
-                return translateWithClaude(prompt, sourceLanguage, targetLanguage, inputChars, preview);
+                return executeWithRetry(provider.id, provider.model, sourceLanguage,
+                        targetLanguage, inputChars, preview, () -> {
+                    String systemPrompt = buildSystemPrompt(sourceLanguage, targetLanguage);
+                    JSONObject request = ProviderClient.buildRequest(provider, prompt, systemPrompt);
+                    JSONObject response = HttpUtils.postJson(provider.url(), provider.headers(),
+                            request.toString(), requestTimeout);
+
+                    // Localise the API's own error before trying to read a
+                    // translation out of a response that has none.
+                    JSONObject error = ProviderClient.errorOf(response);
+                    if (error != null) {
+                        int code = JSONCompat.optInt(error, "code", -1);
+                        String message = JSONCompat.optString(error, "message", "Unknown error");
+                        throw new IOException("❌ " + formatApiError(code, message));
+                    }
+
+                    String translation = ProviderClient.parseResponse(provider, response);
+                    logSuccess(provider.displayName + " response parsed, chars=" + translation.length());
+                    return translation;
+                });
             } catch (IOException e) {
-                if (!retriedWithFallback && trySwitchClaudeFallbackModel(e)) {
+                if (!retriedWithFallback && trySwitchFallbackModel(e)) {
                     retriedWithFallback = true;
                     continue;
                 }
                 throw e;
             }
         }
-    }
-
-    /**
-     * Build Gemini API request JSON
-     *
-     * Request format:
-     * {
-     *   "contents": [{
-     *     "parts": [{"text": "prompt here"}]
-     *   }],
-     *   "generationConfig": {
-     *     "temperature": 0.1,
-     *     "maxOutputTokens": 1024
-     *   }
-     * }
-     */
-    private JSONObject buildGeminiRequest(String prompt) throws IOException {
-        try {
-            JSONObject request = new JSONObject();
-
-            // Contents array
-            JSONArray contents = new JSONArray();
-            JSONObject content = new JSONObject();
-            JSONArray parts = new JSONArray();
-            JSONObject part = new JSONObject();
-            part.put("text", prompt);
-            JSONCompat.put(parts, part);
-            content.put("parts", parts);
-            JSONCompat.put(contents, content);
-            request.put("contents", contents);
-
-            // Generation config for better translation
-            JSONObject generationConfig = new JSONObject();
-            generationConfig.put("temperature", 0.1); // Low temperature for consistent translation
-            // Scale the output budget with the input: a fixed 2048 truncates
-            // large batches mid-list (every item after the cut is silently
-            // lost), and on "thinking" models (Gemini 2.5+) hidden reasoning
-            // tokens ALSO count against this cap. prompt chars ≈ 3x the tokens
-            // the translation needs, which leaves thinking headroom.
-            generationConfig.put("maxOutputTokens", clampTokens(prompt.length(), 4096, 32768));
-            generationConfig.put("topP", 0.8);
-            generationConfig.put("topK", 10);
-            request.put("generationConfig", generationConfig);
-
-            return request;
-        } catch (Exception e) {
-            throw new IOException("Failed to build request: " + e.getMessage(), e);
-        }
-    }
-
-    private String extractContentText(Object content) throws IOException {
-        if (content == null) {
-            return "";
-        }
-        if (content instanceof String) {
-            return ((String) content).trim();
-        }
-        if (content instanceof JSONArray) {
-            JSONArray array = (JSONArray) content;
-            StringBuilder builder = new StringBuilder();
-            for (int i = 0; i < JSONCompat.size(array); i++) {
-                Object item = array.get(i);
-                if (item instanceof JSONObject) {
-                    JSONObject obj = (JSONObject) item;
-                    String text = JSONCompat.optString(obj, "text", null);
-                    if (text != null && !text.isEmpty()) {
-                        builder.append(text);
-                    }
-                } else if (item instanceof String) {
-                    builder.append((String) item);
-                }
-            }
-            return builder.toString().trim();
-        }
-        return content.toString().trim();
     }
 
     private String executeWithRetry(String engineName,
@@ -991,118 +780,6 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
             } catch (NumberFormatException ignored) {}
         }
         return -1;
-    }
-
-    /**
-     * Parse Gemini API response
-     *
-     * Response format:
-     * {
-     *   "candidates": [{
-     *     "content": {
-     *       "parts": [{"text": "translated text"}]
-     *     }
-     *   }]
-     * }
-     */
-    private String parseGeminiResponse(JSONObject json) throws IOException {
-        try {
-            // Check for API error
-            JSONObject error = JSONCompat.optJSONObject(json, "error");
-            if (error != null) {
-                int code = JSONCompat.optInt(error, "code", -1);
-                String message = JSONCompat.optString(error, "message", "Unknown error");
-                throw new IOException("❌ " + formatApiError(code, message));
-            }
-
-            // Extract translation
-            JSONArray candidates = JSONCompat.optJSONArray(json, "candidates");
-            if (candidates == null || JSONCompat.size(candidates) == 0) {
-                throw new IOException("⚠️ No translation returned from API");
-            }
-
-            JSONObject candidate = JSONCompat.optJSONObject(candidates, 0);
-            if (candidate == null) {
-                throw new IOException("⚠️ Invalid candidate in response");
-            }
-            JSONObject content = candidate.getJSONObject("content");
-            JSONArray parts = content.getJSONArray("parts");
-
-            if (JSONCompat.size(parts) == 0) {
-                throw new IOException("⚠️ Empty translation response");
-            }
-
-            String translation = JSONCompat.optJSONObject(parts, 0).getString("text");
-
-            translation = translation.trim();
-            if (translation.startsWith("\"") && translation.endsWith("\"")) {
-                translation = translation.substring(1, translation.length() - 1);
-            }
-
-            return translation;
-
-        } catch (Exception e) {
-            logError("Failed to parse Gemini response: " + e.getMessage(), e);
-            throw new IOException("Failed to parse Gemini response: " + e.getMessage(), e);
-        }
-    }
-
-    private String parseOpenAiResponse(JSONObject response) throws IOException {
-        try {
-            JSONArray choices = JSONCompat.optJSONArray(response, "choices");
-            if (choices == null || JSONCompat.size(choices) == 0) {
-                throw new IOException("⚠️ OpenAI response did not include choices");
-            }
-
-            JSONObject message = JSONCompat.optJSONObject(choices, 0);
-            if (message != null) {
-                message = JSONCompat.optJSONObject(message, "message");
-            }
-            if (message == null) {
-                throw new IOException("⚠️ OpenAI response missing message payload");
-            }
-
-            // OpenAI's `content` may be a plain string or an array of content parts.
-            // Try string first; fall back to JSONArray.
-            String translation;
-            try {
-                translation = extractContentText(message.getString("content"));
-            } catch (Exception stringFail) {
-                JSONArray contentArr = JSONCompat.optJSONArray(message, "content");
-                translation = extractContentText(contentArr);
-            }
-            if (translation.isEmpty()) {
-                throw new IOException("⚠️ OpenAI response was empty");
-            }
-            return translation;
-        } catch (Exception e) {
-            logError("Failed to parse OpenAI response: " + e.getMessage(), e);
-            throw new IOException("Failed to parse OpenAI response: " + e.getMessage(), e);
-        }
-    }
-
-    private String parseClaudeResponse(JSONObject response) throws IOException {
-        JSONArray contentArray = JSONCompat.optJSONArray(response, "content");
-        if (contentArray == null || JSONCompat.size(contentArray) == 0) {
-            throw new IOException("⚠️ Claude response did not include content");
-        }
-
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < JSONCompat.size(contentArray); i++) {
-            JSONObject block = JSONCompat.optJSONObject(contentArray, i);
-            if (block != null) {
-                String text = JSONCompat.optString(block, "text", "");
-                if (!text.isEmpty()) {
-                    builder.append(text);
-                }
-            }
-        }
-
-        String translation = builder.toString().trim();
-        if (translation.isEmpty()) {
-            throw new IOException("⚠️ Claude response was empty");
-        }
-        return translation;
     }
 
     /**
@@ -1308,8 +985,23 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         }
         logWarn("Falling back to Gemini due to " + messageKey);
 
-        selectedEngine = GeminiConstants.ENGINE_GEMINI;
+        provider = Providers.gemini(prefs);
+        selectedEngine = provider.id;
+        modelName = provider.model;
         loadGeminiConfig(prefs);
+    }
+
+    /**
+     * Localised "no key" message for a provider, falling back to the generic
+     * one so a provider added later never shows a raw placeholder.
+     */
+    private String keyMissingMessageKey(String providerId) {
+        switch (providerId) {
+            case Providers.ID_OPENAI:     return "error_openai_no_api_key";
+            case Providers.ID_CLAUDE:     return "error_claude_no_api_key";
+            case Providers.ID_OPENROUTER: return "error_openrouter_no_api_key";
+            default:                      return "error_no_api_key";
+        }
     }
 
     private void loadGeminiConfig(SharedPreferences prefs) {
@@ -1333,8 +1025,13 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         return key == null ? "" : key.trim();
     }
 
-    private boolean trySwitchClaudeFallbackModel(IOException e) {
-        if (!GeminiConstants.ENGINE_CLAUDE.equals(selectedEngine)) {
+    /**
+     * Claude retires model aliases without notice; the API answers
+     * {@code not_found_error}. Retry once against the best model the account
+     * can actually reach. Other providers have no equivalent, so they opt out.
+     */
+    private boolean trySwitchFallbackModel(IOException e) {
+        if (!Providers.ID_CLAUDE.equals(provider.id)) {
             return false;
         }
         String message = e.getMessage();
@@ -1347,25 +1044,26 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
             autoModel = GeminiConstants.CLAUDE_MODEL_FALLBACK;
         }
 
-        if (autoModel.equals(claudeModel)) {
+        if (autoModel.equals(provider.model)) {
             return false;
         }
 
-        claudeModel = autoModel;
+        provider = provider.withModel(autoModel);
+        modelName = provider.model;
         if (preferences != null) {
-            preferences.edit().putString(GeminiConstants.PREF_CLAUDE_MODEL, claudeModel).apply();
+            preferences.edit().putString(GeminiConstants.PREF_CLAUDE_MODEL, autoModel).apply();
         }
         PluginContext pluginContext = getContext();
         if (pluginContext != null) {
-            pluginContext.showToast(getContext().getString("{msg_claude_model_auto_selected}") + " " + claudeModel);
+            pluginContext.showToast(getContext().getString("{msg_claude_model_auto_selected}") + " " + autoModel);
         }
-        logWarn("Claude model unavailable; auto-selected " + claudeModel);
+        logWarn("Claude model unavailable; auto-selected " + autoModel);
         return true;
     }
 
     private String fetchAvailableClaudeModel() {
         try {
-            List<ModelCatalogManager.ModelInfo> models = ModelCatalogManager.fetchClaudeModels(claudeApiKey);
+            List<ModelCatalogManager.ModelInfo> models = ModelCatalogManager.fetchClaudeModels(provider.apiKey);
             return ModelCatalogManager.selectBestModel(models, GeminiConstants.CLAUDE_MODEL_FALLBACK);
         } catch (IOException ex) {
             logWarn("Unable to fetch Claude models: " + ex.getMessage());
