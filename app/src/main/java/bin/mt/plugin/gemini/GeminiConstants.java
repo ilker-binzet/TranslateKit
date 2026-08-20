@@ -139,6 +139,25 @@ public class GeminiConstants {
     public static final String CLAUDE_MODEL_SONNET_4 = "claude-sonnet-4-latest";
     public static final String DEFAULT_CLAUDE_ENDPOINT = "https://api.anthropic.com/v1/messages";
 
+    // OpenRouter preference keys
+    public static final String PREF_OPENROUTER_API_KEY = "openrouter_api_key";
+    public static final String PREF_OPENROUTER_MODEL = "openrouter_model_name";
+    public static final String PREF_OPENROUTER_ENDPOINT = "openrouter_api_endpoint";
+    public static final String PREF_CACHE_OPENROUTER_MODELS = "cache_openrouter_models";
+
+    // OpenRouter speaks the OpenAI chat/completions wire, so it needs no new
+    // request path — only an endpoint, a key format and a model catalogue.
+    public static final String DEFAULT_OPENROUTER_ENDPOINT =
+            "https://openrouter.ai/api/v1/chat/completions";
+    public static final String OPENROUTER_MODELS_ENDPOINT =
+            "https://openrouter.ai/api/v1/models";
+    public static final String OPENROUTER_API_KEY_PATTERN = "^sk-or-v1-[A-Za-z0-9]{16,}$";
+    public static final String DEFAULT_OPENROUTER_MODEL = "google/gemini-2.5-flash";
+
+    public static final String URL_OPENROUTER_KEYS = "https://openrouter.ai/keys";
+    public static final String URL_OPENROUTER_DOCS = "https://openrouter.ai/docs";
+    public static final String URL_OPENROUTER_PRICING = "https://openrouter.ai/models";
+
     // ==================== Default Model Seeds ====================
     // Single source of truth for "what models do we know about as of v0.4.0".
     // Used when no cache is present (first install, offline) and as fallback
@@ -179,6 +198,14 @@ public class GeminiConstants {
             {CLAUDE_MODEL_OPUS_4,    "Claude Opus 4",         "Legacy",                  "false",  "80"},
     };
 
+    public static final String[][] OPENROUTER_SEED = {
+            {"google/gemini-2.5-flash",           "Gemini 2.5 Flash",  "Fast, Recommended", "true",  "130"},
+            {"anthropic/claude-sonnet-4.5",       "Claude Sonnet 4.5", "Balanced",          "false", "120"},
+            {"openai/gpt-4.1-mini",               "GPT-4.1 Mini",      "Economical",        "false", "115"},
+            {"deepseek/deepseek-chat",            "DeepSeek Chat",     "Very low cost",     "false", "105"},
+            {"meta-llama/llama-3.3-70b-instruct", "Llama 3.3 70B",     "Open weights",      "false",  "95"},
+    };
+
     /** Custom model override preference key suffix (per provider). */
     public static final String PREF_CUSTOM_MODEL = "_custom_model";
 
@@ -187,6 +214,7 @@ public class GeminiConstants {
     public static final String ENGINE_GEMINI = "gemini";
     public static final String ENGINE_OPENAI = "openai";
     public static final String ENGINE_CLAUDE = "claude";
+    public static final String ENGINE_OPENROUTER = "openrouter";
 
     // ==================== Rate Limits (Free Tier - Updated 2026)
     // ====================
