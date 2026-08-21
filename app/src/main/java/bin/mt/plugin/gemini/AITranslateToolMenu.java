@@ -9,9 +9,11 @@ import android.view.Gravity;
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import bin.mt.json.JSONObject;
 import bin.mt.plugin.api.drawable.MaterialIcons;
 import bin.mt.plugin.api.editor.BaseTextEditorToolMenu;
 import bin.mt.plugin.api.editor.TextEditor;
@@ -28,15 +30,20 @@ import bin.mt.plugin.api.ui.dialog.PluginDialog;
 import bin.mt.plugin.api.ui.menu.PluginMenu;
 import bin.mt.plugin.api.ui.menu.PluginPopupMenu;
 import bin.mt.plugin.api.util.AsyncTask;
+import bin.mt.plugin.common.HttpUtils;
+import bin.mt.plugin.common.JSONCompat;
+import bin.mt.plugin.provider.Provider;
+import bin.mt.plugin.provider.ProviderClient;
+import bin.mt.plugin.provider.Providers;
 
 /**
  * AI Translation Tool Menu for Text Editor
- * 
+ *
  * Adds an "AI Translate" button to the editor toolbar,
  * providing a full translation dialog with engine selection,
  * source/target language options, and live translation preview.
- * 
- * @author TranslateKit
+ *
+ * @author Ilker Binzet
  * @version 1.0.0
  */
 public class AITranslateToolMenu extends BaseTextEditorToolMenu {
@@ -50,11 +57,18 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
         "zh-CN", "zh-TW", "ar", "hi", "nl", "sv", "pl", "uk"
     );
     
-    private static final List<String> ENGINES = Arrays.asList(
-        GeminiConstants.ENGINE_GEMINI,
-        GeminiConstants.ENGINE_OPENAI,
-        GeminiConstants.ENGINE_CLAUDE
-    );
+    /** Short system directive; the menu translates one selection, not a batch. */
+    private static final String SYSTEM_PROMPT =
+            "You are a professional translator. Translate text accurately and return only the translation.";
+
+    /**
+     * Configured providers, in registry order. Resolved per invocation rather
+     * than held in a constant so providers the user adds show up without a
+     * restart — and so the list is never limited to the three built-ins.
+     */
+    private List<Provider> engines() {
+        return Providers.all(getContext().getPreferences());
+    }
 
     @NonNull
     @Override
@@ -89,7 +103,9 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
         // Get saved preferences
         int savedSourceLang = preferences.getInt(KEY_SOURCE_LANG, 0);
         int savedTargetLang = preferences.getInt(KEY_TARGET_LANG, 1);
-        int savedEngine = preferences.getInt(KEY_ENGINE, 0);
+        // Clamp: the provider list grows and shrinks as the user adds or
+        // removes custom endpoints, so a stored index can outlive its entry.
+        int savedEngine = Math.max(0, Math.min(preferences.getInt(KEY_ENGINE, 0), engineNames.size() - 1));
         
         // Build the dialog view
         PluginEditTextBuilder builder = pluginUI
@@ -182,8 +198,9 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
             
             String sourceLang = LANGUAGES.get(sourceIdx);
             String targetLang = LANGUAGES.get(targetIdx);
-            String engine = ENGINES.get(engineIdx);
-            
+            List<Provider> available = engines();
+            String engine = available.get(Math.max(0, Math.min(engineIdx, available.size() - 1))).id;
+
             performTranslation(pluginUI, text, sourceLang, targetLang, engine, outputText);
         });
         
@@ -221,40 +238,37 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
     }
     
     private List<String> buildEngineNames() {
-        return Arrays.asList("Gemini", "OpenAI", "Claude");
+        List<String> names = new ArrayList<>();
+        for (Provider p : engines()) {
+            names.add(p.displayName);
+        }
+        return names;
     }
     
     private void showEngineOptionsMenu(PluginUI pluginUI, PluginView anchor, PluginSpinner engineSpinner) {
         PluginPopupMenu popupMenu = pluginUI.createPopupMenu(anchor);
         PluginMenu menu = popupMenu.getMenu();
         
-        SharedPreferences prefs = getContext().getPreferences();
-        String currentEngine = ENGINES.get(engineSpinner.getSelection());
-        
-        // Add engine-specific options
-        menu.add("gemini", "Gemini Settings").setCheckable(true)
-            .setChecked(GeminiConstants.ENGINE_GEMINI.equals(currentEngine));
-        menu.add("openai", "OpenAI Settings").setCheckable(true)
-            .setChecked(GeminiConstants.ENGINE_OPENAI.equals(currentEngine));
-        menu.add("claude", "Claude Settings").setCheckable(true)
-            .setChecked(GeminiConstants.ENGINE_CLAUDE.equals(currentEngine));
-        
+        List<Provider> available = engines();
+        int selection = Math.max(0, Math.min(engineSpinner.getSelection(), available.size() - 1));
+        String currentEngine = available.get(selection).id;
+
+        for (Provider p : available) {
+            menu.add(p.id, p.displayName + " Settings").setCheckable(true)
+                .setChecked(p.id.equals(currentEngine));
+        }
+
         popupMenu.setOnMenuItemClickListener(item -> {
             String itemId = item.getItemId();
-            switch (itemId) {
-                case "gemini":
-                    engineSpinner.setSelection(0);
+            for (int i = 0; i < available.size(); i++) {
+                if (available.get(i).id.equals(itemId)) {
+                    engineSpinner.setSelection(i);
                     break;
-                case "openai":
-                    engineSpinner.setSelection(1);
-                    break;
-                case "claude":
-                    engineSpinner.setSelection(2);
-                    break;
+                }
             }
             return true;
         });
-        
+
         popupMenu.show();
     }
     
@@ -279,19 +293,25 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
                     int timeout = readIntPreference(prefs, GeminiConstants.PREF_TIMEOUT, GeminiConstants.DEFAULT_TIMEOUT);
                     
                     String prompt = buildTranslationPrompt(text, sourceLang, targetLang);
-                    
-                    switch (engine) {
-                        case GeminiConstants.ENGINE_OPENAI:
-                            translatedText = translateWithOpenAI(prompt, prefs, timeout);
-                            break;
-                        case GeminiConstants.ENGINE_CLAUDE:
-                            translatedText = translateWithClaude(prompt, prefs, timeout);
-                            break;
-                        case GeminiConstants.ENGINE_GEMINI:
-                        default:
-                            translatedText = translateWithGemini(prompt, prefs, timeout);
-                            break;
+
+                    Provider provider = Providers.byId(prefs, engine);
+                    if (provider == null) {
+                        provider = Providers.selected(prefs);
                     }
+                    if (provider.requiresKey() && provider.apiKey.isEmpty()) {
+                        throw new IOException(provider.displayName + " API key not configured");
+                    }
+
+                    JSONObject request = ProviderClient.buildRequest(provider, prompt, SYSTEM_PROMPT);
+                    JSONObject response = HttpUtils.postJson(provider.url(), provider.headers(),
+                            request.toString(), timeout);
+
+                    JSONObject apiError = ProviderClient.errorOf(response);
+                    if (apiError != null) {
+                        throw new IOException("API Error: "
+                                + JSONCompat.optString(apiError, "message", "Unknown error"));
+                    }
+                    translatedText = ProviderClient.parseResponse(provider, response);
                 } catch (Exception e) {
                     error = e;
                 }
@@ -338,197 +358,6 @@ public class AITranslateToolMenu extends BaseTextEditorToolMenu {
         prompt.append(text);
         
         return prompt.toString();
-    }
-    
-    private String translateWithGemini(String prompt, SharedPreferences prefs, int timeout) throws IOException {
-        String apiKey = prefs.getString(GeminiConstants.PREF_API_KEY, "");
-        String modelName = prefs.getString(GeminiConstants.PREF_MODEL_NAME, GeminiConstants.DEFAULT_MODEL);
-
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new IOException("Gemini API key not configured");
-        }
-
-        bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
-        try {
-            bin.mt.json.JSONArray contents = new bin.mt.json.JSONArray();
-            bin.mt.json.JSONObject content = new bin.mt.json.JSONObject();
-            bin.mt.json.JSONArray parts = new bin.mt.json.JSONArray();
-            bin.mt.json.JSONObject part = new bin.mt.json.JSONObject();
-            part.put("text", prompt);
-            parts.add(part);
-            content.put("parts", parts);
-            contents.add(content);
-            request.put("contents", contents);
-
-            bin.mt.json.JSONObject generationConfig = new bin.mt.json.JSONObject();
-            generationConfig.put("temperature", 0.1);
-            generationConfig.put("maxOutputTokens", 2048);
-            request.put("generationConfig", generationConfig);
-        } catch (Exception e) {
-            throw new IOException("Failed to build request", e);
-        }
-
-        String apiUrl = String.format("%s/%s:generateContent?key=%s",
-            GeminiConstants.API_BASE_URL, modelName, apiKey);
-
-        bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(apiUrl, null, request.toString());
-        return parseGeminiResponse(response);
-    }
-
-    private String translateWithOpenAI(String prompt, SharedPreferences prefs, int timeout) throws IOException {
-        String apiKey = prefs.getString(GeminiConstants.PREF_OPENAI_API_KEY, "");
-        String model = prefs.getString(GeminiConstants.PREF_OPENAI_MODEL, GeminiConstants.DEFAULT_OPENAI_MODEL);
-        String endpoint = prefs.getString(GeminiConstants.PREF_OPENAI_ENDPOINT, GeminiConstants.DEFAULT_OPENAI_ENDPOINT);
-
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new IOException("OpenAI API key not configured");
-        }
-
-        bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
-        try {
-            request.put("model", model);
-            bin.mt.json.JSONArray messages = new bin.mt.json.JSONArray();
-            messages.add(new bin.mt.json.JSONObject()
-                    .put("role", "system")
-                    .put("content", "You are a professional translator. Return only the translation."));
-            messages.add(new bin.mt.json.JSONObject()
-                    .put("role", "user")
-                    .put("content", prompt));
-            request.put("messages", messages);
-            request.put("temperature", 0.1);
-            request.put("max_tokens", 2048);
-        } catch (Exception e) {
-            throw new IOException("Failed to build request", e);
-        }
-
-        java.util.Map<String, String> headers = new java.util.HashMap<>();
-        headers.put("Authorization", "Bearer " + apiKey);
-        bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(endpoint, headers, request.toString());
-        return parseOpenAIResponse(response);
-    }
-
-    private String translateWithClaude(String prompt, SharedPreferences prefs, int timeout) throws IOException {
-        String apiKey = prefs.getString(GeminiConstants.PREF_CLAUDE_API_KEY, "");
-        String model = prefs.getString(GeminiConstants.PREF_CLAUDE_MODEL, GeminiConstants.DEFAULT_CLAUDE_MODEL);
-        String endpoint = prefs.getString(GeminiConstants.PREF_CLAUDE_ENDPOINT, GeminiConstants.DEFAULT_CLAUDE_ENDPOINT);
-
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new IOException("Claude API key not configured");
-        }
-
-        bin.mt.json.JSONObject request = new bin.mt.json.JSONObject();
-        try {
-            request.put("model", model);
-            request.put("max_tokens", 2048);
-            request.put("system", "You are a professional translator. Return only the translation.");
-
-            bin.mt.json.JSONArray messages = new bin.mt.json.JSONArray();
-            bin.mt.json.JSONObject userMessage = new bin.mt.json.JSONObject();
-            userMessage.put("role", "user");
-            bin.mt.json.JSONArray content = new bin.mt.json.JSONArray();
-            bin.mt.json.JSONObject textBlock = new bin.mt.json.JSONObject();
-            textBlock.put("type", "text");
-            textBlock.put("text", prompt);
-            content.add(textBlock);
-            userMessage.put("content", content);
-            messages.add(userMessage);
-            request.put("messages", messages);
-        } catch (Exception e) {
-            throw new IOException("Failed to build request", e);
-        }
-
-        java.util.Map<String, String> headers = new java.util.HashMap<>();
-        headers.put("x-api-key", apiKey);
-        headers.put("anthropic-version", GeminiConstants.CLAUDE_API_VERSION);
-        bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(endpoint, headers, request.toString());
-        return parseClaudeResponse(response);
-    }
-
-    private String parseGeminiResponse(bin.mt.json.JSONObject json) throws IOException {
-        try {
-            if (json.contains("error")) {
-                bin.mt.json.JSONObject error = json.getJSONObject("error");
-                throw new IOException("API Error: " + bin.mt.plugin.common.JSONCompat.optString(error, "message", "Unknown error"));
-            }
-
-            bin.mt.json.JSONArray candidates = bin.mt.plugin.common.JSONCompat.optJSONArray(json, "candidates");
-            if (candidates == null || bin.mt.plugin.common.JSONCompat.size(candidates) == 0) {
-                throw new IOException("No translation returned");
-            }
-
-            bin.mt.json.JSONObject candidate = bin.mt.plugin.common.JSONCompat.optJSONObject(candidates, 0);
-            if (candidate == null) {
-                throw new IOException("Invalid candidate");
-            }
-            bin.mt.json.JSONObject content = candidate.getJSONObject("content");
-            bin.mt.json.JSONArray parts = content.getJSONArray("parts");
-
-            if (bin.mt.plugin.common.JSONCompat.size(parts) == 0) {
-                throw new IOException("Empty translation response");
-            }
-
-            return bin.mt.plugin.common.JSONCompat.optJSONObject(parts, 0).getString("text").trim();
-        } catch (Exception e) {
-            throw new IOException("Failed to parse response", e);
-        }
-    }
-
-    private String parseOpenAIResponse(bin.mt.json.JSONObject response) throws IOException {
-        try {
-            bin.mt.json.JSONArray choices = bin.mt.plugin.common.JSONCompat.optJSONArray(response, "choices");
-            if (choices == null || bin.mt.plugin.common.JSONCompat.size(choices) == 0) {
-                throw new IOException("No response from OpenAI");
-            }
-
-            bin.mt.json.JSONObject message = bin.mt.plugin.common.JSONCompat.optJSONObject(choices, 0);
-            if (message != null) {
-                message = bin.mt.plugin.common.JSONCompat.optJSONObject(message, "message");
-            }
-            if (message == null) {
-                throw new IOException("Invalid OpenAI response");
-            }
-
-            String translation;
-            try {
-                translation = message.getString("content").trim();
-            } catch (Exception stringFail) {
-                bin.mt.json.JSONArray contentArr = bin.mt.plugin.common.JSONCompat.optJSONArray(message, "content");
-                if (contentArr == null) {
-                    throw new IOException("OpenAI message content missing");
-                }
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < bin.mt.plugin.common.JSONCompat.size(contentArr); i++) {
-                    bin.mt.json.JSONObject block = bin.mt.plugin.common.JSONCompat.optJSONObject(contentArr, i);
-                    if (block != null) {
-                        sb.append(bin.mt.plugin.common.JSONCompat.optString(block, "text", ""));
-                    }
-                }
-                translation = sb.toString().trim();
-            }
-            return translation;
-        } catch (Exception e) {
-            throw new IOException("Failed to parse OpenAI response", e);
-        }
-    }
-
-    private String parseClaudeResponse(bin.mt.json.JSONObject response) throws IOException {
-        bin.mt.json.JSONArray contentArray = bin.mt.plugin.common.JSONCompat.optJSONArray(response, "content");
-        if (contentArray == null || bin.mt.plugin.common.JSONCompat.size(contentArray) == 0) {
-            throw new IOException("No response from Claude");
-        }
-
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < bin.mt.plugin.common.JSONCompat.size(contentArray); i++) {
-            bin.mt.json.JSONObject block = bin.mt.plugin.common.JSONCompat.optJSONObject(contentArray, i);
-            if (block != null) {
-                String text = bin.mt.plugin.common.JSONCompat.optString(block, "text", "");
-                if (!text.isEmpty()) {
-                    builder.append(text);
-                }
-            }
-        }
-
-        return builder.toString().trim();
     }
     
     private int readIntPreference(SharedPreferences prefs, String key, int defaultValue) {
