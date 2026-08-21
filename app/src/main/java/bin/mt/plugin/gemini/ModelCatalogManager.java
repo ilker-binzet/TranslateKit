@@ -102,6 +102,13 @@ public class ModelCatalogManager {
         return out;
     }
 
+    /** Curated OpenRouter list — used when no cache or fetch fails. */
+    public static List<ModelInfo> getDefaultSeedOpenRouter() {
+        List<ModelInfo> out = new ArrayList<>(GeminiConstants.OPENROUTER_SEED.length);
+        for (String[] row : GeminiConstants.OPENROUTER_SEED) out.add(seedRow(row));
+        return out;
+    }
+
     /**
      * Merge live-fetched models on top of the seed. Live list always wins on
      * id collision. New models from the API appear; old/missing models
@@ -189,8 +196,10 @@ public class ModelCatalogManager {
         if (prefs == null || cacheKey == null) return;
         // Skip when debug cache bypass is active.
         if (prefs.getBoolean(GeminiConstants.PREF_DEBUG_DISABLE_MODEL_CACHE, false)) return;
-        // Skip when no API key — seed list will be used.
-        if (TextUtils.isEmpty(apiKey)) return;
+        // Skip when no API key — seed list will be used. OpenRouter is exempt:
+        // its catalogue endpoint is public, so it refreshes before the user has
+        // entered a key, which is exactly when browsing models is most useful.
+        if (TextUtils.isEmpty(apiKey) && provider != Provider.OPENROUTER) return;
         // Skip when cache is fresh and non-empty.
         if (!isCacheStale(prefs, cacheKey, ttlMs)) return;
         // Skip when cache exists and has models (only refresh when truly empty).
@@ -224,6 +233,7 @@ public class ModelCatalogManager {
                     case GEMINI: models = fetchGeminiModels(apiKey); break;
                     case OPENAI: models = fetchOpenAiModels(apiKey); break;
                     case CLAUDE: models = fetchClaudeModels(apiKey); break;
+                    case OPENROUTER: models = fetchOpenRouterModels(apiKey); break;
                     default: models = Collections.emptyList();
                 }
                 saveModelCache(prefs, cacheKey, models);
@@ -242,7 +252,7 @@ public class ModelCatalogManager {
     }
 
     /** Provider identifier for refresh operations. */
-    public enum Provider { GEMINI, OPENAI, CLAUDE }
+    public enum Provider { GEMINI, OPENAI, CLAUDE, OPENROUTER }
 
     /** Result of an auto-refresh attempt. */
     public interface RefreshCallback {
@@ -404,6 +414,67 @@ public class ModelCatalogManager {
         }
         sortModels(models);
         return models;
+    }
+
+    /**
+     * OpenRouter's catalogue is public, so the key is optional — passing it
+     * only personalises the listing. This is also the only provider catalogue
+     * that reports context length and per-token pricing, both of which go into
+     * the detail line so the user can weigh cost against capability.
+     */
+    public static List<ModelInfo> fetchOpenRouterModels(String apiKey) throws IOException {
+        Map<String, String> headers = new HashMap<>();
+        if (!TextUtils.isEmpty(apiKey)) {
+            headers.put("Authorization", "Bearer " + apiKey);
+        }
+        JSONObject response = HttpUtils.getJson(
+                GeminiConstants.OPENROUTER_MODELS_ENDPOINT, headers);
+        JSONArray data = JSONCompat.optJSONArray(response, "data");
+        if (data == null) {
+            return Collections.emptyList();
+        }
+        List<ModelInfo> models = new ArrayList<>();
+        for (int i = 0; i < JSONCompat.size(data); i++) {
+            JSONObject entry = JSONCompat.optJSONObject(data, i);
+            if (entry == null) continue;
+            String id = JSONCompat.optString(entry, "id", "");
+            if (id.isEmpty()) continue;
+            models.add(new ModelInfo(
+                    id,
+                    JSONCompat.optString(entry, "name", id),
+                    describeOpenRouter(entry),
+                    false,
+                    0));
+        }
+        sortModels(models);
+        return models;
+    }
+
+    /** e.g. "1M ctx · $0.30/M in" — empty when the API reports neither. */
+    private static String describeOpenRouter(JSONObject entry) {
+        StringBuilder sb = new StringBuilder();
+        long ctx = JSONCompat.optLong(entry, "context_length", 0);
+        if (ctx >= 1_000_000) {
+            sb.append(ctx / 1_000_000).append("M ctx");
+        } else if (ctx >= 1000) {
+            sb.append(ctx / 1000).append("K ctx");
+        }
+        JSONObject pricing = JSONCompat.optJSONObject(entry, "pricing");
+        if (pricing != null) {
+            try {
+                double perToken = Double.parseDouble(JSONCompat.optString(pricing, "prompt", ""));
+                if (perToken > 0) {
+                    if (sb.length() > 0) sb.append(" · ");
+                    sb.append(String.format(Locale.US, "$%.2f/M in", perToken * 1_000_000));
+                } else if (perToken == 0) {
+                    if (sb.length() > 0) sb.append(" · ");
+                    sb.append("free");
+                }
+            } catch (NumberFormatException ignored) {
+                // A missing or unparseable price is not an error.
+            }
+        }
+        return sb.toString();
     }
 
     public static List<ModelInfo> fetchGeminiModels(String apiKey) throws IOException {
