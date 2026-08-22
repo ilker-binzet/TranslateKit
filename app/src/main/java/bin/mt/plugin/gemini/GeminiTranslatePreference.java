@@ -3,10 +3,11 @@ package bin.mt.plugin.gemini;
 import android.content.SharedPreferences;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import bin.mt.plugin.api.PluginContext;
 import bin.mt.plugin.api.preference.PluginPreference;
+import bin.mt.plugin.provider.Provider;
+import bin.mt.plugin.provider.Providers;
 
 /**
  * Main preference screen for TranslateKit.
@@ -22,6 +23,14 @@ public class GeminiTranslatePreference implements PluginPreference {
     private final Map<String, ProviderStatus> providerStatusCache = new HashMap<>();
     private boolean preferenceListenerRegistered;
     private final SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener = (prefs, key) -> {
+        // Editing the custom list can add, rename or remove several entries at
+        // once, so there is no single cache row to invalidate.
+        if (Providers.PREF_CUSTOM_PROVIDERS.equals(key)) {
+            synchronized (providerStatusCache) {
+                providerStatusCache.clear();
+            }
+            return;
+        }
         String providerKey = mapPreferenceToProviderKey(key);
         if (providerKey != null) {
             synchronized (providerStatusCache) {
@@ -29,10 +38,6 @@ public class GeminiTranslatePreference implements PluginPreference {
             }
         }
     };
-
-    private static final Pattern PATTERN_GEMINI_API_KEY = Pattern.compile(GeminiConstants.API_KEY_PATTERN);
-    private static final Pattern PATTERN_OPENAI_API_KEY = Pattern.compile(GeminiConstants.OPENAI_API_KEY_PATTERN);
-    private static final Pattern PATTERN_CLAUDE_API_KEY = Pattern.compile(GeminiConstants.CLAUDE_API_KEY_PATTERN);
 
     private static class ProviderStatus {
         final String displayName;
@@ -86,16 +91,20 @@ public class GeminiTranslatePreference implements PluginPreference {
     // ==================== Summary Builders ====================
 
     private String buildProvidersSummary() {
+        java.util.List<Provider> all = Providers.all(preferences);
         int configured = 0;
-        if (isKeyConfigured(GeminiConstants.PREF_API_KEY, PATTERN_GEMINI_API_KEY)) configured++;
-        if (isKeyConfigured(GeminiConstants.PREF_OPENAI_API_KEY, PATTERN_OPENAI_API_KEY)) configured++;
-        if (isKeyConfigured(GeminiConstants.PREF_CLAUDE_API_KEY, PATTERN_CLAUDE_API_KEY)) configured++;
+        for (Provider p : all) {
+            // A keyless custom endpoint counts as configured once it has a URL.
+            if (!p.requiresKey() || (!p.apiKey.isEmpty() && p.hasValidKeyFormat())) {
+                configured++;
+            }
+        }
 
         String activeEngine = getActiveEngineName();
         if (configured == 0) {
             return "No providers configured \u2022 Tap to set up";
         }
-        return configured + "/3 configured \u2022 Active: " + activeEngine;
+        return configured + "/" + all.size() + " configured \u2022 Active: " + activeEngine;
     }
 
     private String buildTranslationSummary() {
@@ -118,29 +127,23 @@ public class GeminiTranslatePreference implements PluginPreference {
     // ==================== Providers Menu ====================
 
     private void showProvidersMenu(bin.mt.plugin.api.ui.PluginUI pluginUI) {
-        ProviderStatus gemini = getProviderStatus("gemini");
-        ProviderStatus openai = getProviderStatus("openai");
-        ProviderStatus claude = getProviderStatus("claude");
+        java.util.List<Provider> all = Providers.all(preferences);
 
-        CharSequence[] labels = new CharSequence[]{
-            gemini.icon + " " + gemini.displayName + "\n" + gemini.title + " \u2022 " + gemini.detail,
-            openai.icon + " " + openai.displayName + "\n" + openai.title + " \u2022 " + openai.detail,
-            claude.icon + " " + claude.displayName + "\n" + claude.title + " \u2022 " + claude.detail
-        };
+        // One extra row at the end for managing user-defined endpoints.
+        CharSequence[] labels = new CharSequence[all.size() + 1];
+        for (int i = 0; i < all.size(); i++) {
+            ProviderStatus s = getProviderStatus(all.get(i));
+            labels[i] = s.icon + " " + s.displayName + "\n" + s.title + " \u2022 " + s.detail;
+        }
+        labels[all.size()] = "\u2795 Custom endpoints\nAdd any OpenAI-compatible API";
 
         pluginUI.buildDialog()
                 .setTitle("AI Providers")
                 .setItems(labels, (dialog, which) -> {
-                    switch (which) {
-                        case 0:
-                            context.openPreference(GeminiProviderPreference.class);
-                            break;
-                        case 1:
-                            context.openPreference(OpenAIProviderPreference.class);
-                            break;
-                        case 2:
-                            context.openPreference(ClaudeProviderPreference.class);
-                            break;
+                    if (which >= all.size()) {
+                        context.openPreference(CustomProviderPreference.class);
+                    } else {
+                        openSettingsFor(all.get(which).id);
                     }
                     dialog.dismiss();
                 })
@@ -148,67 +151,73 @@ public class GeminiTranslatePreference implements PluginPreference {
                 .show();
     }
 
+    /** Custom entries share one editor; built-ins each have their own screen. */
+    private void openSettingsFor(String providerId) {
+        switch (providerId) {
+            case Providers.ID_OPENAI:
+                context.openPreference(OpenAIProviderPreference.class);
+                break;
+            case Providers.ID_CLAUDE:
+                context.openPreference(ClaudeProviderPreference.class);
+                break;
+            case Providers.ID_OPENROUTER:
+                context.openPreference(OpenRouterProviderPreference.class);
+                break;
+            case Providers.ID_GEMINI:
+                context.openPreference(GeminiProviderPreference.class);
+                break;
+            default:
+                context.openPreference(CustomProviderPreference.class);
+                break;
+        }
+    }
+
     // ==================== Provider Status Helpers ====================
 
-    private boolean isKeyConfigured(String prefKey, Pattern pattern) {
-        String key = preferences.getString(prefKey, "");
-        return key != null && !key.isEmpty() && pattern.matcher(key).matches();
-    }
-
     private String getActiveEngineName() {
-        String engine = preferences.getString(GeminiConstants.PREF_DEFAULT_ENGINE, GeminiConstants.DEFAULT_ENGINE);
-        switch (engine) {
-            case GeminiConstants.ENGINE_OPENAI: return "OpenAI";
-            case GeminiConstants.ENGINE_CLAUDE: return "Claude";
-            default: return "Gemini";
-        }
+        return Providers.selected(preferences).displayName;
     }
 
-    private ProviderStatus getProviderStatus(String providerKey) {
+    private ProviderStatus getProviderStatus(Provider provider) {
         synchronized (providerStatusCache) {
-            ProviderStatus cached = providerStatusCache.get(providerKey);
+            ProviderStatus cached = providerStatusCache.get(provider.id);
             if (cached != null) return cached;
         }
-        ProviderStatus computed = buildProviderStatus(providerKey);
+        ProviderStatus computed = buildProviderStatus(provider);
         synchronized (providerStatusCache) {
-            providerStatusCache.put(providerKey, computed);
+            providerStatusCache.put(provider.id, computed);
         }
         return computed;
     }
 
-    private ProviderStatus buildProviderStatus(String providerKey) {
-        String prefKey = GeminiConstants.PREF_API_KEY;
-        Pattern keyPattern = PATTERN_GEMINI_API_KEY;
-        String displayName = "Gemini AI";
-        String icon = "\u2728";
-
-        switch (providerKey) {
-            case "openai":
-                prefKey = GeminiConstants.PREF_OPENAI_API_KEY;
-                keyPattern = PATTERN_OPENAI_API_KEY;
-                displayName = "OpenAI GPT-4o";
-                icon = "\uD83E\uDDE0";
-                break;
-            case "claude":
-                prefKey = GeminiConstants.PREF_CLAUDE_API_KEY;
-                keyPattern = PATTERN_CLAUDE_API_KEY;
-                displayName = "Claude 3.5";
-                icon = "\uD83C\uDFAD";
-                break;
-            default:
-                break;
+    /** Purely decorative; an unknown provider falls through to the generic mark. */
+    private static String iconFor(String providerId) {
+        switch (providerId) {
+            case Providers.ID_GEMINI:     return "\u2728";
+            case Providers.ID_OPENAI:     return "\uD83E\uDDE0";
+            case Providers.ID_CLAUDE:     return "\uD83C\uDFAD";
+            case Providers.ID_OPENROUTER: return "\uD83D\uDD00";
+            default:                      return "\uD83D\uDD0C";
         }
+    }
 
-        String keyValue = preferences.getString(prefKey, "");
-        if (keyValue == null) keyValue = "";
+    private ProviderStatus buildProviderStatus(Provider provider) {
+        String icon = iconFor(provider.id);
+        String displayName = provider.displayName;
 
-        if (keyValue.isEmpty()) {
+        // Self-hosted endpoints take no key, so "no key" is a valid state.
+        if (!provider.requiresKey()) {
+            return provider.model == null || provider.model.isEmpty()
+                    ? new ProviderStatus(displayName, icon, "No model set", "Tap to configure")
+                    : new ProviderStatus(displayName, icon, "Ready", provider.model);
+        }
+        if (provider.apiKey.isEmpty()) {
             return new ProviderStatus(displayName, icon, "Not configured", "Tap to set up");
         }
-        if (!keyPattern.matcher(keyValue).matches()) {
+        if (!provider.hasValidKeyFormat()) {
             return new ProviderStatus(displayName, icon, "Invalid key", "Check format");
         }
-        return new ProviderStatus(displayName, icon, "Ready", formatKeyHint(keyValue));
+        return new ProviderStatus(displayName, icon, "Ready", formatKeyHint(provider.apiKey));
     }
 
     private String formatKeyHint(String key) {
@@ -225,9 +234,10 @@ public class GeminiTranslatePreference implements PluginPreference {
     }
 
     private String mapPreferenceToProviderKey(String prefKey) {
-        if (GeminiConstants.PREF_API_KEY.equals(prefKey)) return "gemini";
-        if (GeminiConstants.PREF_OPENAI_API_KEY.equals(prefKey)) return "openai";
-        if (GeminiConstants.PREF_CLAUDE_API_KEY.equals(prefKey)) return "claude";
+        if (GeminiConstants.PREF_API_KEY.equals(prefKey)) return Providers.ID_GEMINI;
+        if (GeminiConstants.PREF_OPENAI_API_KEY.equals(prefKey)) return Providers.ID_OPENAI;
+        if (GeminiConstants.PREF_CLAUDE_API_KEY.equals(prefKey)) return Providers.ID_CLAUDE;
+        if (GeminiConstants.PREF_OPENROUTER_API_KEY.equals(prefKey)) return Providers.ID_OPENROUTER;
         return null;
     }
 }

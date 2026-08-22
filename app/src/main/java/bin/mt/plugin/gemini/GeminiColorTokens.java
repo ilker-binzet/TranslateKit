@@ -15,7 +15,8 @@ public class GeminiColorTokens {
      * Returns lighter colors for dark theme, standard colors for light theme.
      *
      * @param ui       PluginUI instance for theme detection
-     * @param provider Provider name: "gemini", "openai", "claude", "google"
+     * @param provider Provider id: "gemini", "openai", "claude", "openrouter",
+     *                 "google", or a "custom:*" user-defined endpoint
      * @return Color int value
      */
     public static int getProviderBrandColor(PluginUI ui, String provider) {
@@ -25,8 +26,11 @@ public class GeminiColorTokens {
             case "gemini" -> isDark ? 0xFF4285F4 : 0xFF1A73E8;  // Google Blue
             case "openai" -> isDark ? 0xFF10A37F : 0xFF0B8F6A;  // OpenAI Green
             case "claude" -> isDark ? 0xFFD97757 : 0xFFB55F3B;  // Anthropic Orange
+            case "openrouter" -> isDark ? 0xFF8B7CF6 : 0xFF6D5BD0;  // OpenRouter Violet
             case "google" -> isDark ? 0xFF34A853 : 0xFF2D8C43;  // Google Green
-            default -> ui.colorAccent();  // Fallback to system accent
+            // User-defined endpoints have no brand; the system accent keeps
+            // them visually neutral rather than borrowing someone else's colour.
+            default -> ui.colorAccent();
         };
     }
 
