@@ -6,7 +6,7 @@ package bin.mt.plugin.google;
  * This class contains all configuration constants, API endpoints,
  * preference keys, and default values used by the plugin.
  *
- * @author MT Manager Plugin Developer
+ * @author Ilker Binzet
  * @version 1.0.0
  */
 public class GoogleConstants {

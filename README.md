@@ -6,12 +6,12 @@
 
 **Multi-provider AI translation plugin for [MT Manager](https://mt2.cn)**
 
-[![Version](https://img.shields.io/badge/version-0.4.2-blue?style=flat-square)](https://github.com/ilker-binzet/TranslateKit/releases)
+[![Version](https://img.shields.io/badge/version-0.5.0-blue?style=flat-square)](https://github.com/ilker-binzet/TranslateKit/releases)
 [![SDK](https://img.shields.io/badge/MT%20Plugin%20SDK-v3%20stable-purple?style=flat-square)](https://gitee.com/L-JINBIN/mt-plugin-v3-demo)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square)](#)
 
-*Translate Android string resources using Gemini, OpenAI, or Claude — all from a single plugin.*
+*Translate Android string resources using Gemini, OpenAI, Claude, OpenRouter — or any OpenAI-compatible endpoint, including your own local server.*
 
 </div>
 
@@ -34,9 +34,26 @@ The plugin supports three AI providers and Google Cloud Translation, with built-
 | **Google Gemini**    | Gemini 3 Pro/Flash, 2.5 Flash/Pro, 2.5 Flash-Lite  | 2000 req/day (Flash)  |
 | **OpenAI**           | GPT-5.2/5.1/5, GPT-4.1, GPT-4o, o3/o4 Mini         | Pay-as-you-go         |
 | **Anthropic Claude** | Claude Opus 4.6/4.5, Sonnet 4.5, Haiku 4.5         | Pay-as-you-go         |
+| **OpenRouter**       | 400+ models from every major lab, one key          | Free tier on select models |
+| **Custom endpoint**  | Any OpenAI-compatible API                          | Depends on the service |
 | **Google Cloud**     | Neural Machine Translation                         | 500K chars/month free |
 
-> Dynamic model catalog — the plugin fetches the latest available models from each provider's API automatically.
+> Dynamic model catalog — the plugin fetches the latest available models from each provider's API automatically. OpenRouter's catalog also shows context length and per-token price.
+
+### Bring Your Own Endpoint
+
+Anything that speaks OpenAI's `/chat/completions` works as a provider — just add a name, base URL and model:
+
+| Service | Base URL |
+| --- | --- |
+| Groq | `https://api.groq.com/openai/v1` |
+| DeepSeek | `https://api.deepseek.com/v1` |
+| Together | `https://api.together.xyz/v1` |
+| xAI | `https://api.x.ai/v1` |
+| Ollama (local) | `http://127.0.0.1:11434/v1` |
+| LM Studio (local) | `http://127.0.0.1:1234/v1` |
+
+Local servers need no API key — leave the field empty and no `Authorization` header is sent.
 
 ### Context-Aware Translation
 
@@ -112,25 +129,36 @@ cd TranslateKit
 ```
 app/src/main/java/bin/mt/plugin/
 ├── common/
-│   ├── HttpUtils.java                    # Shared HTTP client (all providers)
-│   └── JSONCompat.java                   # JSON helpers for MT runtime
+│   ├── HttpUtils.java                     # Shared HTTP client (all providers)
+│   └── JSONCompat.java                    # JSON helpers for MT runtime
+├── provider/
+│   ├── Provider.java                      # Endpoint, credentials, wire format
+│   ├── Providers.java                     # Registry: built-ins + user-defined
+│   └── ProviderClient.java                # Request/response per wire format
 ├── gemini/
-│   ├── GeminiTranslatePreference.java    # Main settings (5-category nav)
-│   ├── TranslationSubPreference.java     # Engine, timeout, retries
-│   ├── ContextToneSubPreference.java     # Presets, tone, audience
-│   ├── ToolsSubPreference.java           # Dashboard, tests, debug
-│   ├── GeminiProviderPreference.java     # Gemini provider settings
-│   ├── OpenAIProviderPreference.java     # OpenAI provider settings
-│   ├── ClaudeProviderPreference.java     # Claude provider settings
-│   ├── GeminiTranslationEngine.java      # Core translation engine
-│   ├── GeminiConstants.java              # All constants & model names
-│   ├── GeminiColorTokens.java            # Theme-aware UI colors
-│   ├── ModelCatalogManager.java          # Dynamic model fetching & cache
-│   ├── ProviderCatalogRefresher.java     # Background catalog refresh
-│   └── TranslationDebugLogger.java       # Structured debug logging
+│   ├── GeminiTranslatePreference.java     # Main settings (5-category nav)
+│   ├── TranslationSubPreference.java      # Engine, timeout, retries
+│   ├── ContextToneSubPreference.java      # Presets, tone, audience
+│   ├── ToolsSubPreference.java            # Dashboard, tests, debug
+│   ├── GeminiProviderPreference.java      # Gemini provider settings
+│   ├── OpenAIProviderPreference.java      # OpenAI provider settings
+│   ├── ClaudeProviderPreference.java      # Claude provider settings
+│   ├── OpenRouterProviderPreference.java  # OpenRouter provider settings
+│   ├── CustomProviderPreference.java      # User-defined endpoints
+│   ├── GeminiTranslationEngine.java       # Core translation engine
+│   ├── GeminiConstants.java               # All constants & model names
+│   ├── GeminiColorTokens.java             # Theme-aware UI colors
+│   ├── ModelCatalogManager.java           # Dynamic model fetching & cache
+│   ├── ProviderCatalogRefresher.java      # Background catalog refresh
+│   └── TranslationDebugLogger.java        # Structured debug logging
 └── google/
-    └── GoogleCloudTranslationEngine.java # Google Cloud NMT fallback
+    └── GoogleCloudTranslationEngine.java  # Google Cloud NMT fallback
 ```
+
+**Adding a provider.** Providers are many; wire formats are three. `ProviderClient`
+dispatches on `Provider.wire` (`openai` / `anthropic` / `gemini`) rather than on
+provider identity, so a new OpenAI-compatible service is a row in `Providers`,
+not a new code path.
 
 ---
 

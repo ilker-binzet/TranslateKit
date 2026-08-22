@@ -17,7 +17,7 @@ import bin.mt.plugin.api.preference.PluginPreference;
  * - Performance tuning (timeouts, retries)
  * - Feature toggles (caching, etc.)
  *
- * @author MT Manager Plugin Developer
+ * @author Ilker Binzet
  * @version 1.0.0
  */
 public class GoogleTranslatePreference implements PluginPreference {

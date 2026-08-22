@@ -27,7 +27,7 @@ import bin.mt.plugin.common.JSONCompat;
  * This plugin provides translation capabilities using Google Cloud Translation API v2 (Basic).
  * Supports 100+ languages with auto-detection capability.
  *
- * @author MT Manager Plugin Developer
+ * @author Ilker Binzet
  * @version 1.0.0
  *
  * API Documentation: https://cloud.google.com/translate/docs/reference/rest/v2/translate

@@ -5,6 +5,41 @@ All notable changes to TranslateKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-08-17
+
+### Added
+- **OpenRouter support.** One key reaches 400+ models from every major lab.
+  Its model catalogue needs no API key, and it is the only provider listing
+  that reports context length and per-token price, so both now show in the
+  model picker.
+- **Custom OpenAI-compatible endpoints.** Add any service that exposes
+  `/chat/completions` — Groq, DeepSeek, Together, Mistral, xAI — or a local
+  **Ollama** or **LM Studio** server. Entries with no API key are supported;
+  no `Authorization` header is sent when the key is blank, which local
+  servers reject.
+- The engine picker in the editor tool menu now lists every configured
+  provider instead of three hardcoded entries.
+
+### Changed
+- **Provider handling reworked around wire formats.** Providers are many but
+  wire formats are three (`openai`, `anthropic`, `gemini`), so requests now
+  dispatch on the format rather than on provider identity. Adding a provider
+  is a registry row instead of nine methods across three classes.
+  `GeminiTranslationEngine` drops from 1496 to 1194 lines and the two editor
+  menus from 917 to 558 combined, with no change to translation behaviour.
+- Both editor menus now apply the configured Request Timeout, which the
+  previous code read but discarded.
+- The providers dashboard is registry-driven, retiring the stale hardcoded
+  "OpenAI GPT-4o" and "Claude 3.5" labels.
+
+### Removed
+- 62 unused `ICON_*` constants from `GeminiConstants` — zero references
+  anywhere in the codebase.
+
+### Notes
+- **No preference keys changed.** Upgrading keeps every configured API key
+  and model selection; there is no migration step.
+
 ## [0.4.2] - 2026-07-02
 
 ### Fixed
