@@ -8,6 +8,7 @@ junit = "4.13.2"
 [libraries]
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 junit = { module = "junit:junit", version.ref = "junit" }
+mt-plugin-api = { module = "bin.mt.plugin:api", version.ref = "mt-plugin" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

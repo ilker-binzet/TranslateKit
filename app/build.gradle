@@ -51,6 +51,11 @@ dependencies {
     // host doesn't have and crashes with NoSuchMethodError.
 
     testImplementation libs.junit
+    // The MT Plugin SDK is added as compileOnly (the host supplies it at
+    // runtime), so it is absent from the unit test classpath. Re-declaring it
+    // for tests only lets them exercise the real JSON and HTTP code. This does
+    // not affect the packaged .mtp — test configurations are never bundled.
+    testImplementation libs.mt.plugin.api
 }
 
 /**
