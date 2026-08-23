@@ -7,23 +7,15 @@ import bin.mt.plugin.api.preference.PluginPreference;
 
 /**
  * Sub-preference screen for Translation Settings.
- * Contains: Default AI Engine, Request Timeout, Max Retry Attempts.
+ * Contains: Request Timeout, Max Retry Attempts, batch and bilingual options.
+ *
+ * <p>Choosing the provider belongs to the AI Providers screen, which is the
+ * only place that lists every provider along with whether it is configured.
  */
 public class TranslationSubPreference implements PluginPreference {
 
-    private PluginContext context;
-
     @Override
     public void onBuild(PluginContext context, Builder builder) {
-        this.context = context;
-
-        // ==================== Default AI Engine ====================
-        builder.addList("Default AI Engine", GeminiConstants.PREF_DEFAULT_ENGINE)
-                .summary("Choose which AI provider to use by default")
-                .addItem("Gemini (Fast & Free)", GeminiConstants.ENGINE_GEMINI)
-                .addItem("OpenAI GPT (Powerful)", GeminiConstants.ENGINE_OPENAI)
-                .addItem("Claude (Balanced)", GeminiConstants.ENGINE_CLAUDE);
-
         // ==================== Request Timeout ====================
         builder.addInput("Request Timeout (ms)", GeminiConstants.PREF_TIMEOUT)
                 .defaultValue(String.valueOf(GeminiConstants.DEFAULT_TIMEOUT))
@@ -59,19 +51,5 @@ public class TranslationSubPreference implements PluginPreference {
         builder.addSwitch(context.getString("{pref_bilingual_mode}"), GeminiConstants.PREF_BILINGUAL_MODE)
                 .defaultValue(GeminiConstants.DEFAULT_BILINGUAL_MODE)
                 .summary(context.getString("{pref_bilingual_mode_summary}"));
-
-        // Preference change callback
-        builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
-            String key = preferenceItem.getKey();
-            if (GeminiConstants.PREF_DEFAULT_ENGINE.equals(key)) {
-                String engineName;
-                switch ((String) newValue) {
-                    case GeminiConstants.ENGINE_OPENAI: engineName = "OpenAI GPT"; break;
-                    case GeminiConstants.ENGINE_CLAUDE: engineName = "Claude"; break;
-                    default: engineName = "Gemini"; break;
-                }
-                context.showToast("Default engine: " + engineName);
-            }
-        });
     }
 }

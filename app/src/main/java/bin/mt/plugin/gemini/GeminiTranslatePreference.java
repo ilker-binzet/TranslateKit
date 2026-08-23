@@ -132,6 +132,7 @@ public class GeminiTranslatePreference implements PluginPreference {
 
     private void showProvidersMenu(bin.mt.plugin.api.ui.PluginUI pluginUI) {
         java.util.List<Provider> all = Providers.all(preferences);
+        String activeId = Providers.selected(preferences).id;
 
         // One extra row at the end for managing user-defined endpoints.
         CharSequence[] labels = new CharSequence[all.size() + 1];
@@ -140,7 +141,8 @@ public class GeminiTranslatePreference implements PluginPreference {
             // Only the status word is tinted; the name and key hint stay in the
             // normal text colour so the green actually means something.
             android.text.SpannableStringBuilder label = new android.text.SpannableStringBuilder();
-            label.append(s.icon).append(" ").append(s.displayName).append("\n");
+            label.append(all.get(i).id.equals(activeId) ? "\u2713 " : "\u2007\u2007")
+                    .append(s.icon).append(" ").append(s.displayName).append("\n");
             GeminiColorTokens.appendStatus(label, pluginUI, s.title, s.statusType);
             label.append(" \u2022 ").append(s.detail);
             labels[i] = label;
@@ -153,12 +155,53 @@ public class GeminiTranslatePreference implements PluginPreference {
                     if (which >= all.size()) {
                         context.openPreference(CustomProviderPreference.class);
                     } else {
-                        openSettingsFor(all.get(which).id);
+                        showProviderActions(pluginUI, all.get(which));
                     }
                     dialog.dismiss();
                 })
                 .setNegativeButton("{cancel}", null)
                 .show();
+    }
+
+    /**
+     * Activate or configure one provider.
+     *
+     * <p>Choosing the active provider lives here rather than in Translation
+     * Settings: this is the only list that shows every provider \u2014 OpenRouter
+     * and user-defined endpoints included \u2014 together with whether it is
+     * actually configured.
+     */
+    private void showProviderActions(bin.mt.plugin.api.ui.PluginUI pluginUI, Provider provider) {
+        boolean active = provider.id.equals(Providers.selected(preferences).id);
+        // The activate row only appears when it would do something; a dead row
+        // in a two-item list reads worse than a one-item list.
+        CharSequence[] actions = active
+                ? new CharSequence[]{"\u2699 Settings"}
+                : new CharSequence[]{"\u2b50 Use as Default", "\u2699 Settings"};
+
+        pluginUI.buildDialog()
+                .setTitle(iconFor(provider.id) + " " + provider.displayName)
+                .setItems(actions, (dialog, which) -> {
+                    if (!active && which == 0) {
+                        setDefaultProvider(provider);
+                    } else {
+                        openSettingsFor(provider.id);
+                    }
+                    dialog.dismiss();
+                })
+                .setNegativeButton("{cancel}", null)
+                .show();
+    }
+
+    private void setDefaultProvider(Provider provider) {
+        preferences.edit()
+                .putString(GeminiConstants.PREF_DEFAULT_ENGINE, provider.id)
+                .apply();
+        // Say so up front rather than letting the first translation silently
+        // fall back to Gemini because the key was never entered.
+        context.showToast("ready".equals(provider.statusType())
+                ? "Default provider: " + provider.displayName
+                : "Default provider: " + provider.displayName + " \u2014 not configured yet");
     }
 
     /** Custom entries share one editor; built-ins each have their own screen. */
