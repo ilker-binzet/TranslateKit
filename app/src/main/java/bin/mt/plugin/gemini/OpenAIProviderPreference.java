@@ -18,6 +18,9 @@ import bin.mt.plugin.api.preference.PluginPreference;
  */
 public class OpenAIProviderPreference implements PluginPreference {
 
+    /** Row whose summary is recoloured by status once the theme is known. */
+    private static final String KEY_STATUS_ROW = "key_status_row";
+
     private PluginContext context;
     private SharedPreferences preferences;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -37,7 +40,7 @@ public class OpenAIProviderPreference implements PluginPreference {
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
-        builder.addText("API Key Status")
+        builder.addText("API Key Status", KEY_STATUS_ROW)
                 .summary(getKeyStatus());
 
         builder.addText("Test API Key")
@@ -113,6 +116,10 @@ public class OpenAIProviderPreference implements PluginPreference {
                 .onClick((pluginUI, item) -> context.openLogViewer());
 
         // SDK Beta2+ callbacks enabled (minMTVersion >= 26020300)
+        // onBuild has no PluginUI, so the theme is only known here.
+        builder.onCreated((pluginUI, screen) ->
+                GeminiColorTokens.applyStatusSummary(pluginUI, screen, KEY_STATUS_ROW));
+
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
             String key = preferenceItem.getKey();
             if (GeminiConstants.PREF_OPENAI_API_KEY.equals(key)) {
@@ -129,7 +136,7 @@ public class OpenAIProviderPreference implements PluginPreference {
         } else if (!apiKey.startsWith("sk-")) {
             return "🔴 Invalid Format - OpenAI keys start with 'sk-'";
         } else {
-            return "🟡 Ready - Click 'Test API Key' to verify connectivity";
+            return "🟢 Ready - Click 'Test API Key' to verify connectivity";
         }
     }
 
@@ -174,7 +181,7 @@ public class OpenAIProviderPreference implements PluginPreference {
                         .getString("content").trim();
 
                     runOnMainThread(() -> pluginUI.buildDialog()
-                            .setTitle("✅ Translation Successful")
+                            .setTitle(GeminiColorTokens.success(pluginUI, "✅ Translation Successful"))
                             .setMessage("Original: Hello\n\nTranslation (Turkish):\n" + result)
                             .setPositiveButton("{ok}", null)
                             .show());
@@ -252,7 +259,7 @@ public class OpenAIProviderPreference implements PluginPreference {
                     bin.mt.json.JSONArray choices = response.getJSONArray("choices");
                     if (bin.mt.plugin.common.JSONCompat.size(choices) > 0) {
                     runOnMainThread(() -> pluginUI.buildDialog()
-                                .setTitle("✅ API Key Valid")
+                                .setTitle(GeminiColorTokens.success(pluginUI, "✅ API Key Valid"))
                                 .setMessage("Your OpenAI API key is working correctly!\n\nModel: " + model)
                                 .setPositiveButton("{ok}", null)
                         .show());

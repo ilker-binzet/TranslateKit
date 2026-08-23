@@ -44,12 +44,16 @@ public class GeminiTranslatePreference implements PluginPreference {
         final String icon;
         final String title;
         final String detail;
+        /** Drives the title colour — see GeminiColorTokens.getStatusColor. */
+        final String statusType;
 
-        ProviderStatus(String displayName, String icon, String title, String detail) {
+        ProviderStatus(String displayName, String icon, String title, String detail,
+                       String statusType) {
             this.displayName = displayName;
             this.icon = icon;
             this.title = title;
             this.detail = detail;
+            this.statusType = statusType;
         }
     }
 
@@ -133,7 +137,13 @@ public class GeminiTranslatePreference implements PluginPreference {
         CharSequence[] labels = new CharSequence[all.size() + 1];
         for (int i = 0; i < all.size(); i++) {
             ProviderStatus s = getProviderStatus(all.get(i));
-            labels[i] = s.icon + " " + s.displayName + "\n" + s.title + " \u2022 " + s.detail;
+            // Only the status word is tinted; the name and key hint stay in the
+            // normal text colour so the green actually means something.
+            android.text.SpannableStringBuilder label = new android.text.SpannableStringBuilder();
+            label.append(s.icon).append(" ").append(s.displayName).append("\n");
+            GeminiColorTokens.appendStatus(label, pluginUI, s.title, s.statusType);
+            label.append(" \u2022 ").append(s.detail);
+            labels[i] = label;
         }
         labels[all.size()] = "\u2795 Custom endpoints\nAdd any OpenAI-compatible API";
 
@@ -208,16 +218,16 @@ public class GeminiTranslatePreference implements PluginPreference {
         // Self-hosted endpoints take no key, so "no key" is a valid state.
         if (!provider.requiresKey()) {
             return provider.model == null || provider.model.isEmpty()
-                    ? new ProviderStatus(displayName, icon, "No model set", "Tap to configure")
-                    : new ProviderStatus(displayName, icon, "Ready", provider.model);
+                    ? new ProviderStatus(displayName, icon, "No model set", "Tap to configure", "neutral")
+                    : new ProviderStatus(displayName, icon, "Ready", provider.model, "ready");
         }
         if (provider.apiKey.isEmpty()) {
-            return new ProviderStatus(displayName, icon, "Not configured", "Tap to set up");
+            return new ProviderStatus(displayName, icon, "Not configured", "Tap to set up", "neutral");
         }
         if (!provider.hasValidKeyFormat()) {
-            return new ProviderStatus(displayName, icon, "Invalid key", "Check format");
+            return new ProviderStatus(displayName, icon, "Invalid key", "Check format", "invalid");
         }
-        return new ProviderStatus(displayName, icon, "Ready", formatKeyHint(provider.apiKey));
+        return new ProviderStatus(displayName, icon, "Ready", formatKeyHint(provider.apiKey), "ready");
     }
 
     private String formatKeyHint(String key) {

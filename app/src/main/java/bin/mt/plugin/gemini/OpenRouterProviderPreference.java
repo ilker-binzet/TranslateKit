@@ -27,6 +27,9 @@ public class OpenRouterProviderPreference implements PluginPreference {
     /** The catalogue runs to several hundred entries; the picker shows the top slice. */
     private static final int CATALOG_LIMIT = 150;
 
+    /** Row whose summary is recoloured by status once the theme is known. */
+    private static final String KEY_STATUS_ROW = "key_status_row";
+
     private PluginContext context;
     private SharedPreferences preferences;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -45,7 +48,7 @@ public class OpenRouterProviderPreference implements PluginPreference {
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
-        builder.addText("API Key Status").summary(getKeyStatus());
+        builder.addText("API Key Status", KEY_STATUS_ROW).summary(getKeyStatus());
 
         builder.addText("Test API Key")
                 .summary("Send a one-word request to verify the key")
@@ -101,6 +104,10 @@ public class OpenRouterProviderPreference implements PluginPreference {
         builder.addText("Documentation")
                 .summary("View the OpenRouter API documentation")
                 .url(GeminiConstants.URL_OPENROUTER_DOCS);
+
+        // onBuild has no PluginUI, so the theme is only known here.
+        builder.onCreated((pluginUI, screen) ->
+                GeminiColorTokens.applyStatusSummary(pluginUI, screen, KEY_STATUS_ROW));
 
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
             if (GeminiConstants.PREF_OPENROUTER_API_KEY.equals(preferenceItem.getKey())) {
@@ -223,8 +230,13 @@ public class OpenRouterProviderPreference implements PluginPreference {
     }
 
     private void showResult(PluginUI pluginUI, String title, String message) {
+        // Success titles are marked with a check; tint those green so the
+        // outcome reads at a glance rather than from the wording.
+        CharSequence styled = title.startsWith("✅")
+                ? GeminiColorTokens.success(pluginUI, title)
+                : title;
         mainHandler.post(() -> pluginUI.buildDialog()
-                .setTitle(title)
+                .setTitle(styled)
                 .setMessage(message)
                 .setPositiveButton("{ok}", null)
                 .show());

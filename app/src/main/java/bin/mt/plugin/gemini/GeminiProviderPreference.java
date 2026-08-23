@@ -18,6 +18,9 @@ import bin.mt.plugin.api.preference.PluginPreference;
  */
 public class GeminiProviderPreference implements PluginPreference {
 
+    /** Row whose summary is recoloured by status once the theme is known. */
+    private static final String KEY_STATUS_ROW = "key_status_row";
+
     private PluginContext context;
     private SharedPreferences preferences;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -37,7 +40,7 @@ public class GeminiProviderPreference implements PluginPreference {
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
-        builder.addText("API Key Status")
+        builder.addText("API Key Status", KEY_STATUS_ROW)
                 .summary(getKeyStatus());
 
         builder.addText("Test API Key")
@@ -119,6 +122,10 @@ public class GeminiProviderPreference implements PluginPreference {
                 .onClick((pluginUI, item) -> context.openLogViewer());
 
         // SDK Beta2+ callbacks enabled (minMTVersion >= 26020300)
+        // onBuild has no PluginUI, so the theme is only known here.
+        builder.onCreated((pluginUI, screen) ->
+                GeminiColorTokens.applyStatusSummary(pluginUI, screen, KEY_STATUS_ROW));
+
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
             String key = preferenceItem.getKey();
             if (GeminiConstants.PREF_API_KEY.equals(key)) {
@@ -135,7 +142,7 @@ public class GeminiProviderPreference implements PluginPreference {
         } else if (!java.util.regex.Pattern.matches(GeminiConstants.API_KEY_PATTERN, apiKey)) {
             return "🔴 Invalid Format - Please check your API key";
         } else {
-            return "🟡 Ready - Click 'Test API Key' to verify connectivity";
+            return "🟢 Ready - Click 'Test API Key' to verify connectivity";
         }
     }
 
@@ -183,7 +190,7 @@ public class GeminiProviderPreference implements PluginPreference {
                             .getString("text").trim();
 
                     runOnMainThread(() -> pluginUI.buildDialog()
-                            .setTitle("✅ Translation Successful")
+                            .setTitle(GeminiColorTokens.success(pluginUI, "✅ Translation Successful"))
                             .setMessage("Original: Hello\n\nTranslation (Turkish):\n" + result)
                             .setPositiveButton("{ok}", null)
                             .show());
@@ -243,7 +250,7 @@ public class GeminiProviderPreference implements PluginPreference {
 
                 if (response.contains("candidates")) {
                     runOnMainThread(() -> pluginUI.buildDialog()
-                            .setTitle("✅ API Key Valid")
+                            .setTitle(GeminiColorTokens.success(pluginUI, "✅ API Key Valid"))
                             .setMessage("Your Gemini API key is working correctly!\n\nModel: " + model)
                             .setPositiveButton("{ok}", null)
                             .show());

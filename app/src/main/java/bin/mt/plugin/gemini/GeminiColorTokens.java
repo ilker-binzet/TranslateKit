@@ -1,5 +1,11 @@
 package bin.mt.plugin.gemini;
 
+import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+
+import bin.mt.plugin.api.preference.PluginPreference;
 import bin.mt.plugin.api.ui.PluginUI;
 
 /**
@@ -59,12 +65,81 @@ public class GeminiColorTokens {
      */
     public static int getStatusColor(PluginUI ui, String status) {
         return switch (status.toLowerCase()) {
-            case "ready", "success", "active" -> ui.colorPrimary();
+            // Green, not the theme accent: "it worked" should read as success
+            // at a glance rather than blending into every other accented label.
+            case "ready", "success", "active", "valid", "configured" -> getSuccessColor(ui);
             case "error", "failed", "invalid" -> ui.colorError();
             case "warning", "pending", "limited" -> ui.colorWarning();
             case "neutral", "not_configured", "unknown" -> ui.colorTextSecondary();
             default -> ui.colorText();
         };
+    }
+
+    // ==================== Styled Text Helpers ====================
+
+    /**
+     * {@code text} tinted with {@code color}.
+     *
+     * <p>Preference summaries, dialog titles and {@code setItems} labels all
+     * take a {@link CharSequence}, so a span is the only way to colour part of
+     * a line — there is no per-item colour setter in the SDK.
+     */
+    public static CharSequence tint(CharSequence text, int color) {
+        SpannableString s = new SpannableString(text);
+        s.setSpan(new ForegroundColorSpan(color), 0, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return s;
+    }
+
+    /** {@code text} in the theme's success green. */
+    public static CharSequence success(PluginUI ui, CharSequence text) {
+        return tint(text, getSuccessColor(ui));
+    }
+
+    /**
+     * Appends {@code text} to {@code out}, tinted with the colour for
+     * {@code status}. Used to colour just the status word of a longer label.
+     */
+    public static void appendStatus(SpannableStringBuilder out,
+                                    PluginUI ui,
+                                    CharSequence text,
+                                    String status) {
+        int start = out.length();
+        out.append(text);
+        out.setSpan(new ForegroundColorSpan(getStatusColor(ui, status)),
+                start, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    }
+
+    /**
+     * Status type inferred from the indicator emoji the provider screens
+     * already prefix their status lines with.
+     *
+     * <p>Deriving the colour from the same string that carries the text means
+     * the two cannot drift apart — there is no second place to update when a
+     * status message changes.
+     */
+    public static String statusTypeOf(String summary) {
+        if (summary == null) return "neutral";
+        if (summary.startsWith("🟢")) return "ready";
+        if (summary.startsWith("🔴")) return "invalid";
+        if (summary.startsWith("🟡")) return "warning";
+        return "neutral";
+    }
+
+    /**
+     * Recolours a preference summary once the screen exists.
+     *
+     * <p>{@code onBuild} has no {@link PluginUI}, so the theme is unknown
+     * there; {@code Builder.onCreated} supplies one. Safe to call for a key
+     * that is absent — it simply does nothing.
+     */
+    public static void applyStatusSummary(PluginUI ui,
+                                          PluginPreference.PreferenceScreen screen,
+                                          String key) {
+        PluginPreference.PreferenceItem item = screen.findPreference(key);
+        if (item == null) return;
+        CharSequence summary = item.getSummary();
+        if (summary == null || summary.length() == 0) return;
+        item.setSummary(tint(summary, getStatusColor(ui, statusTypeOf(summary.toString()))));
     }
 
     /**

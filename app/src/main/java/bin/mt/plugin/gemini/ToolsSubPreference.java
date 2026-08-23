@@ -62,6 +62,11 @@ public class ToolsSubPreference implements PluginPreference {
         int getAccentColor(bin.mt.plugin.api.ui.PluginUI pluginUI) {
             return GeminiColorTokens.getProviderBrandColor(pluginUI, providerKey);
         }
+
+        /** Green when ready, red when broken — the outcome, not the brand. */
+        int getStatusTextColor(bin.mt.plugin.api.ui.PluginUI pluginUI) {
+            return GeminiColorTokens.getStatusColor(pluginUI, statusType);
+        }
     }
 
     @Override
@@ -291,7 +296,7 @@ public class ToolsSubPreference implements PluginPreference {
             .addVerticalLayout().paddingDp(16).backgroundColor(activeCardBackground).children(subBuilder -> subBuilder
                 .addTextView().text("Active Provider").bold().textColor(activeStatus.getAccentColor(pluginUI))
                 .addTextView().text(activeStatus.icon + " " + activeStatus.displayName).paddingTopDp(6).textSize(18).textColor(primaryTextColor)
-                .addTextView().text(activeStatus.title).paddingTopDp(4).textColor(primaryTextColor)
+                .addTextView().text(activeStatus.title).paddingTopDp(4).textColor(activeStatus.getStatusTextColor(pluginUI))
                 .addTextView().text(activeStatus.detail).paddingTopDp(2).textColor(secondaryTextColor)
                 .addTextView().text("Model: " + activeModel).paddingTopDp(10).textColor(secondaryTextColor)
             )
@@ -305,7 +310,7 @@ public class ToolsSubPreference implements PluginPreference {
                         .addTextView().text(geminiStatus.icon).textSize(28).paddingRightDp(12)
                         .addVerticalLayout().children(col -> col
                             .addTextView().text(geminiStatus.displayName).bold().textColor(geminiStatus.getAccentColor(pluginUI))
-                            .addTextView().text(geminiStatus.title).paddingTopDp(2).textColor(primaryTextColor)
+                            .addTextView().text(geminiStatus.title).paddingTopDp(2).textColor(geminiStatus.getStatusTextColor(pluginUI))
                             .addTextView().text(geminiStatus.detail).paddingTopDp(2).textColor(secondaryTextColor)
                         )
                     )
@@ -315,7 +320,7 @@ public class ToolsSubPreference implements PluginPreference {
                         .addTextView().text(openaiStatus.icon).textSize(28).paddingRightDp(12)
                         .addVerticalLayout().children(col -> col
                             .addTextView().text(openaiStatus.displayName).bold().textColor(openaiStatus.getAccentColor(pluginUI))
-                            .addTextView().text(openaiStatus.title).paddingTopDp(2).textColor(primaryTextColor)
+                            .addTextView().text(openaiStatus.title).paddingTopDp(2).textColor(openaiStatus.getStatusTextColor(pluginUI))
                             .addTextView().text(openaiStatus.detail).paddingTopDp(2).textColor(secondaryTextColor)
                         )
                     )
@@ -325,7 +330,7 @@ public class ToolsSubPreference implements PluginPreference {
                         .addTextView().text(claudeStatus.icon).textSize(28).paddingRightDp(12)
                         .addVerticalLayout().children(col -> col
                             .addTextView().text(claudeStatus.displayName).bold().textColor(claudeStatus.getAccentColor(pluginUI))
-                            .addTextView().text(claudeStatus.title).paddingTopDp(2).textColor(primaryTextColor)
+                            .addTextView().text(claudeStatus.title).paddingTopDp(2).textColor(claudeStatus.getStatusTextColor(pluginUI))
                             .addTextView().text(claudeStatus.detail).paddingTopDp(2).textColor(secondaryTextColor)
                         )
                     )
@@ -390,6 +395,11 @@ public class ToolsSubPreference implements PluginPreference {
             resultMsg = "API key format is correct!\n\nTip: This validates format only. Use 'Test API Key' in provider settings to verify connectivity.";
         }
 
+        // The indicator emoji already encodes the outcome; reuse it so the
+        // headline colour cannot disagree with the icon beside it.
+        int statusColor = GeminiColorTokens.getStatusColor(
+                pluginUI, GeminiColorTokens.statusTypeOf(statusIcon));
+
         bin.mt.plugin.api.ui.PluginView view = pluginUI
             .buildVerticalLayout()
             .addTextView().text("Testing: " + providerName).bold().textSize(16).paddingBottomDp(16)
@@ -397,7 +407,7 @@ public class ToolsSubPreference implements PluginPreference {
                 .addHorizontalLayout().children(h -> h
                     .addTextView().text(statusIcon).textSize(32).paddingRightDp(12)
                     .addVerticalLayout().children(v -> v
-                        .addTextView().text(statusMsg).bold().textSize(16)
+                        .addTextView().text(statusMsg).bold().textSize(16).textColor(statusColor)
                         .addTextView().text(resultMsg).paddingTopDp(4).textSize(14)
                     )
                 )
