@@ -214,20 +214,19 @@ public class GeminiTranslatePreference implements PluginPreference {
     private ProviderStatus buildProviderStatus(Provider provider) {
         String icon = iconFor(provider.id);
         String displayName = provider.displayName;
+        // Self-hosted endpoints take no key, so "no key" is a valid state there.
+        String type = provider.statusType();
 
-        // Self-hosted endpoints take no key, so "no key" is a valid state.
-        if (!provider.requiresKey()) {
-            return provider.model == null || provider.model.isEmpty()
-                    ? new ProviderStatus(displayName, icon, "No model set", "Tap to configure", "neutral")
-                    : new ProviderStatus(displayName, icon, "Ready", provider.model, "ready");
+        if ("invalid".equals(type)) {
+            return new ProviderStatus(displayName, icon, "Invalid key", "Check format", type);
         }
-        if (provider.apiKey.isEmpty()) {
-            return new ProviderStatus(displayName, icon, "Not configured", "Tap to set up", "neutral");
+        if ("neutral".equals(type)) {
+            return provider.requiresKey()
+                    ? new ProviderStatus(displayName, icon, "Not configured", "Tap to set up", type)
+                    : new ProviderStatus(displayName, icon, "No model set", "Tap to configure", type);
         }
-        if (!provider.hasValidKeyFormat()) {
-            return new ProviderStatus(displayName, icon, "Invalid key", "Check format", "invalid");
-        }
-        return new ProviderStatus(displayName, icon, "Ready", formatKeyHint(provider.apiKey), "ready");
+        return new ProviderStatus(displayName, icon, "Ready",
+                provider.requiresKey() ? formatKeyHint(provider.apiKey) : provider.model, type);
     }
 
     private String formatKeyHint(String key) {

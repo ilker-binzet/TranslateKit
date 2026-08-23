@@ -168,8 +168,12 @@ public final class Providers {
 
     /** Raw stored entries, for the settings screen to edit. Never null. */
     public static List<JSONObject> customEntries(SharedPreferences prefs) {
+        return parseEntries(prefs.getString(PREF_CUSTOM_PROVIDERS, ""));
+    }
+
+    /** Entries held in a stored blob. Never null; a corrupt blob yields none. */
+    public static List<JSONObject> parseEntries(String raw) {
         List<JSONObject> list = new ArrayList<>();
-        String raw = prefs.getString(PREF_CUSTOM_PROVIDERS, "");
         if (TextUtils.isEmpty(raw)) {
             return list;
         }
@@ -198,6 +202,27 @@ public final class Providers {
         JSONObject payload = new JSONObject();
         payload.put(FIELD_ITEMS, items);
         prefs.edit().putString(PREF_CUSTOM_PROVIDERS, payload.toString()).apply();
+    }
+
+    /**
+     * The same entry list with every API key blanked.
+     *
+     * <p>Used when writing a settings preset: a preset is meant to be handed to
+     * someone else, and a user-defined endpoint keeps its key in the same blob
+     * as its name and URL. Returns an empty list blob for unreadable input.
+     */
+    public static String withoutKeys(String raw) {
+        JSONArray items = new JSONArray();
+        for (JSONObject e : parseEntries(raw)) {
+            JSONCompat.put(items, newCustomEntry(
+                    JSONCompat.optString(e, "name", ""),
+                    JSONCompat.optString(e, "baseUrl", ""),
+                    "",
+                    JSONCompat.optString(e, "model", "")));
+        }
+        JSONObject payload = new JSONObject();
+        payload.put(FIELD_ITEMS, items);
+        return payload.toString();
     }
 
     /** Builds one stored entry from the settings screen's four fields. */

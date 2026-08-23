@@ -3,12 +3,12 @@ package bin.mt.plugin.gemini;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
 import android.text.format.DateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import bin.mt.json.PrettyPrint;
 import bin.mt.json.JSONObject;
@@ -18,6 +18,9 @@ import bin.mt.plugin.api.ui.PluginView;
 
 import bin.mt.plugin.api.PluginContext;
 import bin.mt.plugin.api.preference.PluginPreference;
+import bin.mt.plugin.common.JSONCompat;
+import bin.mt.plugin.provider.Provider;
+import bin.mt.plugin.provider.Providers;
 
 /**
  * Sub-preference screen for Tools & Diagnostics.
@@ -29,10 +32,6 @@ public class ToolsSubPreference implements PluginPreference {
     private PluginContext context;
     private SharedPreferences preferences;
     private final Map<String, ProviderStatus> providerStatusCache = new HashMap<>();
-
-    private static final Pattern PATTERN_GEMINI_API_KEY = Pattern.compile(GeminiConstants.API_KEY_PATTERN);
-    private static final Pattern PATTERN_OPENAI_API_KEY = Pattern.compile(GeminiConstants.OPENAI_API_KEY_PATTERN);
-    private static final Pattern PATTERN_CLAUDE_API_KEY = Pattern.compile(GeminiConstants.CLAUDE_API_KEY_PATTERN);
 
     private static final int DEBUG_TAP_THRESHOLD = 5;
     private static final long DEBUG_TAP_RESET_MS = 1500L;
@@ -85,7 +84,7 @@ public class ToolsSubPreference implements PluginPreference {
 
         // ==================== Test Active Provider ====================
         builder.addText("Test Active Provider")
-                .summary("Quick test: " + getActiveProviderName())
+                .summary("Quick test: " + Providers.selected(preferences).displayName)
                 .onClick((pluginUI, item) -> showInteractiveProviderTest(pluginUI));
 
         // ==================== View Logs ====================
@@ -147,7 +146,10 @@ public class ToolsSubPreference implements PluginPreference {
             GeminiConstants.PREF_OPENAI_MODEL,
             GeminiConstants.PREF_OPENAI_ENDPOINT,
             GeminiConstants.PREF_CLAUDE_MODEL,
-            GeminiConstants.PREF_CLAUDE_ENDPOINT
+            GeminiConstants.PREF_CLAUDE_ENDPOINT,
+            GeminiConstants.PREF_OPENROUTER_MODEL,
+            GeminiConstants.PREF_OPENROUTER_ENDPOINT,
+            Providers.PREF_CUSTOM_PROVIDERS
     ));
 
     /** Keys stored as boolean (all others are treated as String). */
@@ -175,6 +177,12 @@ public class ToolsSubPreference implements PluginPreference {
                     }
                 } else {
                     String value = preferences.getString(key, null);
+                    if (Providers.PREF_CUSTOM_PROVIDERS.equals(key) && value != null) {
+                        // A user-defined endpoint keeps its key in the same blob
+                        // as its name and URL. Presets are meant to be shared,
+                        // so the name, URL and model travel and the key does not.
+                        value = Providers.withoutKeys(value);
+                    }
                     if (value != null && !value.isEmpty()) {
                         settings.put(key, value);
                         count++;
@@ -262,6 +270,8 @@ public class ToolsSubPreference implements PluginPreference {
                 }
                 if (BOOLEAN_KEYS.contains(key)) {
                     editor.putBoolean(key, settings.getBoolean(key));
+                } else if (Providers.PREF_CUSTOM_PROVIDERS.equals(key)) {
+                    mergeCustomProviders(settings.getString(key));
                 } else {
                     editor.putString(key, settings.getString(key));
                 }
@@ -274,14 +284,52 @@ public class ToolsSubPreference implements PluginPreference {
         }
     }
 
+    /**
+     * Applies the custom endpoints from a preset, keeping any key already
+     * stored under the same endpoint name.
+     *
+     * <p>Export strips keys, so importing a preset back onto the device it came
+     * from would otherwise erase them. Writes on its own rather than through the
+     * caller's editor — the entries are re-serialised, not copied verbatim.
+     */
+    private void mergeCustomProviders(String blob) {
+        Map<String, String> existingKeys = new HashMap<>();
+        for (JSONObject entry : Providers.customEntries(preferences)) {
+            existingKeys.put(JSONCompat.optString(entry, "name", ""),
+                    JSONCompat.optString(entry, "apiKey", ""));
+        }
+
+        java.util.List<JSONObject> merged = new ArrayList<>();
+        for (JSONObject entry : Providers.parseEntries(blob)) {
+            String name = JSONCompat.optString(entry, "name", "");
+            String apiKey = JSONCompat.optString(entry, "apiKey", "");
+            if (apiKey.isEmpty()) {
+                String kept = existingKeys.get(name);
+                if (kept != null) {
+                    apiKey = kept;
+                }
+            }
+            merged.add(Providers.newCustomEntry(name,
+                    JSONCompat.optString(entry, "baseUrl", ""), apiKey,
+                    JSONCompat.optString(entry, "model", "")));
+        }
+        Providers.saveCustomEntries(preferences, merged);
+    }
+
     // ==================== Dashboard Dialog ====================
 
     private void showDashboardCard(bin.mt.plugin.api.ui.PluginUI pluginUI) {
-        ProviderStatus geminiStatus = getProviderStatus("gemini");
-        ProviderStatus openaiStatus = getProviderStatus("openai");
-        ProviderStatus claudeStatus = getProviderStatus("claude");
-        ProviderStatus activeStatus = getActiveProviderStatus();
-        String activeModel = getActiveModelName();
+        // Every configured provider, including OpenRouter and any user-defined
+        // endpoint — the panel used to name three of them literally.
+        java.util.List<ProviderStatus> health = new ArrayList<>();
+        for (Provider p : Providers.all(preferences)) {
+            health.add(getProviderStatus(p));
+        }
+        Provider active = Providers.selected(preferences);
+        ProviderStatus activeStatus = getProviderStatus(active);
+        // A freshly added custom endpoint has no model until one is picked.
+        String activeModel = active.model == null || active.model.isEmpty()
+                ? "not set" : active.model;
 
         int primaryTextColor = GeminiColorTokens.getPrimaryTextColor(pluginUI);
         int secondaryTextColor = GeminiColorTokens.getSecondaryTextColor(pluginUI);
@@ -303,38 +351,20 @@ public class ToolsSubPreference implements PluginPreference {
             .addTextView().height(1).widthMatchParent().backgroundColor(pluginUI.colorDivider()).marginVerticalDp(12)
 
             .addTextView().text("Provider Health").bold().textSize(16).textColor(primaryTextColor)
-            .addVerticalLayout().paddingTopDp(8).children(column -> column
-                .addHorizontalLayout().paddingDp(12).marginBottomDp(8)
-                    .backgroundColor(cardBackground)
-                    .children(row -> row
-                        .addTextView().text(geminiStatus.icon).textSize(28).paddingRightDp(12)
-                        .addVerticalLayout().children(col -> col
-                            .addTextView().text(geminiStatus.displayName).bold().textColor(geminiStatus.getAccentColor(pluginUI))
-                            .addTextView().text(geminiStatus.title).paddingTopDp(2).textColor(geminiStatus.getStatusTextColor(pluginUI))
-                            .addTextView().text(geminiStatus.detail).paddingTopDp(2).textColor(secondaryTextColor)
-                        )
-                    )
-                .addHorizontalLayout().paddingDp(12).marginBottomDp(8)
-                    .backgroundColor(cardBackground)
-                    .children(row -> row
-                        .addTextView().text(openaiStatus.icon).textSize(28).paddingRightDp(12)
-                        .addVerticalLayout().children(col -> col
-                            .addTextView().text(openaiStatus.displayName).bold().textColor(openaiStatus.getAccentColor(pluginUI))
-                            .addTextView().text(openaiStatus.title).paddingTopDp(2).textColor(openaiStatus.getStatusTextColor(pluginUI))
-                            .addTextView().text(openaiStatus.detail).paddingTopDp(2).textColor(secondaryTextColor)
-                        )
-                    )
-                .addHorizontalLayout().paddingDp(12)
-                    .backgroundColor(cardBackground)
-                    .children(row -> row
-                        .addTextView().text(claudeStatus.icon).textSize(28).paddingRightDp(12)
-                        .addVerticalLayout().children(col -> col
-                            .addTextView().text(claudeStatus.displayName).bold().textColor(claudeStatus.getAccentColor(pluginUI))
-                            .addTextView().text(claudeStatus.title).paddingTopDp(2).textColor(claudeStatus.getStatusTextColor(pluginUI))
-                            .addTextView().text(claudeStatus.detail).paddingTopDp(2).textColor(secondaryTextColor)
-                        )
-                    )
-            )
+            .addVerticalLayout().paddingTopDp(8).children(column -> {
+                for (ProviderStatus s : health) {
+                    column.addHorizontalLayout().paddingDp(12).marginBottomDp(8)
+                        .backgroundColor(cardBackground)
+                        .children(row -> row
+                            .addTextView().text(s.icon).textSize(28).paddingRightDp(12)
+                            .addVerticalLayout().children(col -> col
+                                .addTextView().text(s.displayName).bold().textColor(s.getAccentColor(pluginUI))
+                                .addTextView().text(s.title).paddingTopDp(2).textColor(s.getStatusTextColor(pluginUI))
+                                .addTextView().text(s.detail).paddingTopDp(2).textColor(secondaryTextColor)
+                            )
+                        );
+                }
+            })
             .build();
 
         pluginUI.buildDialog()
@@ -347,52 +377,39 @@ public class ToolsSubPreference implements PluginPreference {
     // ==================== Interactive Provider Test ====================
 
     private void showInteractiveProviderTest(bin.mt.plugin.api.ui.PluginUI pluginUI) {
-        String engine = preferences.getString(GeminiConstants.PREF_DEFAULT_ENGINE, GeminiConstants.DEFAULT_ENGINE);
-        String providerName = getActiveProviderName();
-
-        String key = "";
-        Pattern keyPattern = PATTERN_GEMINI_API_KEY;
-
-        if (GeminiConstants.ENGINE_OPENAI.equals(engine)) {
-            key = preferences.getString(GeminiConstants.PREF_OPENAI_API_KEY, "");
-            keyPattern = PATTERN_OPENAI_API_KEY;
-        } else if (GeminiConstants.ENGINE_CLAUDE.equals(engine)) {
-            key = preferences.getString(GeminiConstants.PREF_CLAUDE_API_KEY, "");
-            keyPattern = PATTERN_CLAUDE_API_KEY;
-        } else {
-            key = preferences.getString(GeminiConstants.PREF_API_KEY, "");
-            keyPattern = PATTERN_GEMINI_API_KEY;
-        }
+        // The provider actually in use. This used to read the Gemini key
+        // whenever the selection was neither OpenAI nor Claude, so picking
+        // OpenRouter or a custom endpoint tested the wrong key entirely.
+        Provider provider = Providers.selected(preferences);
+        String providerName = provider.displayName;
+        String formatHint = keyFormatHint(provider);
+        boolean hasModel = provider.model != null && !provider.model.isEmpty();
 
         String statusIcon;
         String statusMsg;
         String resultMsg;
 
-        // Trim whitespace that may come from copy-paste
-        key = key.trim();
-
-        // Determine expected format hint per provider
-        String formatHint;
-        if (GeminiConstants.ENGINE_OPENAI.equals(engine)) {
-            formatHint = "Expected format: sk-...";
-        } else if (GeminiConstants.ENGINE_CLAUDE.equals(engine)) {
-            formatHint = "Expected format: sk-ant-...";
-        } else {
-            formatHint = "Expected format: AIzaSy...";
-        }
-
-        if (key.isEmpty()) {
+        if (!provider.requiresKey()) {
+            // Self-hosted endpoints take no key, so there is nothing to validate.
+            statusIcon = hasModel ? "🟢" : "⚪";
+            statusMsg = hasModel ? "Ready" : "No Model Set";
+            resultMsg = hasModel
+                    ? "This endpoint needs no API key.\n\nEndpoint: " + provider.endpoint
+                            + "\nModel: " + provider.model
+                    : "Set a model id for this endpoint in provider settings.";
+        } else if (provider.apiKey.isEmpty()) {
             statusIcon = "⚪";
             statusMsg = "API Key Missing";
             resultMsg = "Please configure your API key in provider settings.\n\n" + formatHint;
-        } else if (!keyPattern.matcher(key).matches()) {
+        } else if (!provider.hasValidKeyFormat()) {
             statusIcon = "🔴";
             statusMsg = "Invalid Format";
             resultMsg = "API key format is invalid. Please check your key.\n\n" + formatHint;
         } else {
             statusIcon = "🟢";
             statusMsg = "Format Valid";
-            resultMsg = "API key format is correct!\n\nTip: This validates format only. Use 'Test API Key' in provider settings to verify connectivity.";
+            resultMsg = "API key format is correct!\n\nModel: " + provider.model
+                    + "\n\nTip: This validates format only. Use 'Test API Key' in provider settings to verify connectivity.";
         }
 
         // The indicator emoji already encodes the outcome; reuse it so the
@@ -451,12 +468,7 @@ public class ToolsSubPreference implements PluginPreference {
         if (pluginUI == null || preferences == null) return;
 
         boolean disableCache = preferences.getBoolean(GeminiConstants.PREF_DEBUG_DISABLE_MODEL_CACHE, false);
-        ModelCatalogManager.CacheDiagnostics geminiDiagnostics =
-                ModelCatalogManager.inspectCache(preferences, GeminiConstants.PREF_CACHE_GEMINI_MODELS);
-        ModelCatalogManager.CacheDiagnostics openAiDiagnostics =
-                ModelCatalogManager.inspectCache(preferences, GeminiConstants.PREF_CACHE_OPENAI_MODELS);
-        ModelCatalogManager.CacheDiagnostics claudeDiagnostics =
-                ModelCatalogManager.inspectCache(preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS);
+        java.util.List<Provider> cachedCatalogs = providersWithCatalogCache();
 
         int primaryTextColor = GeminiColorTokens.getPrimaryTextColor(pluginUI);
         int secondaryTextColor = GeminiColorTokens.getSecondaryTextColor(pluginUI);
@@ -471,20 +483,18 @@ public class ToolsSubPreference implements PluginPreference {
             .addTextView().text(ttlSummary).paddingTopDp(2).textColor(secondaryTextColor)
             .addTextView().height(1).widthMatchParent().backgroundColor(GeminiColorTokens.getDividerColor(pluginUI)).marginVerticalDp(12)
             .addTextView().text("Catalog Diagnostics").bold().textSize(16).textColor(primaryTextColor)
-            .addVerticalLayout().paddingTopDp(8).children(column -> column
-                .addVerticalLayout().paddingDp(12).marginBottomDp(10).backgroundColor(cardColor).children(section -> section
-                    .addTextView().text("Gemini Catalog").bold().textColor(GeminiColorTokens.getProviderBrandColor(pluginUI, "gemini"))
-                    .addTextView().text(formatCacheDiagnostics(geminiDiagnostics)).paddingTopDp(4).textColor(secondaryTextColor)
-                )
-                .addVerticalLayout().paddingDp(12).marginBottomDp(10).backgroundColor(cardColor).children(section -> section
-                    .addTextView().text("OpenAI Catalog").bold().textColor(GeminiColorTokens.getProviderBrandColor(pluginUI, "openai"))
-                    .addTextView().text(formatCacheDiagnostics(openAiDiagnostics)).paddingTopDp(4).textColor(secondaryTextColor)
-                )
-                .addVerticalLayout().paddingDp(12).marginBottomDp(10).backgroundColor(cardColor).children(section -> section
-                    .addTextView().text("Claude Catalog").bold().textColor(GeminiColorTokens.getProviderBrandColor(pluginUI, "claude"))
-                    .addTextView().text(formatCacheDiagnostics(claudeDiagnostics)).paddingTopDp(4).textColor(secondaryTextColor)
-                )
-            )
+            .addVerticalLayout().paddingTopDp(8).children(column -> {
+                for (Provider p : cachedCatalogs) {
+                    String diagnostics = formatCacheDiagnostics(
+                            ModelCatalogManager.inspectCache(preferences, cacheKeyFor(p.id)));
+                    column.addVerticalLayout().paddingDp(12).marginBottomDp(10).backgroundColor(cardColor)
+                        .children(section -> section
+                            .addTextView().text(p.displayName + " Catalog").bold()
+                                .textColor(GeminiColorTokens.getProviderBrandColor(pluginUI, p.id))
+                            .addTextView().text(diagnostics).paddingTopDp(4).textColor(secondaryTextColor)
+                        );
+                }
+            })
             .addTextView().text("Cache Controls").bold().textSize(16).paddingTopDp(8).textColor(primaryTextColor)
             .addVerticalLayout().paddingDp(12).backgroundColor(cardColor).children(section -> section
                 .addTextView().text(disableCache ? "Cache bypass active" : "Cache enabled")
@@ -514,84 +524,89 @@ public class ToolsSubPreference implements PluginPreference {
 
     // ==================== Helper Methods ====================
 
-    private String getActiveProviderName() {
-        String engine = preferences.getString(GeminiConstants.PREF_DEFAULT_ENGINE, GeminiConstants.DEFAULT_ENGINE);
-        switch (engine) {
-            case GeminiConstants.ENGINE_OPENAI: return "OpenAI GPT";
-            case GeminiConstants.ENGINE_CLAUDE: return "Claude AI";
-            default: return "Gemini AI";
+    /** Purely decorative; an unknown provider falls through to the generic mark. */
+    private static String iconFor(String providerId) {
+        switch (providerId) {
+            case Providers.ID_GEMINI:     return "✨";
+            case Providers.ID_OPENAI:     return "🧠";
+            case Providers.ID_CLAUDE:     return "🎭";
+            case Providers.ID_OPENROUTER: return "🔀";
+            default:                      return "🔌";
         }
     }
 
-    private String getActiveModelName() {
-        return preferences.getString(GeminiConstants.PREF_MODEL_NAME, GeminiConstants.DEFAULT_MODEL);
+    /** What a well-formed key looks like for the provider in hand. */
+    private static String keyFormatHint(Provider provider) {
+        switch (provider.id) {
+            case Providers.ID_GEMINI:     return "Expected format: AIzaSy...";
+            case Providers.ID_OPENAI:     return "Expected format: sk-...";
+            case Providers.ID_CLAUDE:     return "Expected format: sk-ant-...";
+            case Providers.ID_OPENROUTER: return "Expected format: sk-or-v1-...";
+            default:                      return "Any key this endpoint accepts.";
+        }
     }
 
-    private ProviderStatus getProviderStatus(String providerKey) {
+    /**
+     * Model catalogue cache key for a provider, or null when it caches nothing.
+     * User-defined endpoints have no catalogue of their own.
+     */
+    private static String cacheKeyFor(String providerId) {
+        switch (providerId) {
+            case Providers.ID_GEMINI:     return GeminiConstants.PREF_CACHE_GEMINI_MODELS;
+            case Providers.ID_OPENAI:     return GeminiConstants.PREF_CACHE_OPENAI_MODELS;
+            case Providers.ID_CLAUDE:     return GeminiConstants.PREF_CACHE_CLAUDE_MODELS;
+            case Providers.ID_OPENROUTER: return GeminiConstants.PREF_CACHE_OPENROUTER_MODELS;
+            default:                      return null;
+        }
+    }
+
+    private java.util.List<Provider> providersWithCatalogCache() {
+        java.util.List<Provider> list = new ArrayList<>();
+        for (Provider p : Providers.all(preferences)) {
+            if (cacheKeyFor(p.id) != null) {
+                list.add(p);
+            }
+        }
+        return list;
+    }
+
+    private ProviderStatus getProviderStatus(Provider provider) {
         synchronized (providerStatusCache) {
-            ProviderStatus cached = providerStatusCache.get(providerKey);
+            ProviderStatus cached = providerStatusCache.get(provider.id);
             if (cached != null) return cached;
         }
-        ProviderStatus computed = buildProviderStatus(providerKey);
+        ProviderStatus computed = buildProviderStatus(provider);
         synchronized (providerStatusCache) {
-            providerStatusCache.put(providerKey, computed);
+            providerStatusCache.put(provider.id, computed);
         }
         return computed;
     }
 
-    private ProviderStatus getActiveProviderStatus() {
-        String engine = preferences.getString(GeminiConstants.PREF_DEFAULT_ENGINE, GeminiConstants.DEFAULT_ENGINE);
-        switch (engine) {
-            case GeminiConstants.ENGINE_OPENAI: return getProviderStatus("openai");
-            case GeminiConstants.ENGINE_CLAUDE: return getProviderStatus("claude");
-            default: return getProviderStatus("gemini");
-        }
-    }
+    private ProviderStatus buildProviderStatus(Provider provider) {
+        String icon = iconFor(provider.id);
+        String name = provider.displayName;
+        // Shared with the provider list screen so the two cannot disagree.
+        String type = provider.statusType();
 
-    private ProviderStatus buildProviderStatus(String providerKey) {
-        String prefKey = GeminiConstants.PREF_API_KEY;
-        Pattern keyPattern = PATTERN_GEMINI_API_KEY;
-        String displayName = "Gemini AI";
-        String icon = "✨";
-
-        switch (providerKey) {
-            case "openai":
-                prefKey = GeminiConstants.PREF_OPENAI_API_KEY;
-                keyPattern = PATTERN_OPENAI_API_KEY;
-                displayName = "OpenAI GPT";
-                icon = "🧠";
-                break;
-            case "claude":
-                prefKey = GeminiConstants.PREF_CLAUDE_API_KEY;
-                keyPattern = PATTERN_CLAUDE_API_KEY;
-                displayName = "Claude AI";
-                icon = "🎭";
-                break;
-            default:
-                break;
-        }
-
-        String keyValue = preferences.getString(prefKey, "");
-        if (keyValue == null) keyValue = "";
-
-        if (keyValue.isEmpty()) {
-            return new ProviderStatus(providerKey, displayName, icon,
-                "Not configured",
-                "Add your API key to activate " + displayName,
-                "neutral");
-        }
-
-        if (!keyPattern.matcher(keyValue).matches()) {
-            return new ProviderStatus(providerKey, displayName, icon,
+        if ("invalid".equals(type)) {
+            return new ProviderStatus(provider.id, name, icon,
                 "Invalid API key",
                 "The key format looks wrong. Re-copy it from the provider dashboard.",
-                "error");
+                type);
         }
-
-        return new ProviderStatus(providerKey, displayName, icon,
+        if ("neutral".equals(type)) {
+            return provider.requiresKey()
+                ? new ProviderStatus(provider.id, name, icon,
+                    "Not configured", "Add your API key to activate " + name, type)
+                : new ProviderStatus(provider.id, name, icon,
+                    "No model set", "Set a model id for " + name, type);
+        }
+        return new ProviderStatus(provider.id, name, icon,
             "Ready to use",
-            "Key active (" + formatKeyHint(keyValue) + ")",
-            "ready");
+            provider.requiresKey()
+                ? "Key active (" + formatKeyHint(provider.apiKey) + ")"
+                : "Model: " + provider.model,
+            type);
     }
 
     private String formatKeyHint(String key) {
@@ -655,8 +670,10 @@ public class ToolsSubPreference implements PluginPreference {
 
     private void clearAllModelCaches() {
         if (preferences == null) return;
-        ModelCatalogManager.clearModelCache(preferences, GeminiConstants.PREF_CACHE_GEMINI_MODELS);
-        ModelCatalogManager.clearModelCache(preferences, GeminiConstants.PREF_CACHE_OPENAI_MODELS);
-        ModelCatalogManager.clearModelCache(preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS);
+        // Driven by the registry so a new provider's cache is never left behind
+        // — the OpenRouter catalogue survived "Clear Caches" until this changed.
+        for (Provider p : providersWithCatalogCache()) {
+            ModelCatalogManager.clearModelCache(preferences, cacheKeyFor(p.id));
+        }
     }
 }

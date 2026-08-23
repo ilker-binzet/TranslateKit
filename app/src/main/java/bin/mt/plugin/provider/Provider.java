@@ -98,6 +98,28 @@ public final class Provider {
     }
 
     /**
+     * How this provider's configuration reads: {@code "ready"}, {@code "invalid"}
+     * or {@code "neutral"}.
+     *
+     * <p>Lives here rather than on a screen so that every place showing provider
+     * health reaches the same verdict — the settings list and the diagnostics
+     * dashboard used to decide this separately and disagreed.
+     *
+     * <p>The values are the ones {@code GeminiColorTokens.getStatusColor}
+     * understands, so the colour follows from the verdict.
+     */
+    public String statusType() {
+        if (!requiresKey()) {
+            // A self-hosted endpoint is configured once it names a model.
+            return model == null || model.isEmpty() ? "neutral" : "ready";
+        }
+        if (apiKey.isEmpty()) {
+            return "neutral";
+        }
+        return hasValidKeyFormat() ? "ready" : "invalid";
+    }
+
+    /**
      * Gemini takes the model and key in the path and query string; every other
      * wire posts to the configured endpoint unchanged.
      */

@@ -165,6 +165,45 @@ public class ProviderTest {
         assertEquals("groq", Provider.slug("  Groq!  "));
     }
 
+    // ---- configuration verdict ----
+
+    /**
+     * Both the provider list and the diagnostics dashboard colour themselves
+     * from this one answer, so a wrong verdict paints a broken provider green
+     * in two places at once.
+     */
+    @Test
+    public void keylessEndpointIsReadyOnceItNamesAModel() {
+        assertEquals("ready", localOllama().statusType());
+        assertEquals("neutral", localOllama().withModel("").statusType());
+        assertEquals("neutral", localOllama().withModel(null).statusType());
+    }
+
+    @Test
+    public void aMissingKeyReadsAsUnconfiguredRatherThanBroken() {
+        assertEquals("neutral", withKey("^sk-.+$", "").statusType());
+    }
+
+    @Test
+    public void aMalformedKeyIsInvalid() {
+        assertEquals("invalid", withKey("^sk-.+$", "AIzaSyWrongProvider").statusType());
+    }
+
+    @Test
+    public void aWellFormedKeyIsReady() {
+        assertEquals("ready", withKey("^sk-.+$", "sk-secret").statusType());
+    }
+
+    @Test
+    public void noFailingStateIsEverReportedAsReady() {
+        for (Provider broken : new Provider[]{
+                withKey("^sk-.+$", ""),
+                withKey("^sk-.+$", "nonsense"),
+                localOllama().withModel("")}) {
+            assertFalse(broken.toString(), "ready".equals(broken.statusType()));
+        }
+    }
+
     // ---- fallback copy ----
 
     @Test
