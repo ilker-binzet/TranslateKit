@@ -18,8 +18,14 @@ import bin.mt.plugin.provider.Providers;
  */
 public class GeminiTranslatePreference implements PluginPreference {
 
+    /** Rows whose summary names the active provider. */
+    private static final String KEY_PROVIDERS_ROW = "providers_row";
+    private static final String KEY_TRANSLATION_ROW = "translation_row";
+
     private PluginContext context;
     private SharedPreferences preferences;
+    /** Set once the screen exists, so those two summaries can be updated in place. */
+    private PreferenceScreen screen;
     private final Map<String, ProviderStatus> providerStatusCache = new HashMap<>();
     private boolean preferenceListenerRegistered;
     private final SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener = (prefs, key) -> {
@@ -67,12 +73,12 @@ public class GeminiTranslatePreference implements PluginPreference {
         ensurePreferenceListenerRegistered();
 
         // ==================== 1. AI Providers ====================
-        builder.addText("AI Providers")
+        builder.addText("AI Providers", KEY_PROVIDERS_ROW)
                 .summary(buildProvidersSummary())
                 .onClick((pluginUI, item) -> showProvidersMenu(pluginUI));
 
         // ==================== 2. Translation Settings ====================
-        builder.addText("Translation Settings")
+        builder.addText("Translation Settings", KEY_TRANSLATION_ROW)
                 .summary(buildTranslationSummary())
                 .onClick((pluginUI, item) -> context.openPreference(TranslationSubPreference.class));
 
@@ -90,6 +96,8 @@ public class GeminiTranslatePreference implements PluginPreference {
         builder.addText("About")
                 .summary("TranslateKit v" + GeminiConstants.PLUGIN_VERSION_NAME + " • by Ilker Binzet")
                 .url(GeminiConstants.DEVELOPER_GITHUB);
+
+        builder.onCreated((pluginUI, createdScreen) -> this.screen = createdScreen);
     }
 
     // ==================== Summary Builders ====================
@@ -197,6 +205,7 @@ public class GeminiTranslatePreference implements PluginPreference {
         preferences.edit()
                 .putString(GeminiConstants.PREF_DEFAULT_ENGINE, provider.id)
                 .apply();
+        refreshActiveSummaries();
         // Say so up front rather than letting the first translation silently
         // fall back to Gemini because the key was never entered.
         context.showToast("ready".equals(provider.statusType())
@@ -222,6 +231,26 @@ public class GeminiTranslatePreference implements PluginPreference {
             default:
                 context.openPreference(CustomProviderPreference.class);
                 break;
+        }
+    }
+
+    /**
+     * Rewrites the two summaries that name the active provider.
+     *
+     * <p>Picking a provider happens in a dialog, and closing a dialog does not
+     * rebuild the screen behind it — the rows kept naming the old provider
+     * until the user backed out of settings and came in again.
+     */
+    private void refreshActiveSummaries() {
+        if (screen == null) return;
+        setSummary(KEY_PROVIDERS_ROW, buildProvidersSummary());
+        setSummary(KEY_TRANSLATION_ROW, buildTranslationSummary());
+    }
+
+    private void setSummary(String key, CharSequence summary) {
+        PreferenceItem item = screen.findPreference(key);
+        if (item != null) {
+            item.setSummary(summary);
         }
     }
 
