@@ -153,3 +153,34 @@ gc_error_api: API Error
 gc_msg_api_key_valid: API key is valid and working correctly!
 gc_msg_cache_cleared: Translation cache has been cleared
 gc_msg_stats_reset: Statistics have been reset
+
+# Main Navigation
+nav_providers: AI Providers
+nav_translation: Translation Settings
+nav_context: Context & Tone
+nav_tools: Tools & Diagnostics
+nav_tools_summary: Provider status, tests, logs
+nav_about: About
+
+# AI Providers Screen
+providers_custom: Custom endpoints
+providers_custom_summary: Add any OpenAI-compatible API
+providers_settings: Settings
+providers_use_default: Use as Default
+providers_none: No providers configured • Tap to set up
+providers_configured: configured
+providers_active: Active
+providers_provider: Provider
+trans_timeout: Timeout
+ctx_none: No context configured • Set up for better translations
+
+# Provider Status
+status_ready: Ready
+status_invalid_key: Invalid key
+status_check_format: Check format
+status_not_configured: Not configured
+status_tap_setup: Tap to set up
+status_no_model: No model set
+status_tap_configure: Tap to configure
+msg_default_provider: Default provider
+msg_not_configured_yet: not configured yet

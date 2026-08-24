@@ -154,3 +154,34 @@ gc_error_api: API Hatası
 gc_msg_api_key_valid: API anahtarı geçerli ve doğru çalışıyor!
 gc_msg_cache_cleared: Çeviri önbelleği temizlendi
 gc_msg_stats_reset: İstatistikler sıfırlandı
+
+# Main Navigation
+nav_providers: YZ Sağlayıcıları
+nav_translation: Çeviri Ayarları
+nav_context: Bağlam ve Üslup
+nav_tools: Araçlar ve Tanılama
+nav_tools_summary: Sağlayıcı durumu, testler, kayıtlar
+nav_about: Hakkında
+
+# AI Providers Screen
+providers_custom: Özel uç noktalar
+providers_custom_summary: OpenAI uyumlu herhangi bir API ekleyin
+providers_settings: Ayarlar
+providers_use_default: Varsayılan Yap
+providers_none: Yapılandırılmış sağlayıcı yok • Kurmak için dokunun
+providers_configured: yapılandırıldı
+providers_active: Aktif
+providers_provider: Sağlayıcı
+trans_timeout: Zaman aşımı
+ctx_none: Bağlam ayarlanmadı • Daha iyi çeviri için ayarlayın
+
+# Provider Status
+status_ready: Hazır
+status_invalid_key: Geçersiz anahtar
+status_check_format: Biçimi kontrol edin
+status_not_configured: Yapılandırılmadı
+status_tap_setup: Kurmak için dokunun
+status_no_model: Model seçilmedi
+status_tap_configure: Yapılandırmak için dokunun
+msg_default_provider: Varsayılan sağlayıcı
+msg_not_configured_yet: henüz yapılandırılmadı

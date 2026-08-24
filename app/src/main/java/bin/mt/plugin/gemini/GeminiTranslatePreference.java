@@ -73,27 +73,27 @@ public class GeminiTranslatePreference implements PluginPreference {
         ensurePreferenceListenerRegistered();
 
         // ==================== 1. AI Providers ====================
-        builder.addText("AI Providers", KEY_PROVIDERS_ROW)
+        builder.addText(str("{nav_providers}"), KEY_PROVIDERS_ROW)
                 .summary(buildProvidersSummary())
                 .onClick((pluginUI, item) -> showProvidersMenu(pluginUI));
 
         // ==================== 2. Translation Settings ====================
-        builder.addText("Translation Settings", KEY_TRANSLATION_ROW)
+        builder.addText(str("{nav_translation}"), KEY_TRANSLATION_ROW)
                 .summary(buildTranslationSummary())
                 .onClick((pluginUI, item) -> context.openPreference(TranslationSubPreference.class));
 
         // ==================== 3. Context & Tone ====================
-        builder.addText("Context & Tone")
+        builder.addText(str("{nav_context}"))
                 .summary(buildContextSummary())
                 .onClick((pluginUI, item) -> context.openPreference(ContextToneSubPreference.class));
 
         // ==================== 4. Tools & Diagnostics ====================
-        builder.addText("Tools & Diagnostics")
-                .summary("Provider status, tests, logs")
+        builder.addText(str("{nav_tools}"))
+                .summary(str("{nav_tools_summary}"))
                 .onClick((pluginUI, item) -> context.openPreference(ToolsSubPreference.class));
 
         // ==================== 5. About ====================
-        builder.addText("About")
+        builder.addText(str("{nav_about}"))
                 .summary("TranslateKit v" + GeminiConstants.PLUGIN_VERSION_NAME + " • by Ilker Binzet")
                 .url(GeminiConstants.DEVELOPER_GITHUB);
 
@@ -101,6 +101,11 @@ public class GeminiTranslatePreference implements PluginPreference {
     }
 
     // ==================== Summary Builders ====================
+
+    /** Localized text for {@code key}; the language packs live in assets. */
+    private String str(String key) {
+        return context.getString(key);
+    }
 
     private String buildProvidersSummary() {
         java.util.List<Provider> all = Providers.all(preferences);
@@ -114,21 +119,23 @@ public class GeminiTranslatePreference implements PluginPreference {
 
         String activeEngine = getActiveEngineName();
         if (configured == 0) {
-            return "No providers configured \u2022 Tap to set up";
+            return str("{providers_none}");
         }
-        return configured + "/" + all.size() + " configured \u2022 Active: " + activeEngine;
+        return configured + "/" + all.size() + " " + str("{providers_configured}")
+                + " \u2022 " + str("{providers_active}") + ": " + activeEngine;
     }
 
     private String buildTranslationSummary() {
         String provider = getActiveEngineName();
         String timeout = preferences.getString(GeminiConstants.PREF_TIMEOUT, String.valueOf(GeminiConstants.DEFAULT_TIMEOUT));
-        return "Provider: " + provider + " • Timeout: " + timeout + "ms";
+        return str("{providers_provider}") + ": " + provider
+                + " • " + str("{trans_timeout}") + ": " + timeout + "ms";
     }
 
     private String buildContextSummary() {
         String tone = preferences.getString(GeminiConstants.PREF_CONTEXT_TONE, "");
         if (tone == null || tone.isEmpty()) {
-            return "No context configured \u2022 Set up for better translations";
+            return str("{ctx_none}");
         }
         if (tone.length() > 40) {
             tone = tone.substring(0, 37) + "...";
@@ -155,10 +162,11 @@ public class GeminiTranslatePreference implements PluginPreference {
             label.append(" \u2022 ").append(s.detail);
             labels[i] = label;
         }
-        labels[all.size()] = "\u2795 Custom endpoints\nAdd any OpenAI-compatible API";
+        labels[all.size()] = "\u2795 " + str("{providers_custom}")
+                + "\n" + str("{providers_custom_summary}");
 
         pluginUI.buildDialog()
-                .setTitle("AI Providers")
+                .setTitle(str("{nav_providers}"))
                 .setItems(labels, (dialog, which) -> {
                     if (which >= all.size()) {
                         context.openPreference(CustomProviderPreference.class);
@@ -184,8 +192,9 @@ public class GeminiTranslatePreference implements PluginPreference {
         // The activate row only appears when it would do something; a dead row
         // in a two-item list reads worse than a one-item list.
         CharSequence[] actions = active
-                ? new CharSequence[]{"\u2699 Settings"}
-                : new CharSequence[]{"\u2b50 Use as Default", "\u2699 Settings"};
+                ? new CharSequence[]{"\u2699 " + str("{providers_settings}")}
+                : new CharSequence[]{"\u2b50 " + str("{providers_use_default}"),
+                                   "\u2699 " + str("{providers_settings}")};
 
         pluginUI.buildDialog()
                 .setTitle(iconFor(provider.id) + " " + provider.displayName)
@@ -209,8 +218,9 @@ public class GeminiTranslatePreference implements PluginPreference {
         // Say so up front rather than letting the first translation silently
         // fall back to Gemini because the key was never entered.
         context.showToast("ready".equals(provider.statusType())
-                ? "Default provider: " + provider.displayName
-                : "Default provider: " + provider.displayName + " \u2014 not configured yet");
+                ? str("{msg_default_provider}") + ": " + provider.displayName
+                : str("{msg_default_provider}") + ": " + provider.displayName
+                        + " \u2014 " + str("{msg_not_configured_yet}"));
     }
 
     /** Custom entries share one editor; built-ins each have their own screen. */
@@ -290,14 +300,14 @@ public class GeminiTranslatePreference implements PluginPreference {
         String type = provider.statusType();
 
         if ("invalid".equals(type)) {
-            return new ProviderStatus(displayName, icon, "Invalid key", "Check format", type);
+            return new ProviderStatus(displayName, icon, str("{status_invalid_key}"), str("{status_check_format}"), type);
         }
         if ("neutral".equals(type)) {
             return provider.requiresKey()
-                    ? new ProviderStatus(displayName, icon, "Not configured", "Tap to set up", type)
-                    : new ProviderStatus(displayName, icon, "No model set", "Tap to configure", type);
+                    ? new ProviderStatus(displayName, icon, str("{status_not_configured}"), str("{status_tap_setup}"), type)
+                    : new ProviderStatus(displayName, icon, str("{status_no_model}"), str("{status_tap_configure}"), type);
         }
-        return new ProviderStatus(displayName, icon, "Ready",
+        return new ProviderStatus(displayName, icon, str("{status_ready}"),
                 provider.requiresKey() ? formatKeyHint(provider.apiKey) : provider.model, type);
     }
 
