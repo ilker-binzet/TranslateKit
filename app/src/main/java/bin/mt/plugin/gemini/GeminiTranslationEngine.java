@@ -5,7 +5,6 @@ import androidx.annotation.NonNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,20 +37,6 @@ import bin.mt.plugin.provider.Providers;
  * @version 1.0.0
  */
 public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
-
-    // ISO 639-1 language codes
-    private static final List<String> SOURCE_LANGUAGES = Arrays.asList(
-        "auto", // Auto-detection (Gemini will detect)
-        "en", "tr", "de", "fr", "es", "it", "pt", "ru", "ja", "ko", "zh-CN", "zh-TW",
-        "ar", "hi", "nl", "sv", "pl", "uk", "cs", "el", "he", "id", "th", "vi",
-        "ro", "hu", "da", "fi", "no", "bg", "hr", "sr", "sk", "sl", "lt", "lv", "et"
-    );
-
-    private static final List<String> TARGET_LANGUAGES = Arrays.asList(
-        "en", "tr", "de", "fr", "es", "it", "pt", "ru", "ja", "ko", "zh-CN", "zh-TW",
-        "ar", "hi", "nl", "sv", "pl", "uk", "cs", "el", "he", "id", "th", "vi",
-        "ro", "hu", "da", "fi", "no", "bg", "hr", "sr", "sk", "sl", "lt", "lv", "et"
-    );
 
     /**
      * Pattern for detecting placeholders in Android strings.
@@ -137,12 +122,19 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     }
 
     /**
-     * Load source languages including auto-detection
+     * Load source languages including auto-detection.
+     *
+     * <p>The list is whatever the user left enabled in Translation Settings, so
+     * a picker of two or three languages stays short instead of scrolling
+     * through every language the engine can handle.
      */
     @NonNull
     @Override
     public List<String> loadSourceLanguages() {
-        return new ArrayList<>(SOURCE_LANGUAGES);
+        List<String> languages = new ArrayList<>();
+        languages.add("auto"); // Auto-detection (the model will detect)
+        languages.addAll(enabledLanguages());
+        return languages;
     }
 
     /**
@@ -151,11 +143,29 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
     @NonNull
     @Override
     public List<String> loadTargetLanguages(String sourceLanguage) {
-        return new ArrayList<>(TARGET_LANGUAGES);
+        return new ArrayList<>(enabledLanguages());
     }
 
     /**
-     * Convert language code to display name
+     * The enabled selection, or every language when settings are unavailable.
+     *
+     * <p>{@code loadSourceLanguages} can run before {@code onStart}, so this
+     * cannot rely on the preferences field the rest of the engine uses.
+     */
+    private List<String> enabledLanguages() {
+        try {
+            return Languages.parseEnabled(
+                    getContext().getPreferences().getString(Languages.PREF_ENABLED_LANGUAGES, ""));
+        } catch (Exception e) {
+            return Languages.allCodes();
+        }
+    }
+
+    /**
+     * Convert language code to display name.
+     *
+     * <p>MT does not know every code we offer — Hebrew arrived in the picker as
+     * a bare "he" — so the catalogue fills in whatever MT leaves unresolved.
      */
     @NonNull
     @Override
@@ -163,7 +173,14 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         if ("auto".equals(language)) {
             return getContext().getString("{lang_auto}");
         }
-        return super.getLanguageDisplayName(language);
+        String name = super.getLanguageDisplayName(language);
+        if (name == null || name.isEmpty() || name.equals(language)) {
+            String own = Languages.nameOf(language);
+            if (own != null) {
+                return own;
+            }
+        }
+        return name == null ? language : name;
     }
 
     /**

@@ -142,6 +142,7 @@ public class ToolsSubPreference implements PluginPreference {
             GeminiConstants.PREF_CONTEXT_TONE,
             GeminiConstants.PREF_CONTEXT_NOTES,
             GeminiConstants.PREF_DEFAULT_TARGET_LANG,
+            Languages.PREF_ENABLED_LANGUAGES,
             GeminiConstants.PREF_ENABLE_DEBUG,
             GeminiConstants.PREF_OPENAI_MODEL,
             GeminiConstants.PREF_OPENAI_ENDPOINT,
