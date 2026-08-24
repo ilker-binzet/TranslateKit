@@ -16,6 +16,11 @@ public class ContextToneSubPreference implements PluginPreference {
 
     // ==================== Preset Data ====================
 
+    /**
+     * A ready-made context. {@code title} and {@code subtitle} are language
+     * pack keys; the five fields after them are prompt text sent to the model,
+     * which stays in English because that is what the models handle best.
+     */
     private static class ContextPreset {
         final String title;
         final String subtitle;
@@ -37,6 +42,7 @@ public class ContextToneSubPreference implements PluginPreference {
         }
     }
 
+    /** {@code name} and {@code description} are pack keys; {@code storedValue} is prompt text. */
     private static class TonePreset {
         final String name;
         final String storedValue;
@@ -51,8 +57,8 @@ public class ContextToneSubPreference implements PluginPreference {
 
     private static final ContextPreset[] CONTEXT_PRESETS = new ContextPreset[]{
         new ContextPreset(
-            "Mobile App Launch",
-            "Consumer onboarding flows",
+            "{ctx_preset_mobile}",
+            "{ctx_preset_mobile_sub}",
             "Mobile Application",
             "Android/iOS Mobile Experience",
             "General smartphone users",
@@ -60,8 +66,8 @@ public class ContextToneSubPreference implements PluginPreference {
             "Short sentences, plain language, actionable CTA verbs"
         ),
         new ContextPreset(
-            "Gaming Experience",
-            "Playful & energetic UI",
+            "{ctx_preset_gaming}",
+            "{ctx_preset_gaming_sub}",
             "Gaming Application",
             "Mobile/PC Game Interface",
             "Gamers and casual players",
@@ -69,8 +75,8 @@ public class ContextToneSubPreference implements PluginPreference {
             "Use game terminology, keep hype and momentum high"
         ),
         new ContextPreset(
-            "Reading Companion",
-            "E-book & article readers",
+            "{ctx_preset_reading}",
+            "{ctx_preset_reading_sub}",
             "E-book Reader",
             "Digital Reading Platform",
             "Avid readers and book lovers",
@@ -78,8 +84,8 @@ public class ContextToneSubPreference implements PluginPreference {
             "Flowing sentences, keep emphasis on readability and calm tone"
         ),
         new ContextPreset(
-            "Business Dashboard",
-            "Enterprise productivity tools",
+            "{ctx_preset_business}",
+            "{ctx_preset_business_sub}",
             "Business Application",
             "Professional Analytics / Dashboard",
             "Business professionals and analysts",
@@ -87,8 +93,8 @@ public class ContextToneSubPreference implements PluginPreference {
             "Focus on clarity, mention KPIs, avoid slang"
         ),
         new ContextPreset(
-            "Support Chatbot",
-            "Customer care copy",
+            "{ctx_preset_support}",
+            "{ctx_preset_support_sub}",
             "Support Assistant",
             "AI / Human Hybrid Support",
             "End-users needing troubleshooting",
@@ -96,8 +102,8 @@ public class ContextToneSubPreference implements PluginPreference {
             "Reassure the user, acknowledge issues, provide next steps"
         ),
         new ContextPreset(
-            "E-commerce Store",
-            "Product & checkout flows",
+            "{ctx_preset_commerce}",
+            "{ctx_preset_commerce_sub}",
             "Commerce Platform",
             "Online Shopping Experience",
             "Shoppers comparing products",
@@ -105,8 +111,8 @@ public class ContextToneSubPreference implements PluginPreference {
             "Highlight benefits, keep CTA strong, include trust cues"
         ),
         new ContextPreset(
-            "Developer Docs",
-            "APIs & technical notes",
+            "{ctx_preset_devdocs}",
+            "{ctx_preset_devdocs_sub}",
             "Developer Portal",
             "Technical Documentation Suite",
             "Developers and integration engineers",
@@ -114,8 +120,8 @@ public class ContextToneSubPreference implements PluginPreference {
             "Include parameters, avoid marketing tone, keep terminology exact"
         ),
         new ContextPreset(
-            "Education Platform",
-            "Lessons & assessments",
+            "{ctx_preset_education}",
+            "{ctx_preset_education_sub}",
             "Learning Platform",
             "Education / LMS Experience",
             "Students and educators",
@@ -126,34 +132,34 @@ public class ContextToneSubPreference implements PluginPreference {
 
     private static final TonePreset[] TONE_PRESETS = new TonePreset[]{
         new TonePreset(
-            "Friendly Clarity",
+            "{tone_friendly}",
             "Friendly and clear (plain language, second-person guidance, concise sentences)",
-            "Approachable help text for general audiences"
+            "{tone_friendly_desc}"
         ),
         new TonePreset(
-            "Product Marketing",
+            "{tone_marketing}",
             "Confident and inspiring marketing voice (benefit-driven, energetic, short CTA verbs)",
-            "Highlight value propositions while staying concise"
+            "{tone_marketing_desc}"
         ),
         new TonePreset(
-            "Legal / Policy",
+            "{tone_legal}",
             "Formal and compliant tone (objective, third-person, references policy numbers where needed)",
-            "Use for privacy, security, or legal copy"
+            "{tone_legal_desc}"
         ),
         new TonePreset(
-            "Support Hero",
+            "{tone_support}",
             "Empathetic and solution-focused (acknowledge frustration, reassure, offer clear steps)",
-            "Great for help centers or chatbot replies"
+            "{tone_support_desc}"
         ),
         new TonePreset(
-            "Technical Guide",
+            "{tone_technical}",
             "Precise and instructional (step-by-step, include field names, avoid marketing language)",
-            "Best for developer or admin documentation"
+            "{tone_technical_desc}"
         ),
         new TonePreset(
-            "Playful Fun",
+            "{tone_playful}",
             "Playful and witty (light humor, emoji-friendly, upbeat pacing)",
-            "Works for entertainment or Gen Z audiences"
+            "{tone_playful_desc}"
         )
     };
 
@@ -163,30 +169,35 @@ public class ContextToneSubPreference implements PluginPreference {
         this.preferences = context.getPreferences();
 
         // ==================== Quick Presets ====================
-        builder.addText("Quick Presets")
-            .summary("Apply ready-made context + tone combinations")
+        builder.addText(str("{ctx_quick_presets}"))
+            .summary(str("{ctx_quick_presets_summary}"))
             .onClick((pluginUI, item) -> showCombinedPresetsDialog(pluginUI));
 
         // ==================== Tone & Voice ====================
-        builder.addInput("Tone & Voice", GeminiConstants.PREF_CONTEXT_TONE)
-            .summary("Writing style: friendly, formal, playful, technical...")
+        builder.addInput(str("{ctx_tone}"), GeminiConstants.PREF_CONTEXT_TONE)
+            .summary(str("{ctx_tone_summary}"))
             .defaultValue(GeminiConstants.DEFAULT_CONTEXT_TONE)
             .valueAsSummary();
 
         // ==================== App Description ====================
-        builder.addInput("App Description", GeminiConstants.PREF_CONTEXT_APP_NAME)
-            .summary("App name and type (e.g. 'MyApp - Shopping')")
+        builder.addInput(str("{ctx_app}"), GeminiConstants.PREF_CONTEXT_APP_NAME)
+            .summary(str("{ctx_app_summary}"))
             .valueAsSummary();
 
         // ==================== Target Audience ====================
-        builder.addInput("Target Audience", GeminiConstants.PREF_CONTEXT_AUDIENCE)
-            .summary("Who uses your app (e.g. 'teenagers', 'developers')")
+        builder.addInput(str("{ctx_audience}"), GeminiConstants.PREF_CONTEXT_AUDIENCE)
+            .summary(str("{ctx_audience_summary}"))
             .valueAsSummary();
 
         // ==================== Extra Notes ====================
-        builder.addInput("Extra Notes", GeminiConstants.PREF_CONTEXT_NOTES)
-            .summary("Special rules: locale format, forbidden words, etc.")
+        builder.addInput(str("{ctx_notes}"), GeminiConstants.PREF_CONTEXT_NOTES)
+            .summary(str("{ctx_notes_summary}"))
             .valueAsSummary();
+    }
+
+    /** Localized text for {@code key}; the language packs live in assets. */
+    private String str(String key) {
+        return context.getString(key);
     }
 
     // ==================== Dialog Methods ====================
@@ -198,28 +209,28 @@ public class ContextToneSubPreference implements PluginPreference {
         // Context presets section
         for (int i = 0; i < CONTEXT_PRESETS.length; i++) {
             ContextPreset p = CONTEXT_PRESETS[i];
-            labels[i] = "\uD83D\uDCCB " + p.title + "\n" + p.subtitle;
+            labels[i] = "\uD83D\uDCCB " + str(p.title) + "\n" + str(p.subtitle);
         }
         // Separator
-        labels[CONTEXT_PRESETS.length] = "── Tone Only ──";
+        labels[CONTEXT_PRESETS.length] = "── " + str("{ctx_tone_only}") + " ──";
         // Tone presets
         for (int i = 0; i < TONE_PRESETS.length; i++) {
             TonePreset t = TONE_PRESETS[i];
-            labels[CONTEXT_PRESETS.length + 1 + i] = "\uD83C\uDFA8 " + t.name + "\n" + t.description;
+            labels[CONTEXT_PRESETS.length + 1 + i] = "\uD83C\uDFA8 " + str(t.name) + "\n" + str(t.description);
         }
 
         pluginUI.buildDialog()
-                .setTitle("Quick Presets")
+                .setTitle(str("{ctx_quick_presets}"))
                 .setItems(labels, (dialog, which) -> {
                     if (which < CONTEXT_PRESETS.length) {
                         applyContextPreset(CONTEXT_PRESETS[which]);
-                        context.showToast(CONTEXT_PRESETS[which].title + " applied");
+                        context.showToast(str(CONTEXT_PRESETS[which].title) + " " + str("{msg_preset_applied}"));
                     } else if (which > CONTEXT_PRESETS.length) {
                         TonePreset tone = TONE_PRESETS[which - CONTEXT_PRESETS.length - 1];
                         preferences.edit()
                                 .putString(GeminiConstants.PREF_CONTEXT_TONE, tone.storedValue)
                                 .apply();
-                        context.showToast("Tone: " + tone.name);
+                        context.showToast(str("{ctx_tone}") + ": " + str(tone.name));
                     }
                     dialog.dismiss();
                 })

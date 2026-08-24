@@ -184,3 +184,45 @@ status_no_model: No model set
 status_tap_configure: Tap to configure
 msg_default_provider: Default provider
 msg_not_configured_yet: not configured yet
+
+# Context and Tone
+ctx_quick_presets: Quick Presets
+ctx_quick_presets_summary: Apply ready-made context + tone combinations
+ctx_tone: Tone & Voice
+ctx_tone_summary: Writing style: friendly, formal, playful, technical...
+ctx_app: App Description
+ctx_app_summary: App name and type (e.g. 'MyApp - Shopping')
+ctx_audience: Target Audience
+ctx_audience_summary: Who uses your app (e.g. 'teenagers', 'developers')
+ctx_notes: Extra Notes
+ctx_notes_summary: Special rules: locale format, forbidden words, etc.
+ctx_tone_only: Tone Only
+msg_preset_applied: applied
+ctx_preset_mobile: Mobile App Launch
+ctx_preset_mobile_sub: Consumer onboarding flows
+ctx_preset_gaming: Gaming Experience
+ctx_preset_gaming_sub: Playful & energetic UI
+ctx_preset_reading: Reading Companion
+ctx_preset_reading_sub: E-book & article readers
+ctx_preset_business: Business Dashboard
+ctx_preset_business_sub: Enterprise productivity tools
+ctx_preset_support: Support Chatbot
+ctx_preset_support_sub: Customer care copy
+ctx_preset_commerce: E-commerce Store
+ctx_preset_commerce_sub: Product & checkout flows
+ctx_preset_devdocs: Developer Docs
+ctx_preset_devdocs_sub: APIs & technical notes
+ctx_preset_education: Education Platform
+ctx_preset_education_sub: Lessons & assessments
+tone_friendly: Friendly Clarity
+tone_friendly_desc: Approachable help text for general audiences
+tone_marketing: Product Marketing
+tone_marketing_desc: Highlight value propositions while staying concise
+tone_legal: Legal / Policy
+tone_legal_desc: Use for privacy, security, or legal copy
+tone_support: Support Hero
+tone_support_desc: Great for help centers or chatbot replies
+tone_technical: Technical Guide
+tone_technical_desc: Best for developer or admin documentation
+tone_playful: Playful Fun
+tone_playful_desc: Works for entertainment or Gen Z audiences

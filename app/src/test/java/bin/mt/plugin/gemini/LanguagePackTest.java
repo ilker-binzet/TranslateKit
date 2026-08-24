@@ -34,35 +34,28 @@ public class LanguagePackTest {
     private static final Set<String> MT_BUILT_INS =
             new HashSet<>(Arrays.asList("ok", "cancel", "close", "delete"));
 
-    /** Read by the MT plugin config and by Languages, not by a literal in a screen. */
+    /**
+     * Read by the MT plugin config and by the language catalogue rather than by
+     * a literal in a screen, so they cannot be found by scanning sources.
+     */
     private static final Pattern EXEMPT_FROM_USAGE =
             Pattern.compile("^(plugin_name|plugin_description|lang_.+)$");
 
     /**
-     * An unmistakable request for a localized string. Used to decide what MUST
-     * exist, so it stays narrow: a prompt template full of {0} and {name}
-     * placeholders must never be mistaken for a language pack lookup.
+     * Every mention of an entry: the explicit getString call and the bare
+     * "{key}" literal that MT resolves inside preference rows, which is also
+     * how the preset tables carry their labels.
      */
-    private static final Pattern REQUESTED =
-            Pattern.compile("(?:getString|str)\\(\"\\{([A-Za-z_0-9-]+)}\"\\)");
+    private static final Pattern REFERENCED = Pattern.compile("\"\\{([A-Za-z_0-9-]+)}\"");
 
-    /**
-     * Any mention of an entry at all, including the bare "{key}" literal that
-     * MT resolves inside preference rows. Used to decide what is unused, so it
-     * stays broad: over-counting here only keeps an entry alive.
-     */
-    private static final Pattern REFERENCED =
-            Pattern.compile("\"\\{([A-Za-z_0-9-]+)}\"");
-
-    private static final Pattern DECLARED =
-            Pattern.compile("^([A-Za-z_0-9-]+):");
+    private static final Pattern DECLARED = Pattern.compile("^([A-Za-z_0-9-]+):");
 
     @Test
-    public void everyRequestedKeyIsDeclared() throws IOException {
+    public void everyReferencedKeyIsDeclared() throws IOException {
         Set<String> declared = keysOf(pack("strings.mtl"));
         Set<String> missing = new TreeSet<>();
         for (Path source : javaSources()) {
-            Matcher m = REQUESTED.matcher(read(source));
+            Matcher m = REFERENCED.matcher(withoutComments(read(source)));
             while (m.find()) {
                 String key = m.group(1);
                 if (!declared.contains(key) && !MT_BUILT_INS.contains(key)) {
@@ -72,23 +65,23 @@ public class LanguagePackTest {
         }
         if (!missing.isEmpty()) {
             fail("strings.mtl is missing " + missing.size() + " entry/entries the code asks for."
-                    + " Each would render as a raw {key} on screen:\n  "
+                    + " Each would reach the user as a raw {key} on screen:\n  "
                     + String.join("\n  ", missing));
         }
     }
 
     @Test
     public void noEntryIsOrphaned() throws IOException {
-        Set<String> requested = new HashSet<>();
+        Set<String> referenced = new HashSet<>();
         for (Path source : javaSources()) {
-            Matcher m = REFERENCED.matcher(read(source));
+            Matcher m = REFERENCED.matcher(withoutComments(read(source)));
             while (m.find()) {
-                requested.add(m.group(1));
+                referenced.add(m.group(1));
             }
         }
         Set<String> orphans = new TreeSet<>();
         for (String key : keysOf(pack("strings.mtl"))) {
-            if (!requested.contains(key) && !EXEMPT_FROM_USAGE.matcher(key).matches()) {
+            if (!referenced.contains(key) && !EXEMPT_FROM_USAGE.matcher(key).matches()) {
                 orphans.add(key);
             }
         }
@@ -109,8 +102,8 @@ public class LanguagePackTest {
             Set<String> unknown = new TreeSet<>(keysOf(translated));
             unknown.removeAll(base);
             if (!unknown.isEmpty()) {
-                // A key that is in no base pack can never be looked up, so an
-                // entry here is a typo that silently does nothing.
+                // Nothing can look up an entry the base pack does not name, so
+                // one here is a typo that silently does nothing.
                 fail(translated.getFileName() + " declares " + unknown.size()
                         + " entry/entries that strings.mtl does not:\n  "
                         + String.join("\n  ", unknown));
@@ -128,7 +121,7 @@ public class LanguagePackTest {
                     continue;
                 }
                 if (!DECLARED.matcher(line).find()) {
-                    fail(p.getFileName() + ": line is neither a comment nor 'key: value' -> " + line);
+                    fail(p.getFileName() + ": neither a comment nor 'key: value' -> " + line);
                 }
                 entries++;
             }
@@ -137,6 +130,19 @@ public class LanguagePackTest {
     }
 
     // ---- helpers ----
+
+    /** Javadoc and comments quote {0} and {name} as examples; they are not lookups. */
+    private static String withoutComments(String source) {
+        StringBuilder out = new StringBuilder();
+        for (String line : source.split("\n")) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("*") || trimmed.startsWith("//") || trimmed.startsWith("/*")) {
+                continue;
+            }
+            out.append(line).append('\n');
+        }
+        return out.toString();
+    }
 
     private static Path pack(String name) {
         return new File("src/main/assets/" + name).toPath();

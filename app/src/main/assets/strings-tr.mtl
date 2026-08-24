@@ -185,3 +185,45 @@ status_no_model: Model seçilmedi
 status_tap_configure: Yapılandırmak için dokunun
 msg_default_provider: Varsayılan sağlayıcı
 msg_not_configured_yet: henüz yapılandırılmadı
+
+# Context and Tone
+ctx_quick_presets: Hazır Ayarlar
+ctx_quick_presets_summary: Hazır bağlam ve üslup birleşimlerini uygula
+ctx_tone: Üslup ve Ses
+ctx_tone_summary: Yazım tarzı: samimi, resmî, eğlenceli, teknik...
+ctx_app: Uygulama Tanımı
+ctx_app_summary: Uygulama adı ve türü (örn. 'Uygulamam - Alışveriş')
+ctx_audience: Hedef Kitle
+ctx_audience_summary: Uygulamanızı kimler kullanıyor (örn. 'gençler', 'geliştiriciler')
+ctx_notes: Ek Notlar
+ctx_notes_summary: Özel kurallar: yerel biçim, yasak kelimeler vb.
+ctx_tone_only: Yalnızca Üslup
+msg_preset_applied: uygulandı
+ctx_preset_mobile: Mobil Uygulama Lansmanı
+ctx_preset_mobile_sub: Kullanıcı tanıtım akışları
+ctx_preset_gaming: Oyun Deneyimi
+ctx_preset_gaming_sub: Eğlenceli ve enerjik arayüz
+ctx_preset_reading: Okuma Arkadaşı
+ctx_preset_reading_sub: E-kitap ve makale okuyucuları
+ctx_preset_business: İş Panosu
+ctx_preset_business_sub: Kurumsal verimlilik araçları
+ctx_preset_support: Destek Sohbet Botu
+ctx_preset_support_sub: Müşteri hizmetleri metni
+ctx_preset_commerce: E-ticaret Mağazası
+ctx_preset_commerce_sub: Ürün ve ödeme akışları
+ctx_preset_devdocs: Geliştirici Belgeleri
+ctx_preset_devdocs_sub: API'ler ve teknik notlar
+ctx_preset_education: Eğitim Platformu
+ctx_preset_education_sub: Dersler ve değerlendirmeler
+tone_friendly: Samimi Netlik
+tone_friendly_desc: Genel kitleye uygun, ulaşılabilir yardım metni
+tone_marketing: Ürün Pazarlama
+tone_marketing_desc: Kısa kalarak değer önerilerini öne çıkarır
+tone_legal: Hukuk / Politika
+tone_legal_desc: Gizlilik, güvenlik veya hukuki metinler için
+tone_support: Destek Kahramanı
+tone_support_desc: Yardım merkezleri veya bot yanıtları için ideal
+tone_technical: Teknik Kılavuz
+tone_technical_desc: Geliştirici veya yönetici belgeleri için en uygunu
+tone_playful: Eğlenceli Neşe
+tone_playful_desc: Eğlence veya Z kuşağı kitlesi için uygun
