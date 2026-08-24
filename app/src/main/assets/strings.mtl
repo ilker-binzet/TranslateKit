@@ -226,3 +226,62 @@ tone_technical: Technical Guide
 tone_technical_desc: Best for developer or admin documentation
 tone_playful: Playful Fun
 tone_playful_desc: Works for entertainment or Gen Z audiences
+
+# Translation Settings
+trans_languages: Languages
+trans_languages_all: languages shown in the translate dialog
+trans_languages_some: shown in the translate dialog
+trans_request_timeout: Request Timeout (ms)
+trans_request_timeout_summary: Maximum wait time for API response
+trans_max_retries: Max Retry Attempts
+trans_max_retries_summary: Number of retry attempts on failures
+msg_pick_one_language: Pick at least one language — keeping all of them
+msg_languages_saved: Reopen the translate dialog to see the new list
+
+# Tools and Diagnostics
+tools_provider_status: Provider Status
+tools_provider_status_summary: View all providers health at a glance
+tools_test_provider: Test Active Provider
+tools_quick_test: Quick test
+tools_view_logs: View Logs
+tools_view_logs_summary: Open MT Manager log viewer
+tools_debug_logging: Debug Logging
+tools_debug_logging_summary: Record detailed request info to MT Manager logs
+tools_export: Export Settings
+tools_export_summary: Copy all settings as JSON to share
+tools_import: Import Settings
+tools_import_summary: Restore settings from JSON preset
+tools_plugin_version: Plugin Version
+msg_debug_enabled: Debug logging enabled - check MT Manager logs for details
+msg_settings_copied: settings copied to clipboard
+msg_clipboard_failed: Clipboard copy failed, please copy from the dialog
+tools_export_hint: Copied to clipboard. You can also long-press the text below:
+btn_done: Done
+msg_export_failed: Export failed
+tools_import_hint: Paste a preset JSON below:
+btn_import: Import
+msg_no_json: No JSON provided
+msg_invalid_preset: Invalid preset: required fields are missing
+msg_settings_restored: settings restored, restart the plugin to apply
+msg_import_failed: Import failed, invalid JSON
+
+# Dashboard and Provider Test
+dash_not_set: not set
+dash_title: AI Provider Overview
+dash_active: Active Provider
+dash_model: Model
+dash_health: Provider Health
+dash_dialog: Dashboard
+test_no_key_needed: This endpoint needs no API key.
+test_endpoint: Endpoint
+test_set_model: Set a model id for this endpoint in provider settings.
+test_key_missing: API Key Missing
+test_key_missing_detail: Please configure your API key in provider settings.
+test_invalid_format: Invalid Format
+test_invalid_detail: API key format is invalid. Please check your key.
+test_format_valid: Format Valid
+test_format_valid_detail: API key format is correct!
+test_format_tip: Tip: this checks the format only. Use Test API Key in provider settings to verify the connection.
+test_testing: Testing
+test_dialog: Provider Test
+test_hint_any: Any key this endpoint accepts.

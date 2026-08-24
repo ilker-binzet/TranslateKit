@@ -78,37 +78,37 @@ public class ToolsSubPreference implements PluginPreference {
         }
 
         // ==================== Provider Status ====================
-        builder.addText("Provider Status")
-                .summary("View all providers health at a glance")
+        builder.addText(str("{tools_provider_status}"))
+                .summary(str("{tools_provider_status_summary}"))
                 .onClick((pluginUI, item) -> showDashboardCard(pluginUI));
 
         // ==================== Test Active Provider ====================
-        builder.addText("Test Active Provider")
-                .summary("Quick test: " + Providers.selected(preferences).displayName)
+        builder.addText(str("{tools_test_provider}"))
+                .summary(str("{tools_quick_test}") + ": " + Providers.selected(preferences).displayName)
                 .onClick((pluginUI, item) -> showInteractiveProviderTest(pluginUI));
 
         // ==================== View Logs ====================
-        builder.addText("View Logs")
-                .summary("Open MT Manager log viewer")
+        builder.addText(str("{tools_view_logs}"))
+                .summary(str("{tools_view_logs_summary}"))
                 .onClick((pluginUI, item) -> context.openLogViewer());
 
         // ==================== Debug Logging ====================
-        builder.addSwitch("Debug Logging", GeminiConstants.PREF_ENABLE_DEBUG)
+        builder.addSwitch(str("{tools_debug_logging}"), GeminiConstants.PREF_ENABLE_DEBUG)
                 .defaultValue(GeminiConstants.DEFAULT_ENABLE_DEBUG)
-                .summary("Record detailed request info to MT Manager logs");
+                .summary(str("{tools_debug_logging_summary}"));
 
         // ==================== Export Settings ====================
-        builder.addText("Export Settings")
-                .summary("Copy all settings as JSON to share")
+        builder.addText(str("{tools_export}"))
+                .summary(str("{tools_export_summary}"))
                 .onClick((pluginUI, item) -> showExportDialog(pluginUI));
 
         // ==================== Import Settings ====================
-        builder.addText("Import Settings")
-                .summary("Restore settings from JSON preset")
+        builder.addText(str("{tools_import}"))
+                .summary(str("{tools_import_summary}"))
                 .onClick((pluginUI, item) -> showImportDialog(pluginUI));
 
         // ==================== Hidden Debug Access ====================
-        builder.addText("Plugin Version")
+        builder.addText(str("{tools_plugin_version}"))
             .summary("v" + GeminiConstants.PLUGIN_VERSION_NAME)
             .onClick((pluginUI, item) -> handlePluginVersionTap(pluginUI));
 
@@ -117,10 +117,15 @@ public class ToolsSubPreference implements PluginPreference {
             if (preferenceItem.getKey().equals(GeminiConstants.PREF_ENABLE_DEBUG)) {
                 boolean debugEnabled = (boolean) newValue;
                 if (debugEnabled) {
-                    context.showToast("Debug logging enabled - Check MT Manager logs for details");
+                    context.showToast(str("{msg_debug_enabled}"));
                 }
             }
         });
+    }
+
+    /** Localized text for {@code key}; the language packs live in assets. */
+    private String str(String key) {
+        return context.getString(key);
     }
 
     // ==================== Exportable Preference Keys ====================
@@ -200,26 +205,26 @@ public class ToolsSubPreference implements PluginPreference {
             // we show our own so the user knows the export succeeded.
             try {
                 context.setClipboardText(jsonText, null);
-                context.showToast("✅ " + count + " settings copied to clipboard");
+                context.showToast("✅ " + count + " " + str("{msg_settings_copied}"));
             } catch (Exception clipErr) {
                 // Fallback: just open the dialog so the user can copy manually
-                context.showToast("⚠️ Clipboard copy failed — please copy from dialog");
+                context.showToast("⚠️ " + str("{msg_clipboard_failed}"));
             }
 
             pluginUI.buildDialog()
-                    .setTitle("Export Settings (" + count + " items)")
+                    .setTitle(str("{tools_export}") + " (" + count + ")")
                     .setView(pluginUI.buildVerticalLayout()
-                            .addTextView().text("Copied to clipboard. You can also long‑press the text below:")
+                            .addTextView().text(str("{tools_export_hint}"))
                             .textColor(GeminiColorTokens.getSecondaryTextColor(pluginUI))
                             .textSize(13)
                             .addEditBox("exportJson").text(jsonText)
                             .minLines(6).maxLines(12).textSize(12)
                             .softWrap(PluginEditText.SOFT_WRAP_KEEP_WORD)
                             .build())
-                    .setPositiveButton("Done", null)
+                    .setPositiveButton(str("{btn_done}"), null)
                     .show();
         } catch (Exception e) {
-            context.showToast("Export failed: " + e.getMessage());
+            context.showToast(str("{msg_export_failed}") + ": " + e.getMessage());
         }
     }
 
@@ -227,7 +232,7 @@ public class ToolsSubPreference implements PluginPreference {
 
     private void showImportDialog(bin.mt.plugin.api.ui.PluginUI pluginUI) {
         PluginView dialogView = pluginUI.buildVerticalLayout()
-                .addTextView().text("Paste a preset JSON below:")
+                .addTextView().text(str("{tools_import_hint}"))
                 .textColor(GeminiColorTokens.getSecondaryTextColor(pluginUI))
                 .textSize(13)
                 .addEditBox("importJson").hint("{ \"preset_version\": 1, ... }")
@@ -235,18 +240,18 @@ public class ToolsSubPreference implements PluginPreference {
                 .build();
 
         pluginUI.buildDialog()
-                .setTitle("Import Settings")
+                .setTitle(str("{tools_import}"))
                 .setView(dialogView)
-                .setPositiveButton("Import", (dialog, which) -> {
+                .setPositiveButton(str("{btn_import}"), (dialog, which) -> {
                     PluginEditText editText = dialogView.requireViewById("importJson");
                     String input = editText.getText().toString().trim();
                     if (input.isEmpty()) {
-                        context.showToast("No JSON provided");
+                        context.showToast(str("{msg_no_json}"));
                         return;
                     }
                     applyPresetJson(input);
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton("{cancel}", null)
                 .show();
     }
 
@@ -255,7 +260,7 @@ public class ToolsSubPreference implements PluginPreference {
             JSONObject json = new JSONObject(jsonText);
 
             if (!json.contains("preset_version") || !json.contains("settings")) {
-                context.showToast("Invalid preset: missing required fields");
+                context.showToast(str("{msg_invalid_preset}"));
                 return;
             }
 
@@ -279,9 +284,9 @@ public class ToolsSubPreference implements PluginPreference {
                 applied++;
             }
             editor.apply();
-            context.showToast("Restored " + applied + " settings — restart plugin to apply");
+            context.showToast(applied + " " + str("{msg_settings_restored}"));
         } catch (Exception e) {
-            context.showToast("Import failed: invalid JSON — " + e.getMessage());
+            context.showToast(str("{msg_import_failed}") + ": " + e.getMessage());
         }
     }
 
@@ -330,7 +335,7 @@ public class ToolsSubPreference implements PluginPreference {
         ProviderStatus activeStatus = getProviderStatus(active);
         // A freshly added custom endpoint has no model until one is picked.
         String activeModel = active.model == null || active.model.isEmpty()
-                ? "not set" : active.model;
+                ? str("{dash_not_set}") : active.model;
 
         int primaryTextColor = GeminiColorTokens.getPrimaryTextColor(pluginUI);
         int secondaryTextColor = GeminiColorTokens.getSecondaryTextColor(pluginUI);
@@ -339,19 +344,19 @@ public class ToolsSubPreference implements PluginPreference {
 
         bin.mt.plugin.api.ui.PluginView view = pluginUI
             .buildVerticalLayout()
-            .addTextView().text("AI Provider Overview").bold().textSize(18).paddingBottomDp(8).textColor(primaryTextColor)
+            .addTextView().text(str("{dash_title}")).bold().textSize(18).paddingBottomDp(8).textColor(primaryTextColor)
 
             // Active provider card
             .addVerticalLayout().paddingDp(16).backgroundColor(activeCardBackground).children(subBuilder -> subBuilder
-                .addTextView().text("Active Provider").bold().textColor(activeStatus.getAccentColor(pluginUI))
+                .addTextView().text(str("{dash_active}")).bold().textColor(activeStatus.getAccentColor(pluginUI))
                 .addTextView().text(activeStatus.icon + " " + activeStatus.displayName).paddingTopDp(6).textSize(18).textColor(primaryTextColor)
                 .addTextView().text(activeStatus.title).paddingTopDp(4).textColor(activeStatus.getStatusTextColor(pluginUI))
                 .addTextView().text(activeStatus.detail).paddingTopDp(2).textColor(secondaryTextColor)
-                .addTextView().text("Model: " + activeModel).paddingTopDp(10).textColor(secondaryTextColor)
+                .addTextView().text(str("{dash_model}") + ": " + activeModel).paddingTopDp(10).textColor(secondaryTextColor)
             )
             .addTextView().height(1).widthMatchParent().backgroundColor(pluginUI.colorDivider()).marginVerticalDp(12)
 
-            .addTextView().text("Provider Health").bold().textSize(16).textColor(primaryTextColor)
+            .addTextView().text(str("{dash_health}")).bold().textSize(16).textColor(primaryTextColor)
             .addVerticalLayout().paddingTopDp(8).children(column -> {
                 for (ProviderStatus s : health) {
                     column.addHorizontalLayout().paddingDp(12).marginBottomDp(8)
@@ -369,7 +374,7 @@ public class ToolsSubPreference implements PluginPreference {
             .build();
 
         pluginUI.buildDialog()
-            .setTitle("Dashboard")
+            .setTitle(str("{dash_dialog}"))
             .setView(view)
             .setPositiveButton("{close}", null)
             .show();
@@ -393,24 +398,24 @@ public class ToolsSubPreference implements PluginPreference {
         if (!provider.requiresKey()) {
             // Self-hosted endpoints take no key, so there is nothing to validate.
             statusIcon = hasModel ? "🟢" : "⚪";
-            statusMsg = hasModel ? "Ready" : "No Model Set";
+            statusMsg = hasModel ? str("{status_ready}") : str("{status_no_model}");
             resultMsg = hasModel
-                    ? "This endpoint needs no API key.\n\nEndpoint: " + provider.endpoint
-                            + "\nModel: " + provider.model
-                    : "Set a model id for this endpoint in provider settings.";
+                    ? str("{test_no_key_needed}") + "\n\n" + str("{test_endpoint}") + ": " + provider.endpoint
+                            + "\n" + str("{dash_model}") + ": " + provider.model
+                    : str("{test_set_model}");
         } else if (provider.apiKey.isEmpty()) {
             statusIcon = "⚪";
-            statusMsg = "API Key Missing";
-            resultMsg = "Please configure your API key in provider settings.\n\n" + formatHint;
+            statusMsg = str("{test_key_missing}");
+            resultMsg = str("{test_key_missing_detail}") + "\n\n" + formatHint;
         } else if (!provider.hasValidKeyFormat()) {
             statusIcon = "🔴";
-            statusMsg = "Invalid Format";
-            resultMsg = "API key format is invalid. Please check your key.\n\n" + formatHint;
+            statusMsg = str("{test_invalid_format}");
+            resultMsg = str("{test_invalid_detail}") + "\n\n" + formatHint;
         } else {
             statusIcon = "🟢";
-            statusMsg = "Format Valid";
-            resultMsg = "API key format is correct!\n\nModel: " + provider.model
-                    + "\n\nTip: This validates format only. Use 'Test API Key' in provider settings to verify connectivity.";
+            statusMsg = str("{test_format_valid}");
+            resultMsg = str("{test_format_valid_detail}") + "\n\n" + str("{dash_model}") + ": " + provider.model
+                    + "\n\n" + str("{test_format_tip}");
         }
 
         // The indicator emoji already encodes the outcome; reuse it so the
@@ -420,7 +425,7 @@ public class ToolsSubPreference implements PluginPreference {
 
         bin.mt.plugin.api.ui.PluginView view = pluginUI
             .buildVerticalLayout()
-            .addTextView().text("Testing: " + providerName).bold().textSize(16).paddingBottomDp(16)
+            .addTextView().text(str("{test_testing}") + ": " + providerName).bold().textSize(16).paddingBottomDp(16)
             .addVerticalLayout().paddingDp(12).children(subBuilder -> subBuilder
                 .addHorizontalLayout().children(h -> h
                     .addTextView().text(statusIcon).textSize(32).paddingRightDp(12)
@@ -433,7 +438,7 @@ public class ToolsSubPreference implements PluginPreference {
             .build();
 
         pluginUI.buildDialog()
-            .setTitle("Provider Test")
+            .setTitle(str("{test_dialog}"))
             .setView(view)
             .setPositiveButton("{close}", null)
             .show();
@@ -465,6 +470,9 @@ public class ToolsSubPreference implements PluginPreference {
         showDebugTools(pluginUI);
     }
 
+    // Deliberately not translated: this menu is a developer aid reached by
+    // tapping the version five times, and every entry in it would otherwise
+    // be a line asked of every volunteer translator.
     private void showDebugTools(bin.mt.plugin.api.ui.PluginUI pluginUI) {
         if (pluginUI == null || preferences == null) return;
 
@@ -537,13 +545,13 @@ public class ToolsSubPreference implements PluginPreference {
     }
 
     /** What a well-formed key looks like for the provider in hand. */
-    private static String keyFormatHint(Provider provider) {
+    private String keyFormatHint(Provider provider) {
         switch (provider.id) {
             case Providers.ID_GEMINI:     return "Expected format: AIzaSy...";
             case Providers.ID_OPENAI:     return "Expected format: sk-...";
             case Providers.ID_CLAUDE:     return "Expected format: sk-ant-...";
             case Providers.ID_OPENROUTER: return "Expected format: sk-or-v1-...";
-            default:                      return "Any key this endpoint accepts.";
+            default:                      return str("{test_hint_any}");
         }
     }
 

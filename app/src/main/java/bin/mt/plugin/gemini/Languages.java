@@ -2,6 +2,8 @@ package bin.mt.plugin.gemini;
 
 import android.content.SharedPreferences;
 
+import bin.mt.plugin.api.PluginContext;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -77,6 +79,20 @@ public final class Languages {
     /** Every supported code, in catalogue order. */
     public static List<String> allCodes() {
         return new ArrayList<>(NAMES.keySet());
+    }
+
+    /**
+     * The name to show for a code, translated when the language pack carries
+     * an entry for it. Entries are addressed as {@code lang_<code>}.
+     */
+    public static String displayName(PluginContext context, String code) {
+        String translated = context.getString("{lang_" + code + "}");
+        // A pack with no entry hands back something unusable rather than a name.
+        if (translated == null || translated.isEmpty() || translated.contains("{")) {
+            String english = nameOf(code);
+            return english != null ? english : code;
+        }
+        return translated;
     }
 
     /** English name for a code, or null when the code is not in the catalogue. */

@@ -227,3 +227,62 @@ tone_technical: Teknik Kılavuz
 tone_technical_desc: Geliştirici veya yönetici belgeleri için en uygunu
 tone_playful: Eğlenceli Neşe
 tone_playful_desc: Eğlence veya Z kuşağı kitlesi için uygun
+
+# Translation Settings
+trans_languages: Diller
+trans_languages_all: dil çeviri penceresinde görünüyor
+trans_languages_some: çeviri penceresinde görünüyor
+trans_request_timeout: İstek Zaman Aşımı (ms)
+trans_request_timeout_summary: API yanıtı için azami bekleme süresi
+trans_max_retries: Azami Yeniden Deneme
+trans_max_retries_summary: Hata durumunda kaç kez yeniden denenecek
+msg_pick_one_language: En az bir dil seçin — hepsi korunuyor
+msg_languages_saved: Yeni listeyi görmek için çeviri penceresini yeniden açın
+
+# Tools and Diagnostics
+tools_provider_status: Sağlayıcı Durumu
+tools_provider_status_summary: Tüm sağlayıcıların durumunu tek bakışta gör
+tools_test_provider: Aktif Sağlayıcıyı Test Et
+tools_quick_test: Hızlı test
+tools_view_logs: Kayıtları Görüntüle
+tools_view_logs_summary: MT Manager kayıt görüntüleyicisini aç
+tools_debug_logging: Hata Ayıklama Kaydı
+tools_debug_logging_summary: Ayrıntılı istek bilgisini MT Manager kayıtlarına yaz
+tools_export: Ayarları Dışa Aktar
+tools_export_summary: Tüm ayarları paylaşmak için JSON olarak kopyala
+tools_import: Ayarları İçe Aktar
+tools_import_summary: Ayarları JSON ön ayarından geri yükle
+tools_plugin_version: Eklenti Sürümü
+msg_debug_enabled: Hata ayıklama kaydı açık - ayrıntılar MT Manager kayıtlarında
+msg_settings_copied: ayar panoya kopyalandı
+msg_clipboard_failed: Panoya kopyalanamadı, lütfen pencereden kopyalayın
+tools_export_hint: Panoya kopyalandı. Aşağıdaki metne uzun basarak da kopyalayabilirsiniz:
+btn_done: Tamam
+msg_export_failed: Dışa aktarma başarısız
+tools_import_hint: Aşağıya bir ön ayar JSON yapıştırın:
+btn_import: İçe Aktar
+msg_no_json: JSON girilmedi
+msg_invalid_preset: Geçersiz ön ayar: zorunlu alanlar eksik
+msg_settings_restored: ayar geri yüklendi, uygulamak için eklentiyi yeniden başlatın
+msg_import_failed: İçe aktarma başarısız, geçersiz JSON
+
+# Dashboard and Provider Test
+dash_not_set: ayarlanmadı
+dash_title: YZ Sağlayıcı Özeti
+dash_active: Aktif Sağlayıcı
+dash_model: Model
+dash_health: Sağlayıcı Sağlığı
+dash_dialog: Pano
+test_no_key_needed: Bu uç nokta API anahtarı istemiyor.
+test_endpoint: Uç nokta
+test_set_model: Sağlayıcı ayarlarından bu uç nokta için bir model kimliği girin.
+test_key_missing: API Anahtarı Yok
+test_key_missing_detail: Lütfen sağlayıcı ayarlarından API anahtarınızı girin.
+test_invalid_format: Geçersiz Biçim
+test_invalid_detail: API anahtarı biçimi geçersiz. Lütfen anahtarınızı kontrol edin.
+test_format_valid: Biçim Geçerli
+test_format_valid_detail: API anahtarı biçimi doğru!
+test_format_tip: İpucu: bu yalnızca biçimi denetler. Bağlantıyı sınamak için sağlayıcı ayarlarındaki Test API Key seçeneğini kullanın.
+test_testing: Test ediliyor
+test_dialog: Sağlayıcı Testi
+test_hint_any: Bu uç noktanın kabul ettiği herhangi bir anahtar.

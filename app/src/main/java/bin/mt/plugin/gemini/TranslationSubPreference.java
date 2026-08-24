@@ -29,21 +29,21 @@ public class TranslationSubPreference implements PluginPreference {
         this.preferences = context.getPreferences();
 
         // ==================== Languages ====================
-        builder.addText("Languages", KEY_LANGUAGES_ROW)
+        builder.addText(str("{trans_languages}"), KEY_LANGUAGES_ROW)
                 .summary(buildLanguagesSummary())
                 .onClick((pluginUI, item) -> showLanguagePicker(pluginUI));
 
         // ==================== Request Timeout ====================
-        builder.addInput("Request Timeout (ms)", GeminiConstants.PREF_TIMEOUT)
+        builder.addInput(str("{trans_request_timeout}"), GeminiConstants.PREF_TIMEOUT)
                 .defaultValue(String.valueOf(GeminiConstants.DEFAULT_TIMEOUT))
-                .summary("Maximum wait time for API response")
+                .summary(str("{trans_request_timeout_summary}"))
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_NUMBER);
 
         // ==================== Max Retry Attempts ====================
-        builder.addInput("Max Retry Attempts", GeminiConstants.PREF_MAX_RETRIES)
+        builder.addInput(str("{trans_max_retries}"), GeminiConstants.PREF_MAX_RETRIES)
                 .defaultValue(String.valueOf(GeminiConstants.DEFAULT_MAX_RETRIES))
-                .summary("Number of retry attempts on failures")
+                .summary(str("{trans_max_retries_summary}"))
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_NUMBER);
 
@@ -72,12 +72,17 @@ public class TranslationSubPreference implements PluginPreference {
         builder.onCreated((pluginUI, createdScreen) -> this.screen = createdScreen);
     }
 
+    /** Localized text for {@code key}; the language packs live in assets. */
+    private String str(String key) {
+        return context.getString(key);
+    }
+
     private String buildLanguagesSummary() {
         int enabled = Languages.enabled(preferences).size();
         int total = Languages.allCodes().size();
         return enabled == total
-                ? "All " + total + " languages shown in the translate dialog"
-                : enabled + " of " + total + " shown in the translate dialog";
+                ? total + " " + str("{trans_languages_all}")
+                : enabled + "/" + total + " " + str("{trans_languages_some}");
     }
 
     /**
@@ -94,12 +99,12 @@ public class TranslationSubPreference implements PluginPreference {
         CharSequence[] labels = new CharSequence[codes.size()];
         boolean[] checked = new boolean[codes.size()];
         for (int i = 0; i < codes.size(); i++) {
-            labels[i] = Languages.nameOf(codes.get(i)) + "  (" + codes.get(i) + ")";
+            labels[i] = Languages.displayName(context, codes.get(i)) + "  (" + codes.get(i) + ")";
             checked[i] = enabled.contains(codes.get(i));
         }
 
         pluginUI.buildDialog()
-                .setTitle("Languages")
+                .setTitle(str("{trans_languages}"))
                 .setMultiChoiceItems(labels, checked,
                         (dialog, which, isChecked) -> checked[which] = isChecked)
                 .setPositiveButton("{ok}", (dialog, which) -> {
@@ -111,11 +116,11 @@ public class TranslationSubPreference implements PluginPreference {
                     }
                     if (picked.isEmpty()) {
                         // An empty list would leave MT with nothing to pick.
-                        context.showToast("Pick at least one language — keeping all of them");
+                        context.showToast(str("{msg_pick_one_language}"));
                     }
                     Languages.saveEnabled(preferences, picked);
                     refreshLanguagesSummary();
-                    context.showToast("Reopen the translate dialog to see the new list");
+                    context.showToast(str("{msg_languages_saved}"));
                     dialog.dismiss();
                 })
                 .setNegativeButton("{cancel}", null)

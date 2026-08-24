@@ -175,12 +175,11 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         }
         String name = super.getLanguageDisplayName(language);
         if (name == null || name.isEmpty() || name.equals(language)) {
-            String own = Languages.nameOf(language);
-            if (own != null) {
-                return own;
-            }
+            // The pack answers in the plugin's own language, so a Chinese user
+            // reads the language list in Chinese rather than in English.
+            return Languages.displayName(getContext(), language);
         }
-        return name == null ? language : name;
+        return name;
     }
 
     /**
