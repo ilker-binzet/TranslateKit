@@ -256,8 +256,8 @@ public class GeminiConstants {
     public static final String PLUGIN_ID = "mt.plugin.translatekit";
     // Must stay in step with mtPlugin { versionCode / versionName } in
     // app/build.gradle — the two are read by different subsystems.
-    public static final int PLUGIN_VERSION_CODE = 13;
-    public static final String PLUGIN_VERSION_NAME = "0.5.0";
+    public static final int PLUGIN_VERSION_CODE = 14;
+    public static final String PLUGIN_VERSION_NAME = "0.6.0";
 
     // ==================== API Key Pattern ====================
 

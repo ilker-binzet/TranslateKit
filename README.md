@@ -6,7 +6,7 @@
 
 **Multi-provider AI translation plugin for [MT Manager](https://mt2.cn)**
 
-[![Version](https://img.shields.io/badge/version-0.5.0-blue?style=flat-square)](https://github.com/ilker-binzet/TranslateKit/releases)
+[![Version](https://img.shields.io/badge/version-0.6.0-blue?style=flat-square)](https://github.com/ilker-binzet/TranslateKit/releases)
 [![SDK](https://img.shields.io/badge/MT%20Plugin%20SDK-v3%20stable-purple?style=flat-square)](https://gitee.com/L-JINBIN/mt-plugin-v3-demo)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square)](#)
@@ -21,7 +21,7 @@
 
 TranslateKit brings the power of modern AI translation directly into MT Manager. Instead of switching between multiple tools or browser tabs, you configure your API keys once and translate strings with a tap.
 
-The plugin supports three AI providers and Google Cloud Translation, with built-in context presets, tone controls, and retry logic — making it suitable for everything from casual app localization to production-grade translation workflows.
+The plugin supports four AI providers, any OpenAI-compatible endpoint, and Google Cloud Translation, with built-in context presets, tone controls, and retry logic — making it suitable for everything from casual app localization to production-grade translation workflows.
 
 ---
 
@@ -68,12 +68,28 @@ Organized into 5 navigable categories instead of a flat list:
 
 ```
 TranslateKit Settings
-├── AI Providers          → Configure Gemini / OpenAI / Claude
-├── Translation Settings  → Default engine, timeout, retries
+├── AI Providers          → Pick the active one, configure keys and models
+├── Translation Settings  → Languages, timeout, retries, batching
 ├── Context & Tone        → Presets, tone, audience, notes
-├── Tools & Diagnostics   → Provider health, tests, logs
+├── Tools & Diagnostics   → Provider health, tests, logs, export/import
+├── Translate This Plugin → How to add your language
 └── About
 ```
+
+### Interface Languages
+
+The plugin itself speaks **English**, **Türkçe** and **简体中文**, following the
+device language. Every screen reads its text from a language pack in
+[`app/src/main/assets`](app/src/main/assets) — a plain `key: value` file.
+
+Adding a language takes one file and no Java: copy `strings.mtl` to
+`strings-<code>.mtl`, translate the right-hand side, open a pull request. A
+missing entry falls back to English rather than breaking, so partial
+translations are welcome. See **[docs/TRANSLATING.md](docs/TRANSLATING.md)**,
+which the plugin links to from its own settings.
+
+You can also choose which of the 37 translation languages appear in MT's Source
+and Target dropdowns, under *Translation Settings → Languages*.
 
 ### Developer Tools
 

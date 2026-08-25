@@ -1,7 +1,7 @@
 
 # Eklenti Bilgileri
 plugin_name: TranslateKit
-plugin_description: Gemini, OpenAI ve Claude için çoklu çeviri eklentisi (ÜCRETSiZ katmanlar mevcut)
+plugin_description: Android dizelerini Gemini, OpenAI, Claude, OpenRouter veya OpenAI uyumlu herhangi bir uç noktayla çevirin
 
 # Ayarlar Ekranı
 

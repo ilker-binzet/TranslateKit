@@ -5,6 +5,64 @@ All notable changes to TranslateKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-08-25
+
+### Added
+- **The interface can be translated, and ships in Simplified Chinese.** Every
+  screen reads its text from a language pack in `app/src/main/assets` instead
+  of from string literals in Java. English, Turkish and Simplified Chinese are
+  included; a missing entry falls back to English rather than breaking, so a
+  partial translation is usable.
+- **A row that explains how to add a language.** *Translate This Plugin* on the
+  main screen opens `docs/TRANSLATING.md`: copy one file, translate the
+  right-hand side, open a pull request. No Java involved.
+- **Choose which languages the translate dialog offers.** The engine supports
+  37, and MT's Source and Target dropdowns are a short scrolling list inside a
+  dialog. *Translation Settings -> Languages* ticks the ones to show. Leaving
+  every box ticked keeps the previous behaviour.
+- **Choose the active provider from the AI Providers screen.** The active one
+  carries a check mark, and any entry offers *Use as Default* alongside its
+  settings.
+
+### Fixed
+- **Test Active Provider validated the wrong key.** With OpenRouter or a custom
+  endpoint selected it fell through to the Gemini key, so the test reported on
+  a provider that was not in use.
+- **Clear Caches skipped the OpenRouter catalogue**, which survived the purge.
+- **Export and Import silently dropped settings** — the OpenRouter model and
+  endpoint, and every user-defined endpoint. Custom endpoints now travel with
+  their API keys stripped, since a preset is meant to be shared, and importing
+  one keeps whatever key is already stored under the same endpoint name.
+- **The dashboard's model line always showed Gemini's model**, whichever
+  provider was active. This one predates 0.5.0.
+- **Provider Health listed three providers**, having never learned about
+  OpenRouter or custom endpoints.
+- **Hebrew appeared in the language dropdowns as a bare `he`**, MT having no
+  built-in name for the code.
+
+### Changed
+- Ready and successful states are drawn in green rather than the theme accent,
+  so an outcome reads at a glance instead of from the wording.
+- *Default AI Engine* leaves Translation Settings. Picking a provider belongs
+  on the screen that shows which providers are configured.
+- The quick API test translates into the interface language instead of always
+  into Turkish.
+- Tools & Diagnostics is driven by the provider registry throughout, so a new
+  provider cannot be missed by one of its panels again.
+
+### Removed
+- `ClaudeTranslatePreference` and `OpenAITranslatePreference`, superseded by
+  the Provider screens and reachable from nowhere. They were the only readers
+  of most of the language pack, which drops from 307 entries to the 338 the
+  interface actually uses after the extraction.
+
+### Notes
+- **No preference keys changed.** Upgrading keeps every configured API key,
+  model and endpoint.
+- `LanguagePackTest` fails the build when a screen asks for an entry no pack
+  declares, which would reach the user as a raw `{key}`, and when a pack
+  declares an entry nothing asks for, which would waste a translator's time.
+
 ## [0.5.0] - 2026-08-17
 
 ### Added

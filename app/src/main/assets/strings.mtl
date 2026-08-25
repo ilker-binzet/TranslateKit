@@ -1,7 +1,7 @@
 
 # Plugin Information
 plugin_name: TranslateKit
-plugin_description: Multi-provider translation for Gemini, OpenAI, and Claude (FREE tiers available)
+plugin_description: Translate Android strings with Gemini, OpenAI, Claude, OpenRouter, or any OpenAI-compatible endpoint
 
 # Preference Screen
 pref_batch_enabled: Batch Translation

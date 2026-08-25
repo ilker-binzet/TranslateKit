@@ -4,7 +4,7 @@
 
 # Plugin Information
 plugin_name: TranslateKit
-plugin_description: 支持 Gemini、OpenAI 和 Claude 的多服务商翻译插件（均有免费额度）
+plugin_description: 使用 Gemini、OpenAI、Claude、OpenRouter 或任意兼容 OpenAI 的端点翻译 Android 字符串
 
 # Preference Screen
 pref_batch_enabled: 批量翻译
