@@ -44,23 +44,43 @@ jobs:
       - name: Generate release notes
         id: notes
         run: |
-          echo "## TranslateKit ${{ github.ref_name }}" > release_notes.md
-          echo "" >> release_notes.md
-          echo "### Installation" >> release_notes.md
-          echo "1. Download \`TranslateKit-${{ github.ref_name }}.mtp\` below" >> release_notes.md
-          echo "2. Open with MT Manager → Install" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "### Changes" >> release_notes.md
-          # Get commits since last tag
-          PREV_TAG=$(git tag --sort=-creatordate | head -2 | tail -1) || true
-          if [ -n "$PREV_TAG" ] && [ "$PREV_TAG" != "${{ github.ref_name }}" ]; then
-            git log --pretty=format:"- %s" "$PREV_TAG".."${{ github.ref_name }}" >> release_notes.md
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          {
+            echo "## TranslateKit ${{ github.ref_name }}"
+            echo
+            echo "### Installation"
+            echo "1. Download \`TranslateKit-${{ github.ref_name }}.mtp\` below"
+            echo "2. Open with MT Manager -> Install"
+            echo
+          } > release_notes.md
+
+          # Prefer the CHANGELOG entry for this version: it is written for
+          # people, where a list of commit subjects is written for git. Falls
+          # back to the subjects when the version has no entry yet.
+          awk -v v="## [$VERSION]" '
+            index($0, v) == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > changelog_section.md
+
+          if [ -s changelog_section.md ]; then
+            cat changelog_section.md >> release_notes.md
           else
-            git log --pretty=format:"- %s" -10 >> release_notes.md
+            echo "### Changes" >> release_notes.md
+            PREV_TAG=$(git tag --sort=-creatordate | head -2 | tail -1) || true
+            if [ -n "$PREV_TAG" ] && [ "$PREV_TAG" != "${{ github.ref_name }}" ]; then
+              git log --pretty=format:"- %s" "$PREV_TAG".."${{ github.ref_name }}" >> release_notes.md
+            else
+              git log --pretty=format:"- %s" -10 >> release_notes.md
+            fi
+            echo >> release_notes.md
           fi
-          echo "" >> release_notes.md
-          echo "---" >> release_notes.md
-          echo "*Built with MT Plugin SDK v3 (3.0.0 stable) on $(date -u +%Y-%m-%d)*" >> release_notes.md
+
+          {
+            echo
+            echo "---"
+            echo "*Built with MT Plugin SDK v3 (3.0.0 stable) on $(date -u +%Y-%m-%d)*"
+          } >> release_notes.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
