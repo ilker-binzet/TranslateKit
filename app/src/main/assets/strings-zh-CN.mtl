@@ -1,0 +1,389 @@
+# TranslateKit - 简体中文
+# 键名请勿翻译，只翻译冒号右侧的内容。
+# 缺少的条目会自动回退到 strings.mtl（英文）。
+
+# Plugin Information
+plugin_name: TranslateKit
+plugin_description: 支持 Gemini、OpenAI 和 Claude 的多服务商翻译插件（均有免费额度）
+
+# Preference Screen
+pref_batch_enabled: 批量翻译
+pref_batch_enabled_summary: 在一次 API 调用中发送多条文本，翻译更快
+pref_batch_size: 批量大小
+pref_batch_size_summary: 每次批量请求的最大文本条数（1-100）
+pref_batch_max_chars: 批量字符上限
+pref_batch_max_chars_summary: 每次批量请求的最大总字符数（500-50000）
+pref_bilingual_mode: 双语输出
+pref_bilingual_mode_summary: 保留原文，并在其下方显示译文
+
+# Language Names
+lang_auto: 自动检测
+lang_en: 英语
+lang_tr: 土耳其语
+lang_de: 德语
+lang_fr: 法语
+lang_es: 西班牙语
+lang_it: 意大利语
+lang_pt: 葡萄牙语
+lang_ru: 俄语
+lang_ja: 日语
+lang_ko: 韩语
+lang_zh-CN: 简体中文
+lang_zh-TW: 繁体中文
+lang_ar: 阿拉伯语
+lang_hi: 印地语
+lang_nl: 荷兰语
+lang_sv: 瑞典语
+lang_pl: 波兰语
+lang_uk: 乌克兰语
+lang_cs: 捷克语
+lang_el: 希腊语
+lang_he: 希伯来语
+lang_id: 印度尼西亚语
+lang_th: 泰语
+lang_vi: 越南语
+lang_ro: 罗马尼亚语
+lang_hu: 匈牙利语
+lang_da: 丹麦语
+lang_fi: 芬兰语
+lang_no: 挪威语
+lang_bg: 保加利亚语
+lang_hr: 克罗地亚语
+lang_sr: 塞尔维亚语
+lang_sk: 斯洛伐克语
+lang_sl: 斯洛文尼亚语
+lang_lt: 立陶宛语
+lang_lv: 拉脱维亚语
+lang_et: 爱沙尼亚语
+
+# Error Messages
+error_no_api_key: 尚未配置 API key。可在 aistudio.google.com/app/apikey 免费获取
+error_api: API 错误
+
+# Success Messages
+msg_fallback_gemini: ⚠️ 已回退到 Gemini AI（默认服务商）。
+msg_claude_model_auto_selected: ⚠️ 所选 Claude 模型对你的账户不可用。已切换为：
+
+# Dialog Buttons
+close: 关闭
+
+# Text Editor Floating Menu & Tool Menu
+floating_menu_translate: AI 翻译
+tool_menu_ai_translate: AI 翻译
+source_text: 原文
+translated_text: 译文
+from: 源语言：
+to: 目标语言：
+engine: 引擎：
+translate: 翻译
+replace_original: 替换原文
+text_replaced: 文本已替换
+translating: 正在翻译
+translating_with: 正在使用
+translation_complete: 翻译完成
+error_no_text_selected: 未选择文本
+error_no_text: 请输入要翻译的文本
+error_translation_failed: 翻译失败
+
+# ==================== Google Cloud Translation (gc_) ====================
+gc_plugin_name: Google Cloud 翻译
+
+gc_pref_header_main: Google Cloud 翻译
+gc_pref_plugin_name: 插件名称
+gc_pref_plugin_description: 使用 Google 神经机器翻译的高级翻译
+
+gc_pref_header_api_config: API 配置
+gc_pref_api_key_title: API Key
+gc_pref_api_key_summary: 输入你的 Google Cloud Translation API key。\n可在 console.cloud.google.com 获取
+gc_pref_test_api_key: 测试 API Key
+gc_pref_test_api_key_summary: 验证 API key 是否正常工作
+gc_pref_get_api_key: 获取 API Key
+gc_pref_get_api_key_summary: 打开 Google Cloud Console 创建 API key
+
+gc_pref_header_translation_settings: 翻译设置
+gc_pref_default_target_lang: 默认目标语言
+gc_pref_default_target_lang_summary: 翻译时优先使用的语言
+gc_pref_use_advanced_model: 使用高级 NMT 模型
+gc_pref_use_advanced_model_summary: 启用 Google 的高级神经机器翻译模型（费用可能更高）
+
+gc_pref_header_performance: 性能设置
+gc_pref_timeout: 请求超时（毫秒）
+gc_pref_timeout_summary: 等待 API 响应的最长时间（5000-120000 毫秒）
+gc_pref_max_retries: 最大重试次数
+gc_pref_max_retries_summary: 出现临时故障时的重试次数（0-5）
+
+gc_pref_header_advanced: 高级功能
+gc_pref_enable_cache: 启用翻译缓存
+gc_pref_enable_cache_summary: 缓存译文以减少 API 调用并提升速度
+gc_pref_cache_expiration: 缓存有效期（分钟）
+gc_pref_cache_expiration_summary: 译文在缓存中保留多久
+gc_pref_clear_cache: 清除缓存
+gc_pref_clear_cache_summary: 移除所有已缓存的译文
+
+gc_pref_header_statistics: 统计
+gc_pref_stats_cache_hits: 缓存命中
+gc_pref_stats_cache_misses: 缓存未命中
+gc_pref_stats_value: %d
+gc_pref_reset_stats: 重置统计
+gc_pref_reset_stats_summary: 清除所有使用统计
+
+gc_pref_header_info: 信息与帮助
+gc_pref_version: 插件版本
+gc_pref_api_docs: API 文档
+gc_pref_api_docs_summary: 查看 Google Cloud Translation API 文档
+gc_pref_pricing: 价格信息
+gc_pref_pricing_summary: 查看翻译费用与免费额度
+gc_pref_github: GitHub 仓库
+gc_pref_github_summary: 查看源码并反馈问题
+
+gc_lang_auto: 自动检测
+gc_lang_en: 英语
+gc_lang_zh-CN: 简体中文
+gc_lang_tr: 土耳其语
+gc_lang_de: 德语
+gc_lang_fr: 法语
+gc_lang_es: 西班牙语
+gc_lang_ja: 日语
+gc_lang_ko: 韩语
+
+gc_error_no_api_key: 尚未配置 API key。请在设置中填入你的 API key。
+gc_error_invalid_api_key_format: API key 格式无效。Google API key 应以 "AIzaSy" 开头，长度为 39 个字符。
+gc_error_api_key_invalid: API key 验证失败。请检查后重试。
+gc_error_api_test_failed: API key 测试失败
+gc_error_text_too_long: 文本超过 5000 字符上限。请拆分为更小的片段。
+gc_error_api: API 错误
+
+gc_msg_api_key_valid: API key 有效，工作正常！
+gc_msg_cache_cleared: 翻译缓存已清除
+gc_msg_stats_reset: 统计已重置
+
+# Main Navigation
+nav_providers: AI 服务商
+nav_translation: 翻译设置
+nav_context: 语境与语气
+nav_tools: 工具与诊断
+nav_tools_summary: 服务商状态、测试、日志
+nav_about: 关于
+
+# AI Providers Screen
+providers_custom: 自定义端点
+providers_custom_summary: 添加任意兼容 OpenAI 的 API
+providers_settings: 设置
+providers_use_default: 设为默认
+providers_none: 尚未配置服务商 • 点击进行设置
+providers_configured: 已配置
+providers_active: 当前
+providers_provider: 服务商
+trans_timeout: 超时
+ctx_none: 尚未配置语境 • 配置后翻译更准确
+
+# Provider Status
+status_ready: 就绪
+status_invalid_key: key 无效
+status_check_format: 请检查格式
+status_not_configured: 未配置
+status_tap_setup: 点击进行设置
+status_no_model: 未设置模型
+status_tap_configure: 点击进行配置
+msg_default_provider: 默认服务商
+msg_not_configured_yet: 尚未配置
+
+# Context and Tone
+ctx_quick_presets: 快速预设
+ctx_quick_presets_summary: 套用现成的语境与语气组合
+ctx_tone: 语气与风格
+ctx_tone_summary: 写作风格：亲切、正式、活泼、技术性……
+ctx_app: 应用说明
+ctx_app_summary: 应用名称与类型（例如“我的应用 - 购物”）
+ctx_audience: 目标受众
+ctx_audience_summary: 谁在使用你的应用（例如“青少年”“开发者”）
+ctx_notes: 附加说明
+ctx_notes_summary: 特殊规则：地区格式、禁用词等
+ctx_tone_only: 仅语气
+msg_preset_applied: 已套用
+ctx_preset_mobile: 移动应用发布
+ctx_preset_mobile_sub: 面向用户的引导流程
+ctx_preset_gaming: 游戏体验
+ctx_preset_gaming_sub: 活泼有活力的界面
+ctx_preset_reading: 阅读伴侣
+ctx_preset_reading_sub: 电子书与文章读者
+ctx_preset_business: 商务仪表板
+ctx_preset_business_sub: 企业生产力工具
+ctx_preset_support: 客服机器人
+ctx_preset_support_sub: 客户服务文案
+ctx_preset_commerce: 电商店铺
+ctx_preset_commerce_sub: 商品与结算流程
+ctx_preset_devdocs: 开发者文档
+ctx_preset_devdocs_sub: API 与技术说明
+ctx_preset_education: 教育平台
+ctx_preset_education_sub: 课程与测评
+tone_friendly: 亲切清晰
+tone_friendly_desc: 面向普通用户的易懂帮助文案
+tone_marketing: 产品营销
+tone_marketing_desc: 简洁地突出产品价值
+tone_legal: 法律 / 政策
+tone_legal_desc: 适用于隐私、安全或法律文案
+tone_support: 客服达人
+tone_support_desc: 适合帮助中心或机器人回复
+tone_technical: 技术指南
+tone_technical_desc: 最适合开发者或管理员文档
+tone_playful: 轻松有趣
+tone_playful_desc: 适合娱乐类或年轻受众
+
+# Translation Settings
+trans_languages: 语言
+trans_languages_all: 种语言会出现在翻译对话框中
+trans_languages_some: 会出现在翻译对话框中
+trans_request_timeout: 请求超时（毫秒）
+trans_request_timeout_summary: 等待 API 响应的最长时间
+trans_max_retries: 最大重试次数
+trans_max_retries_summary: 失败时的重试次数
+msg_pick_one_language: 请至少选择一种语言 — 已保留全部
+msg_languages_saved: 重新打开翻译对话框即可看到新列表
+
+# Tools and Diagnostics
+tools_provider_status: 服务商状态
+tools_provider_status_summary: 一眼查看所有服务商的状态
+tools_test_provider: 测试当前服务商
+tools_quick_test: 快速测试
+tools_view_logs: 查看日志
+tools_view_logs_summary: 打开 MT 管理器日志查看器
+tools_debug_logging: 调试日志
+tools_debug_logging_summary: 将详细请求信息记录到 MT 管理器日志
+tools_export: 导出设置
+tools_export_summary: 将所有设置复制为 JSON 以便分享
+tools_import: 导入设置
+tools_import_summary: 从 JSON 预设恢复设置
+tools_plugin_version: 插件版本
+msg_debug_enabled: 调试日志已启用 - 详情见 MT 管理器日志
+msg_settings_copied: 项设置已复制到剪贴板
+msg_clipboard_failed: 复制到剪贴板失败，请从对话框中复制
+tools_export_hint: 已复制到剪贴板。也可以长按下方文本复制：
+btn_done: 完成
+msg_export_failed: 导出失败
+tools_import_hint: 请在下方粘贴预设 JSON：
+btn_import: 导入
+msg_no_json: 未提供 JSON
+msg_invalid_preset: 预设无效：缺少必填字段
+msg_settings_restored: 项设置已恢复，重启插件后生效
+msg_import_failed: 导入失败，JSON 无效
+
+# Dashboard and Provider Test
+dash_not_set: 未设置
+dash_title: AI 服务商总览
+dash_active: 当前服务商
+dash_model: 模型
+dash_health: 服务商状态
+dash_dialog: 面板
+test_no_key_needed: 此端点无需 API key。
+test_endpoint: 端点
+test_set_model: 请在服务商设置中为此端点填写模型 ID。
+test_key_missing: 缺少 API Key
+test_key_missing_detail: 请先在服务商设置中配置 API key。
+test_invalid_format: 格式无效
+test_invalid_detail: API key 格式无效。请检查你的 key。
+test_format_valid: 格式正确
+test_format_valid_detail: API key 格式正确！
+test_format_tip: 提示：这里只检查格式。要验证连接，请使用服务商设置中的 Test API Key。
+test_testing: 正在测试
+test_dialog: 服务商测试
+test_hint_any: 此端点接受的任意 key。
+
+# Provider Screens (shared)
+prov_api_key: API Key
+prov_api_key_status: API Key 状态
+prov_api_docs: API 文档
+prov_model: 模型
+prov_model_catalog: 模型目录
+prov_refresh_models: 刷新模型列表
+prov_custom_model: 自定义模型（可选）
+prov_test_key: 测试 API Key
+prov_provider: 服务商
+prov_quick_test: 快速测试
+prov_view_logs: 查看日志
+prov_view_logs_summary: 打开 MT 管理器日志查看器
+prov_test_key_summary: 验证你的 API key 是否可用
+prov_quick_test_summary: 用一句简单的话测试翻译
+prov_custom_model_summary: 填写后将覆盖上方的默认模型。可填任意模型名称。
+prov_custom_override:   （自定义）
+prov_default:   （默认）
+prov_key_updated: API key 已更新。重新打开设置以刷新状态。
+prov_unknown_error: 未知错误
+prov_bad_response: 收到意外的响应格式。
+prov_free_limits: 免费额度
+prov_get_key: 获取 API Key
+prov_rate_limited: 已超出速率限制，但你的 key 是有效的！
+prov_empty_response: API key 有效，但响应为空。
+prov_verifying: 正在验证你的 API key，请稍候
+prov_pricing: 价格信息
+prov_switch_model: 切换模型
+
+# Provider Screens (headers and dialogs)
+prov_head_api: 🔑 API 配置
+prov_head_usage: 📊 用量与限额
+prov_test_failed: ❌ 测试失败
+prov_no_key: ❌ 缺少 API Key
+prov_no_key_warn: ⚠️ 缺少 API Key
+prov_refresh_failed: ❌ 刷新失败
+prov_key_valid: ✅ API Key 有效
+prov_head_model: 🧠 模型选择
+prov_test_ok: ✅ 测试成功
+prov_testing: 🔄 正在测试…
+prov_status_configured: 🟢 已配置
+prov_documentation: 文档
+prov_pricing_short: 价格
+
+# Provider Screens (rows)
+prov_no_models: ⚠️ 未找到模型
+prov_bad_key: ❌ API Key 无效
+prov_translation_failed: ❌ 翻译失败
+prov_api_error: ❌ API 错误
+prov_head_test: 🔧 测试与调试
+prov_test_prompt: 翻译成中文：Hello
+prov_test_result: 原文：Hello\n\n译文：\n
+gemini_get_key: 获取免费 API Key
+gemini_model_hint: 例如 gemini-2.0-flash-exp
+gemini_limits: 每天 2000 次请求（Flash）| 每天 100 次请求（Pro）- 完全免费
+gemini_refresh_summary: 通过 Google API 获取最新的 Gemini 模型
+gemini_key_summary: 在 aistudio.google.com/app/apikey 免费获取 API key
+gemini_get_key_summary: 打开 Google AI Studio 创建免费 API key
+gemini_docs_summary: 查看 Gemini API 文档与价格
+gemini_need_key: 请先配置你的 Gemini API key。
+prov_warning: ⚠️ 警告
+prov_bad_key_format: ❌ Key 格式无效
+prov_unexpected: ❌ 意外的响应
+prov_testing_connection: 正在测试 API 连接...
+openai_model_hint: 例如 gpt-5.3-nano
+openai_refresh_summary: 获取所有可用的 Chat Completions 模型
+openai_pricing: GPT-4o：每 100 万输入 token $2.50 | GPT-4o Mini：每 100 万 token $0.15 - 按量付费
+openai_key_summary: 在 platform.openai.com/api-keys 获取 API key
+openai_get_key_summary: 打开 OpenAI Platform 管理 API key
+openai_docs_summary: 查看 OpenAI API 文档与价格
+openai_need_key: 请先配置你的 OpenAI API key。
+prov_model_unavailable: ❌ 模型不可用
+prov_translating: 正在翻译...
+claude_model_hint: 例如 claude-opus-5-latest
+claude_refresh_summary: 通过 Anthropic API 获取最新的 Claude 模型
+claude_pricing: Sonnet：每 100 万输入 token $3 | Haiku：每 100 万 token $0.25 - 按量付费
+claude_key_summary: 在 console.anthropic.com/settings/keys 获取 API key
+claude_get_key_summary: 打开 Anthropic Console 管理 API key
+claude_docs_summary: 查看 Claude API 文档与价格
+claude_need_key: 请先配置你的 Claude API key。
+openrouter_key_summary: 在 openrouter.ai/keys 获取 API key
+openrouter_test_summary: 发送一个单词的请求以验证 key
+openrouter_get_key_summary: 打开 OpenRouter 管理 API key
+openrouter_refresh_summary: 获取当前模型目录，无需 API key
+openrouter_custom_summary: 填写后将覆盖上方的模型。请填写完整的 OpenRouter ID。
+openrouter_pricing: 按模型计费，按量付费。部分模型免费。价格见模型目录。
+openrouter_docs_summary: 查看 OpenRouter API 文档
+openrouter_need_key: 请先配置你的 OpenRouter API key。
+custom_head: 🔌 自定义端点
+custom_add: ➕ 添加端点
+custom_add_summary: 名称、基础 URL、API key 和模型
+custom_none: 尚无端点
+custom_none_summary: 在下方添加即可使用任意兼容 OpenAI 的服务
+custom_supported: ℹ️ 支持的服务
+
+# Translation Contributions
+nav_translate_plugin: 翻译此插件
+nav_translate_plugin_summary: 帮助把 TranslateKit 翻译成你的语言
