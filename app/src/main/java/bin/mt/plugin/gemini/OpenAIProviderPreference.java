@@ -25,36 +25,41 @@ public class OpenAIProviderPreference implements PluginPreference {
     private SharedPreferences preferences;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
+    /** Localized text for {@code key}; the language packs live in assets. */
+    private String str(String key) {
+        return context.getString(key);
+    }
+
     @Override
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
         this.preferences = context.getPreferences();
 
         // ==================== API Configuration ====================
-        builder.addText("🔑 API Configuration")
+        builder.addText(str("{prov_head_api}"))
                 .summary("");
 
-        builder.addInput("API Key", GeminiConstants.PREF_OPENAI_API_KEY)
+        builder.addInput(str("{prov_api_key}"), GeminiConstants.PREF_OPENAI_API_KEY)
                 .defaultValue(GeminiConstants.DEFAULT_API_KEY)
-                .summary("Get your API key at platform.openai.com/api-keys")
+                .summary(str("{openai_key_summary}"))
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
-        builder.addText("API Key Status", KEY_STATUS_ROW)
+        builder.addText(str("{prov_api_key_status}"), KEY_STATUS_ROW)
                 .summary(getKeyStatus());
 
-        builder.addText("Test API Key")
-                .summary("Verify your API key is working")
+        builder.addText(str("{prov_test_key}"))
+                .summary(str("{prov_test_key_summary}"))
                 .onClick((pluginUI, item) -> {
                     testApiKey(pluginUI, item);
                 });
 
-        builder.addText("Get API Key")
-                .summary("Open OpenAI Platform to manage API keys")
+        builder.addText(str("{prov_get_key}"))
+                .summary(str("{openai_get_key_summary}"))
                 .url("https://platform.openai.com/api-keys");
 
         // ==================== Model Selection ====================
-        builder.addText("🧠 Model Selection").summary("");
+        builder.addText(str("{prov_head_model}")).summary("");
 
         // The model choice is an implementation detail. The default is the
         // recommended OpenAI model; the user can override via Custom Model.
@@ -63,26 +68,26 @@ public class OpenAIProviderPreference implements PluginPreference {
                 preferences, GeminiConstants.PREF_OPENAI_MODEL, GeminiConstants.DEFAULT_OPENAI_MODEL);
         boolean isCustomOpenAi = !TextUtils.isEmpty(preferences.getString(customOpenAiKey, ""));
 
-        builder.addText("Provider")
+        builder.addText(str("{prov_provider}"))
             .summary("OpenAI");
-        builder.addText("Model")
+        builder.addText(str("{prov_model}"))
             .summary(isCustomOpenAi
-                    ? effectiveOpenAiModel + "  (custom override)"
-                    : effectiveOpenAiModel + "  (default)");
+                    ? effectiveOpenAiModel + str("{prov_custom_override}")
+                    : effectiveOpenAiModel + str("{prov_default}"));
 
-        builder.addText("Model Catalog")
+        builder.addText(str("{prov_model_catalog}"))
             .summary(ModelCatalogManager.formatLastRefreshed(
                     preferences, GeminiConstants.PREF_CACHE_OPENAI_MODELS))
             .onClick((pluginUI, item) -> showModelCatalog(pluginUI));
 
-        builder.addText("Refresh Model List")
-            .summary("Fetch all available Chat Completions models")
+        builder.addText(str("{prov_refresh_models}"))
+            .summary(str("{openai_refresh_summary}"))
             .onClick((pluginUI, item) -> refreshOpenAiModels(pluginUI));
 
-        builder.addInput("Custom Model (optional)", customOpenAiKey)
+        builder.addInput(str("{prov_custom_model}"), customOpenAiKey)
                 .defaultValue("")
-                .summary("Overrides the default model above when non-empty. Use for any model name.")
-                .hint("e.g. gpt-5.3-nano")
+                .summary(str("{prov_custom_model_summary}"))
+                .hint(str("{openai_model_hint}"))
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_TEXT);
 
@@ -93,26 +98,26 @@ public class OpenAIProviderPreference implements PluginPreference {
                 ModelCatalogManager.Provider.OPENAI);
 
         // ==================== Usage & Limits ====================
-        builder.addText("📊 Usage & Limits")
+        builder.addText(str("{prov_head_usage}"))
                 .summary("");
 
-        builder.addText("Pricing Information")
-                .summary("GPT-4o: $2.50/1M input tokens | GPT-4o Mini: $0.15/1M tokens - Pay as you go");
+        builder.addText(str("{prov_pricing}"))
+                .summary(str("{openai_pricing}"));
 
-        builder.addText("API Documentation")
-                .summary("View OpenAI API documentation and pricing")
+        builder.addText(str("{prov_api_docs}"))
+                .summary(str("{openai_docs_summary}"))
                 .url("https://platform.openai.com/docs/overview");
 
         // ==================== Test & Debug ====================
-        builder.addText("🔧 Test & Debug")
+        builder.addText(str("{prov_head_test}"))
                 .summary("");
 
-        builder.addText("Quick Test")
-                .summary("Test translation with a simple phrase")
+        builder.addText(str("{prov_quick_test}"))
+                .summary(str("{prov_quick_test_summary}"))
                 .onClick((pluginUI, item) -> runQuickTranslationTest(pluginUI));
 
-        builder.addText("View Logs")
-                .summary("Open MT Manager log viewer")
+        builder.addText(str("{prov_view_logs}"))
+                .summary(str("{prov_view_logs_summary}"))
                 .onClick((pluginUI, item) -> context.openLogViewer());
 
         // SDK Beta2+ callbacks enabled (minMTVersion >= 26020300)
@@ -123,7 +128,7 @@ public class OpenAIProviderPreference implements PluginPreference {
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
             String key = preferenceItem.getKey();
             if (GeminiConstants.PREF_OPENAI_API_KEY.equals(key)) {
-                context.showToast("API key updated. Re-open settings to refresh status.");
+                context.showToast(str("{prov_key_updated}"));
             }
         });
     }
@@ -147,8 +152,8 @@ public class OpenAIProviderPreference implements PluginPreference {
 
         if (apiKey.isEmpty()) {
             pluginUI.buildDialog()
-                    .setTitle("❌ No API Key")
-                    .setMessage("Please configure your OpenAI API key first.")
+                    .setTitle(str("{prov_no_key}"))
+                    .setMessage(str("{openai_need_key}"))
                     .setPositiveButton("{ok}", null)
                     .show();
             return;
@@ -164,7 +169,7 @@ public class OpenAIProviderPreference implements PluginPreference {
                 bin.mt.json.JSONArray messages = new bin.mt.json.JSONArray();
                 bin.mt.json.JSONObject message = new bin.mt.json.JSONObject();
                 message.put("role", "user");
-                message.put("content", "Translate to Turkish: Hello");
+                message.put("content", str("{prov_test_prompt}"));
                 messages.add(message);
                 request.put("messages", messages);
                 request.put("max_tokens", 50);
@@ -182,19 +187,19 @@ public class OpenAIProviderPreference implements PluginPreference {
 
                     runOnMainThread(() -> pluginUI.buildDialog()
                             .setTitle(GeminiColorTokens.success(pluginUI, "✅ Translation Successful"))
-                            .setMessage("Original: Hello\n\nTranslation (Turkish):\n" + result)
+                            .setMessage(str("{prov_test_result}") + result)
                             .setPositiveButton("{ok}", null)
                             .show());
                 } else {
                     runOnMainThread(() -> pluginUI.buildDialog()
-                            .setTitle("❌ Translation Failed")
-                            .setMessage("Received unexpected response format.")
+                            .setTitle(str("{prov_translation_failed}"))
+                            .setMessage(str("{prov_bad_response}"))
                             .setPositiveButton("{ok}", null)
                             .show());
                 }
             } catch (Throwable e) { // Throwable: an Error escaping this thread would crash MT Manager
                 runOnMainThread(() -> pluginUI.buildDialog()
-                        .setTitle("❌ Test Failed")
+                        .setTitle(str("{prov_test_failed}"))
                         .setMessage("Error: " + e.getMessage())
                         .setPositiveButton("{ok}", null)
                         .show());
@@ -209,8 +214,8 @@ public class OpenAIProviderPreference implements PluginPreference {
 
         if (apiKey.isEmpty()) {
             pluginUI.buildDialog()
-                    .setTitle("❌ No API Key")
-                    .setMessage("Please configure your OpenAI API key first.")
+                    .setTitle(str("{prov_no_key}"))
+                    .setMessage(str("{openai_need_key}"))
                     .setPositiveButton("{ok}", null)
                     .show();
             return;
@@ -218,7 +223,7 @@ public class OpenAIProviderPreference implements PluginPreference {
 
         if (!apiKey.startsWith("sk-")) {
             pluginUI.buildDialog()
-                    .setTitle("❌ Invalid Key Format")
+                    .setTitle(str("{prov_bad_key_format}"))
                     .setMessage("OpenAI API keys must start with 'sk-'")
                     .setPositiveButton("{ok}", null)
                     .show();
@@ -228,8 +233,8 @@ public class OpenAIProviderPreference implements PluginPreference {
         // Show progress dialog
         bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog = 
             new bin.mt.plugin.api.ui.dialog.LoadingDialog(pluginUI)
-                .setMessage("Testing API Connection...")
-                .setSecondaryMessage("Please wait while we verify your API key")
+                .setMessage(str("{prov_testing_connection}"))
+                .setSecondaryMessage(str("{prov_verifying}"))
                 .show();
 
         new Thread(() -> {
@@ -259,20 +264,20 @@ public class OpenAIProviderPreference implements PluginPreference {
                     bin.mt.json.JSONArray choices = response.getJSONArray("choices");
                     if (bin.mt.plugin.common.JSONCompat.size(choices) > 0) {
                     runOnMainThread(() -> pluginUI.buildDialog()
-                                .setTitle(GeminiColorTokens.success(pluginUI, "✅ API Key Valid"))
+                                .setTitle(GeminiColorTokens.success(pluginUI, str("{prov_key_valid}")))
                                 .setMessage("Your OpenAI API key is working correctly!\n\nModel: " + model)
                                 .setPositiveButton("{ok}", null)
                         .show());
                     } else {
                     runOnMainThread(() -> pluginUI.buildDialog()
-                                .setTitle("⚠️ Warning")
-                                .setMessage("API key is valid but received empty response.")
+                                .setTitle(str("{prov_warning}"))
+                                .setMessage(str("{prov_empty_response}"))
                                 .setPositiveButton("{ok}", null)
                         .show());
                     }
                 } else if (response.contains("error")) {
                     bin.mt.json.JSONObject error = response.getJSONObject("error");
-                    String errorMsg = bin.mt.plugin.common.JSONCompat.optString(error, "message", "Unknown error");
+                    String errorMsg = bin.mt.plugin.common.JSONCompat.optString(error, "message", str("{prov_unknown_error}"));
                     String errorType = bin.mt.plugin.common.JSONCompat.optString(error, "type", "");
 
                     String dialogTitle;
@@ -285,7 +290,7 @@ public class OpenAIProviderPreference implements PluginPreference {
                         dialogTitle = "⚠️ Quota Exceeded";
                         dialogMessage = "Your API key is valid but you have exceeded your quota.\n\n" + errorMsg;
                     } else {
-                        dialogTitle = "❌ API Error";
+                        dialogTitle = str("{prov_api_error}");
                         dialogMessage = "Error Type: " + errorType + "\n\n" + errorMsg;
                     }
                     
@@ -296,8 +301,8 @@ public class OpenAIProviderPreference implements PluginPreference {
                             .show());
                 } else {
                         runOnMainThread(() -> pluginUI.buildDialog()
-                            .setTitle("❌ Unexpected Response")
-                            .setMessage("Received unexpected response format from API.")
+                            .setTitle(str("{prov_unexpected}"))
+                            .setMessage(str("{prov_bad_response}"))
                             .setPositiveButton("{ok}", null)
                             .show());
                 }
@@ -313,10 +318,10 @@ public class OpenAIProviderPreference implements PluginPreference {
                     dialogMessage = "Invalid API key (401 Unauthorized)\n\nPlease verify your API key.";
                 } else if (msg != null && msg.contains("429")) {
                     dialogTitle = "⚠️ Rate Limit";
-                    dialogMessage = "Rate limit exceeded, but your key is valid!";
+                    dialogMessage = str("{prov_rate_limited}");
                 } else {
                     dialogTitle = "❌ Connection Failed";
-                    dialogMessage = "Failed to connect to OpenAI API.\n\n" + (msg != null ? msg : "Unknown error");
+                    dialogMessage = "Failed to connect to OpenAI API.\n\n" + (msg != null ? msg : str("{prov_unknown_error}"));
                 }
                 
                 runOnMainThread(() -> pluginUI.buildDialog()
@@ -328,7 +333,7 @@ public class OpenAIProviderPreference implements PluginPreference {
             } catch (Throwable e) { // Throwable: an Error escaping this thread would crash MT Manager
                 runOnMainThread(loadingDialog::dismiss);
                 runOnMainThread(() -> pluginUI.buildDialog()
-                        .setTitle("❌ Test Failed")
+                        .setTitle(str("{prov_test_failed}"))
                         .setMessage("Error: " + e.getMessage())
                         .setPositiveButton("{ok}", null)
                         .show());
@@ -390,7 +395,7 @@ public class OpenAIProviderPreference implements PluginPreference {
                     loadingDialog.dismiss();
                     if (error != null) {
                         pluginUI.buildDialog()
-                                .setTitle("❌ Refresh Failed")
+                                .setTitle(str("{prov_refresh_failed}"))
                                 .setMessage("Could not fetch OpenAI models:\n" + error.getMessage())
                                 .setPositiveButton("{ok}", null)
                                 .show();
@@ -398,7 +403,7 @@ public class OpenAIProviderPreference implements PluginPreference {
                     }
                     if (models == null || models.isEmpty()) {
                         pluginUI.buildDialog()
-                                .setTitle("⚠️ No Models Found")
+                                .setTitle(str("{prov_no_models}"))
                                 .setMessage("Your account did not return any chat-capable models.")
                                 .setPositiveButton("{ok}", null)
                                 .show();
@@ -417,15 +422,15 @@ public class OpenAIProviderPreference implements PluginPreference {
     private boolean ensureValidOpenAiKey(bin.mt.plugin.api.ui.PluginUI pluginUI, String apiKey) {
         if (TextUtils.isEmpty(apiKey)) {
             pluginUI.buildDialog()
-                    .setTitle("❌ No API Key")
-                    .setMessage("Please configure your OpenAI API key first.")
+                    .setTitle(str("{prov_no_key}"))
+                    .setMessage(str("{openai_need_key}"))
                     .setPositiveButton("{ok}", null)
                     .show();
             return false;
         }
         if (!apiKey.startsWith("sk-")) {
             pluginUI.buildDialog()
-                    .setTitle("❌ Invalid Key Format")
+                    .setTitle(str("{prov_bad_key_format}"))
                     .setMessage("OpenAI API keys must start with 'sk-'.")
                     .setPositiveButton("{ok}", null)
                     .show();

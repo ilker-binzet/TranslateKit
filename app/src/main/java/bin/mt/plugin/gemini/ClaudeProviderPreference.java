@@ -25,36 +25,41 @@ public class ClaudeProviderPreference implements PluginPreference {
     private SharedPreferences preferences;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
+    /** Localized text for {@code key}; the language packs live in assets. */
+    private String str(String key) {
+        return context.getString(key);
+    }
+
     @Override
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
         this.preferences = context.getPreferences();
 
         // ==================== API Configuration ====================
-        builder.addText("🔑 API Configuration")
+        builder.addText(str("{prov_head_api}"))
                 .summary("");
 
-        builder.addInput("API Key", GeminiConstants.PREF_CLAUDE_API_KEY)
+        builder.addInput(str("{prov_api_key}"), GeminiConstants.PREF_CLAUDE_API_KEY)
                 .defaultValue(GeminiConstants.DEFAULT_API_KEY)
-                .summary("Get your API key at console.anthropic.com/settings/keys")
+                .summary(str("{claude_key_summary}"))
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
-        builder.addText("API Key Status", KEY_STATUS_ROW)
+        builder.addText(str("{prov_api_key_status}"), KEY_STATUS_ROW)
                 .summary(getKeyStatus());
 
-        builder.addText("Test API Key")
-                .summary("Verify your API key is working")
+        builder.addText(str("{prov_test_key}"))
+                .summary(str("{prov_test_key_summary}"))
                 .onClick((pluginUI, item) -> {
                     testApiKey(pluginUI, item);
                 });
 
-        builder.addText("Get API Key")
-                .summary("Open Anthropic Console to manage API keys")
+        builder.addText(str("{prov_get_key}"))
+                .summary(str("{claude_get_key_summary}"))
                 .url("https://console.anthropic.com/settings/keys");
 
         // ==================== Model Selection ====================
-        builder.addText("🤖 Model Selection").summary("");
+        builder.addText(str("{prov_head_model}")).summary("");
 
         // The model choice is an implementation detail. The default is the
         // recommended Claude model; the user can override via Custom Model.
@@ -63,26 +68,26 @@ public class ClaudeProviderPreference implements PluginPreference {
                 preferences, GeminiConstants.PREF_CLAUDE_MODEL, GeminiConstants.DEFAULT_CLAUDE_MODEL);
         boolean isCustomClaude = !TextUtils.isEmpty(preferences.getString(customClaudeKey, ""));
 
-        builder.addText("Provider")
+        builder.addText(str("{prov_provider}"))
             .summary("Claude");
-        builder.addText("Model")
+        builder.addText(str("{prov_model}"))
             .summary(isCustomClaude
-                    ? effectiveClaudeModel + "  (custom override)"
-                    : effectiveClaudeModel + "  (default)");
+                    ? effectiveClaudeModel + str("{prov_custom_override}")
+                    : effectiveClaudeModel + str("{prov_default}"));
 
-        builder.addText("Model Catalog")
+        builder.addText(str("{prov_model_catalog}"))
             .summary(ModelCatalogManager.formatLastRefreshed(
                     preferences, GeminiConstants.PREF_CACHE_CLAUDE_MODELS))
             .onClick((pluginUI, item) -> showModelCatalog(pluginUI));
 
-        builder.addText("Refresh Model List")
-            .summary("Fetch the latest Claude models from Anthropic API")
+        builder.addText(str("{prov_refresh_models}"))
+            .summary(str("{claude_refresh_summary}"))
             .onClick((pluginUI, item) -> refreshClaudeModels(pluginUI));
 
-        builder.addInput("Custom Model (optional)", customClaudeKey)
+        builder.addInput(str("{prov_custom_model}"), customClaudeKey)
                 .defaultValue("")
-                .summary("Overrides the default model above when non-empty. Use for any model name.")
-                .hint("e.g. claude-opus-5-latest")
+                .summary(str("{prov_custom_model_summary}"))
+                .hint(str("{claude_model_hint}"))
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_TEXT);
 
@@ -93,26 +98,26 @@ public class ClaudeProviderPreference implements PluginPreference {
                 ModelCatalogManager.Provider.CLAUDE);
 
         // ==================== Usage & Limits ====================
-        builder.addText("📊 Usage & Limits")
+        builder.addText(str("{prov_head_usage}"))
                 .summary("");
 
-        builder.addText("Pricing Information")
-                .summary("Sonnet: $3/1M input tokens | Haiku: $0.25/1M tokens - Pay as you go");
+        builder.addText(str("{prov_pricing}"))
+                .summary(str("{claude_pricing}"));
 
-        builder.addText("API Documentation")
-                .summary("View Claude API documentation and pricing")
+        builder.addText(str("{prov_api_docs}"))
+                .summary(str("{claude_docs_summary}"))
                 .url("https://docs.anthropic.com/");
 
         // ==================== Test & Debug ====================
-        builder.addText("🔧 Test & Debug")
+        builder.addText(str("{prov_head_test}"))
                 .summary("");
 
-        builder.addText("Quick Test")
-                .summary("Test translation with a simple phrase")
+        builder.addText(str("{prov_quick_test}"))
+                .summary(str("{prov_quick_test_summary}"))
                 .onClick((pluginUI, item) -> runQuickTranslationTest(pluginUI));
 
-        builder.addText("View Logs")
-                .summary("Open MT Manager log viewer")
+        builder.addText(str("{prov_view_logs}"))
+                .summary(str("{prov_view_logs_summary}"))
                 .onClick((pluginUI, item) -> context.openLogViewer());
 
         // SDK Beta2+ callbacks enabled (minMTVersion >= 26020300)
@@ -123,7 +128,7 @@ public class ClaudeProviderPreference implements PluginPreference {
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
             String key = preferenceItem.getKey();
             if (GeminiConstants.PREF_CLAUDE_API_KEY.equals(key)) {
-                context.showToast("API key updated. Re-open settings to refresh status.");
+                context.showToast(str("{prov_key_updated}"));
             }
         });
     }
@@ -147,8 +152,8 @@ public class ClaudeProviderPreference implements PluginPreference {
 
         if (apiKey.isEmpty()) {
             pluginUI.buildDialog()
-                    .setTitle("❌ No API Key")
-                    .setMessage("Please configure your Claude API key first.")
+                    .setTitle(str("{prov_no_key}"))
+                    .setMessage(str("{claude_need_key}"))
                     .setPositiveButton("{ok}", null)
                     .show();
             return;
@@ -157,7 +162,7 @@ public class ClaudeProviderPreference implements PluginPreference {
         // Show progress dialog
         bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog = 
             new bin.mt.plugin.api.ui.dialog.LoadingDialog(pluginUI)
-                .setMessage("Translating...")
+                .setMessage(str("{prov_translating}"))
                 .setSecondaryMessage("Testing: 'Hello' → Turkish")
                 .show();
         
@@ -169,7 +174,7 @@ public class ClaudeProviderPreference implements PluginPreference {
                 bin.mt.json.JSONArray messages = new bin.mt.json.JSONArray();
                 bin.mt.json.JSONObject message = new bin.mt.json.JSONObject();
                 message.put("role", "user");
-                message.put("content", "Translate to Turkish: Hello");
+                message.put("content", str("{prov_test_prompt}"));
                 messages.add(message);
                 request.put("messages", messages);
 
@@ -188,13 +193,13 @@ public class ClaudeProviderPreference implements PluginPreference {
 
                     runOnMainThread(() -> pluginUI.buildDialog()
                             .setTitle(GeminiColorTokens.success(pluginUI, "✅ Translation Successful"))
-                            .setMessage("Original: Hello\n\nTranslation (Turkish):\n" + result)
+                            .setMessage(str("{prov_test_result}") + result)
                             .setPositiveButton("{ok}", null)
                             .show());
                 } else {
                     runOnMainThread(() -> pluginUI.buildDialog()
-                            .setTitle("❌ Translation Failed")
-                            .setMessage("Received unexpected response format.")
+                            .setTitle(str("{prov_translation_failed}"))
+                            .setMessage(str("{prov_bad_response}"))
                             .setPositiveButton("{ok}", null)
                             .show());
                 }
@@ -204,14 +209,14 @@ public class ClaudeProviderPreference implements PluginPreference {
                     return;
                 }
                 runOnMainThread(() -> pluginUI.buildDialog()
-                        .setTitle("❌ Test Failed")
+                        .setTitle(str("{prov_test_failed}"))
                         .setMessage("Error: " + e.getMessage())
                         .setPositiveButton("{ok}", null)
                         .show());
             } catch (Throwable e) { // Throwable: an Error escaping this thread would crash MT Manager
                 runOnMainThread(loadingDialog::dismiss);
                 runOnMainThread(() -> pluginUI.buildDialog()
-                        .setTitle("❌ Test Failed")
+                        .setTitle(str("{prov_test_failed}"))
                         .setMessage("Error: " + e.getMessage())
                         .setPositiveButton("{ok}", null)
                         .show());
@@ -226,8 +231,8 @@ public class ClaudeProviderPreference implements PluginPreference {
 
         if (apiKey.isEmpty()) {
             pluginUI.buildDialog()
-                    .setTitle("❌ No API Key")
-                    .setMessage("Please configure your Claude API key first.")
+                    .setTitle(str("{prov_no_key}"))
+                    .setMessage(str("{claude_need_key}"))
                     .setPositiveButton("{ok}", null)
                     .show();
             return;
@@ -235,7 +240,7 @@ public class ClaudeProviderPreference implements PluginPreference {
 
         if (!apiKey.startsWith("sk-ant-")) {
             pluginUI.buildDialog()
-                    .setTitle("❌ Invalid Key Format")
+                    .setTitle(str("{prov_bad_key_format}"))
                     .setMessage("Claude API keys must start with 'sk-ant-'")
                     .setPositiveButton("{ok}", null)
                     .show();
@@ -245,8 +250,8 @@ public class ClaudeProviderPreference implements PluginPreference {
         // Show progress dialog with modern UI
         bin.mt.plugin.api.ui.dialog.LoadingDialog loadingDialog = 
             new bin.mt.plugin.api.ui.dialog.LoadingDialog(pluginUI)
-                .setMessage("Testing API Connection...")
-                .setSecondaryMessage("Please wait while we verify your API key")
+                .setMessage(str("{prov_testing_connection}"))
+                .setSecondaryMessage(str("{prov_verifying}"))
                 .show();
 
         new Thread(() -> {
@@ -276,21 +281,21 @@ public class ClaudeProviderPreference implements PluginPreference {
                     bin.mt.json.JSONArray content = response.getJSONArray("content");
                     if (bin.mt.plugin.common.JSONCompat.size(content) > 0) {
                     runOnMainThread(() -> pluginUI.buildDialog()
-                                .setTitle(GeminiColorTokens.success(pluginUI, "✅ API Key Valid"))
+                                .setTitle(GeminiColorTokens.success(pluginUI, str("{prov_key_valid}")))
                                 .setMessage("Your Claude API key is working correctly!\n\nModel: " + model)
                                 .setPositiveButton("{ok}", null)
                         .show());
                     } else {
                     runOnMainThread(() -> pluginUI.buildDialog()
-                                .setTitle("⚠️ Warning")
-                                .setMessage("API key is valid but received empty response.")
+                                .setTitle(str("{prov_warning}"))
+                                .setMessage(str("{prov_empty_response}"))
                                 .setPositiveButton("{ok}", null)
                         .show());
                     }
                 } else if (response.contains("error")) {
                     bin.mt.json.JSONObject error = response.getJSONObject("error");
                     String errorType = bin.mt.plugin.common.JSONCompat.optString(error, "type", "");
-                    String errorMsg = bin.mt.plugin.common.JSONCompat.optString(error, "message", "Unknown error");
+                    String errorMsg = bin.mt.plugin.common.JSONCompat.optString(error, "message", str("{prov_unknown_error}"));
 
                     String dialogTitle;
                     String dialogMessage;
@@ -305,7 +310,7 @@ public class ClaudeProviderPreference implements PluginPreference {
                         dialogTitle = "⚠️ Rate Limit";
                         dialogMessage = "Rate limit exceeded, but your key is valid!\n\n" + errorMsg;
                     } else {
-                        dialogTitle = "❌ API Error";
+                        dialogTitle = str("{prov_api_error}");
                         dialogMessage = "Error Type: " + errorType + "\n\n" + errorMsg;
                     }
                     
@@ -316,8 +321,8 @@ public class ClaudeProviderPreference implements PluginPreference {
                             .show());
                 } else {
                         runOnMainThread(() -> pluginUI.buildDialog()
-                            .setTitle("❌ Unexpected Response")
-                            .setMessage("Received unexpected response format from API.")
+                            .setTitle(str("{prov_unexpected}"))
+                            .setMessage(str("{prov_bad_response}"))
                             .setPositiveButton("{ok}", null)
                             .show());
                 }
@@ -341,10 +346,10 @@ public class ClaudeProviderPreference implements PluginPreference {
                     dialogMessage = "Access forbidden - check API key permissions.";
                 } else if (msg != null && msg.contains("429")) {
                     dialogTitle = "⚠️ Rate Limit";
-                    dialogMessage = "Rate limit exceeded, but your key is valid!";
+                    dialogMessage = str("{prov_rate_limited}");
                 } else {
                     dialogTitle = "❌ Connection Failed";
-                    dialogMessage = "Failed to connect to Claude API.\n\n" + (msg != null ? msg : "Unknown error");
+                    dialogMessage = "Failed to connect to Claude API.\n\n" + (msg != null ? msg : str("{prov_unknown_error}"));
                 }
                 
                 runOnMainThread(() -> pluginUI.buildDialog()
@@ -356,7 +361,7 @@ public class ClaudeProviderPreference implements PluginPreference {
             } catch (Throwable e) { // Throwable: an Error escaping this thread would crash MT Manager
                 runOnMainThread(loadingDialog::dismiss);
                 runOnMainThread(() -> pluginUI.buildDialog()
-                        .setTitle("❌ Test Failed")
+                        .setTitle(str("{prov_test_failed}"))
                         .setMessage("Error: " + e.getMessage())
                         .setPositiveButton("{ok}", null)
                         .show());
@@ -417,9 +422,9 @@ public class ClaudeProviderPreference implements PluginPreference {
         }
 
         pluginUI.buildDialog()
-                .setTitle("❌ Model Not Available")
+                .setTitle(str("{prov_model_unavailable}"))
                 .setMessage(message.toString())
-                .setPositiveButton("Switch Model", (dialog, which) -> {
+                .setPositiveButton(str("{prov_switch_model}"), (dialog, which) -> {
                     preferences.edit().putString(GeminiConstants.PREF_CLAUDE_MODEL, fallbackModel).apply();
                     pluginUI.buildDialog()
                             .setTitle(GeminiColorTokens.success(pluginUI, "✅ Model Updated"))
@@ -493,7 +498,7 @@ public class ClaudeProviderPreference implements PluginPreference {
                     loadingDialog.dismiss();
                     if (error != null) {
                         pluginUI.buildDialog()
-                                .setTitle("❌ Refresh Failed")
+                                .setTitle(str("{prov_refresh_failed}"))
                                 .setMessage("Could not fetch Claude models:\n" + error.getMessage())
                                 .setPositiveButton("{ok}", null)
                                 .show();
@@ -501,7 +506,7 @@ public class ClaudeProviderPreference implements PluginPreference {
                     }
                     if (models == null || models.isEmpty()) {
                         pluginUI.buildDialog()
-                                .setTitle("⚠️ No Models Found")
+                                .setTitle(str("{prov_no_models}"))
                                 .setMessage("Anthropic returned no Claude models for this key.")
                                 .setPositiveButton("{ok}", null)
                                 .show();
@@ -520,15 +525,15 @@ public class ClaudeProviderPreference implements PluginPreference {
     private boolean ensureValidClaudeKey(bin.mt.plugin.api.ui.PluginUI pluginUI, String apiKey) {
         if (TextUtils.isEmpty(apiKey)) {
             pluginUI.buildDialog()
-                    .setTitle("❌ No API Key")
-                    .setMessage("Please configure your Claude API key first.")
+                    .setTitle(str("{prov_no_key}"))
+                    .setMessage(str("{claude_need_key}"))
                     .setPositiveButton("{ok}", null)
                     .show();
             return false;
         }
         if (!apiKey.startsWith("sk-ant-")) {
             pluginUI.buildDialog()
-                    .setTitle("❌ Invalid Key Format")
+                    .setTitle(str("{prov_bad_key_format}"))
                     .setMessage("Claude API keys must start with 'sk-ant-'.")
                     .setPositiveButton("{ok}", null)
                     .show();

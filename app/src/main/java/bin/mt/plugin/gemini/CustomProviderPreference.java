@@ -42,17 +42,22 @@ public class CustomProviderPreference implements PluginPreference {
     private PluginContext context;
     private SharedPreferences preferences;
 
+    /** Localized text for {@code key}; the language packs live in assets. */
+    private String str(String key) {
+        return context.getString(key);
+    }
+
     @Override
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
         this.preferences = context.getPreferences();
 
-        builder.addText("🔌 Custom Endpoints").summary("");
+        builder.addText(str("{custom_head}")).summary("");
 
         java.util.List<JSONObject> entries = Providers.customEntries(preferences);
         if (entries.isEmpty()) {
-            builder.addText("No endpoints yet")
-                    .summary("Add one below to use any OpenAI-compatible service");
+            builder.addText(str("{custom_none}"))
+                    .summary(str("{custom_none_summary}"));
         } else {
             for (int i = 0; i < entries.size(); i++) {
                 final int index = i;
@@ -70,11 +75,11 @@ public class CustomProviderPreference implements PluginPreference {
             }
         }
 
-        builder.addText("➕ Add Endpoint")
-                .summary("Name, base URL, API key and model")
+        builder.addText(str("{custom_add}"))
+                .summary(str("{custom_add_summary}"))
                 .onClick((pluginUI, item) -> showEditor(pluginUI, -1));
 
-        builder.addText("ℹ️ Supported Services").summary(HINTS);
+        builder.addText(str("{custom_supported}")).summary(HINTS);
     }
 
     /** index < 0 adds a new entry; otherwise the existing one is edited. */

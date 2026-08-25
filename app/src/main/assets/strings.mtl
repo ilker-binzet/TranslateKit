@@ -285,3 +285,98 @@ test_format_tip: Tip: this checks the format only. Use Test API Key in provider 
 test_testing: Testing
 test_dialog: Provider Test
 test_hint_any: Any key this endpoint accepts.
+
+# Provider Screens (shared)
+prov_api_key: API Key
+prov_api_key_status: API Key Status
+prov_api_docs: API Documentation
+prov_model: Model
+prov_model_catalog: Model Catalog
+prov_refresh_models: Refresh Model List
+prov_custom_model: Custom Model (optional)
+prov_test_key: Test API Key
+prov_provider: Provider
+prov_quick_test: Quick Test
+prov_view_logs: View Logs
+prov_view_logs_summary: Open MT Manager log viewer
+prov_test_key_summary: Verify your API key is working
+prov_quick_test_summary: Test translation with a simple phrase
+prov_custom_model_summary: Overrides the default model above when non-empty. Use for any model name.
+prov_custom_override:   (custom override)
+prov_default:   (default)
+prov_key_updated: API key updated. Re-open settings to refresh status.
+prov_unknown_error: Unknown error
+prov_bad_response: Received unexpected response format.
+prov_free_limits: Free Tier Limits
+prov_get_key: Get API Key
+prov_rate_limited: Rate limit exceeded, but your key is valid!
+prov_empty_response: API key is valid but received empty response.
+prov_verifying: Please wait while we verify your API key
+prov_pricing: Pricing Information
+prov_switch_model: Switch Model
+
+# Provider Screens (headers and dialogs)
+prov_head_api: 🔑 API Configuration
+prov_head_usage: 📊 Usage & Limits
+prov_test_failed: ❌ Test Failed
+prov_no_key: ❌ No API Key
+prov_no_key_warn: ⚠️ No API Key
+prov_refresh_failed: ❌ Refresh Failed
+prov_key_valid: ✅ API Key Valid
+prov_head_model: 🧠 Model Selection
+prov_test_ok: ✅ Test Successful
+prov_testing: 🔄 Testing…
+prov_status_configured: 🟢 Configured
+prov_documentation: Documentation
+prov_pricing_short: Pricing
+
+# Provider Screens (rows)
+prov_no_models: ⚠️ No Models Found
+prov_bad_key: ❌ Invalid API Key
+prov_translation_failed: ❌ Translation Failed
+prov_api_error: ❌ API Error
+prov_head_test: 🔧 Test & Debug
+prov_test_prompt: Translate to Spanish: Hello
+prov_test_result: Original: Hello\n\nTranslation:\n
+gemini_get_key: Get FREE API Key
+gemini_model_hint: e.g. gemini-2.0-flash-exp
+gemini_limits: 2000 requests/day (Flash) | 100 requests/day (Pro) - completely free
+gemini_refresh_summary: Fetch the latest Gemini models from the Google API
+gemini_key_summary: Get your free API key at aistudio.google.com/app/apikey
+gemini_get_key_summary: Open Google AI Studio to create a free API key
+gemini_docs_summary: View Gemini API documentation and pricing
+gemini_need_key: Configure your Gemini API key first.
+prov_warning: ⚠️ Warning
+prov_bad_key_format: ❌ Invalid Key Format
+prov_unexpected: ❌ Unexpected Response
+prov_testing_connection: Testing API Connection...
+openai_model_hint: e.g. gpt-5.3-nano
+openai_refresh_summary: Fetch all available Chat Completions models
+openai_pricing: GPT-4o: $2.50/1M input tokens | GPT-4o Mini: $0.15/1M tokens - pay as you go
+openai_key_summary: Get your API key at platform.openai.com/api-keys
+openai_get_key_summary: Open the OpenAI Platform to manage API keys
+openai_docs_summary: View OpenAI API documentation and pricing
+openai_need_key: Configure your OpenAI API key first.
+prov_model_unavailable: ❌ Model Not Available
+prov_translating: Translating...
+claude_model_hint: e.g. claude-opus-5-latest
+claude_refresh_summary: Fetch the latest Claude models from the Anthropic API
+claude_pricing: Sonnet: $3/1M input tokens | Haiku: $0.25/1M tokens - pay as you go
+claude_key_summary: Get your API key at console.anthropic.com/settings/keys
+claude_get_key_summary: Open the Anthropic Console to manage API keys
+claude_docs_summary: View Claude API documentation and pricing
+claude_need_key: Configure your Claude API key first.
+openrouter_key_summary: Get your API key at openrouter.ai/keys
+openrouter_test_summary: Send a one-word request to verify the key
+openrouter_get_key_summary: Open OpenRouter to manage API keys
+openrouter_refresh_summary: Fetch the current catalogue, no API key required
+openrouter_custom_summary: Overrides the model above when non-empty. Use the full OpenRouter id.
+openrouter_pricing: Per model, pay as you go. Some models are free. Prices show in the catalogue.
+openrouter_docs_summary: View the OpenRouter API documentation
+openrouter_need_key: Configure your OpenRouter API key first.
+custom_head: 🔌 Custom Endpoints
+custom_add: ➕ Add Endpoint
+custom_add_summary: Name, base URL, API key and model
+custom_none: No endpoints yet
+custom_none_summary: Add one below to use any OpenAI-compatible service
+custom_supported: ℹ️ Supported Services

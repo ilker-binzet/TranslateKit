@@ -286,3 +286,98 @@ test_format_tip: İpucu: bu yalnızca biçimi denetler. Bağlantıyı sınamak i
 test_testing: Test ediliyor
 test_dialog: Sağlayıcı Testi
 test_hint_any: Bu uç noktanın kabul ettiği herhangi bir anahtar.
+
+# Provider Screens (shared)
+prov_api_key: API Anahtarı
+prov_api_key_status: API Anahtarı Durumu
+prov_api_docs: API Belgeleri
+prov_model: Model
+prov_model_catalog: Model Kataloğu
+prov_refresh_models: Model Listesini Yenile
+prov_custom_model: Özel Model (isteğe bağlı)
+prov_test_key: API Anahtarını Test Et
+prov_provider: Sağlayıcı
+prov_quick_test: Hızlı Test
+prov_view_logs: Kayıtları Görüntüle
+prov_view_logs_summary: MT Manager kayıt görüntüleyicisini aç
+prov_test_key_summary: API anahtarınızın çalıştığını doğrulayın
+prov_quick_test_summary: Basit bir cümleyle çeviriyi sınayın
+prov_custom_model_summary: Doldurulduğunda yukarıdaki modeli geçersiz kılar. Herhangi bir model adı yazılabilir.
+prov_custom_override:   (özel seçim)
+prov_default:   (varsayılan)
+prov_key_updated: API anahtarı güncellendi. Durumu yenilemek için ayarları yeniden açın.
+prov_unknown_error: Bilinmeyen hata
+prov_bad_response: Beklenmeyen yanıt biçimi alındı.
+prov_free_limits: Ücretsiz Katman Sınırları
+prov_get_key: API Anahtarı Al
+prov_rate_limited: İstek sınırı aşıldı, ama anahtarınız geçerli!
+prov_empty_response: API anahtarı geçerli ama yanıt boş geldi.
+prov_verifying: API anahtarınız doğrulanırken lütfen bekleyin
+prov_pricing: Fiyatlandırma Bilgisi
+prov_switch_model: Modeli Değiştir
+
+# Provider Screens (headers and dialogs)
+prov_head_api: 🔑 API Yapılandırması
+prov_head_usage: 📊 Kullanım ve Sınırlar
+prov_test_failed: ❌ Test Başarısız
+prov_no_key: ❌ API Anahtarı Yok
+prov_no_key_warn: ⚠️ API Anahtarı Yok
+prov_refresh_failed: ❌ Yenileme Başarısız
+prov_key_valid: ✅ API Anahtarı Geçerli
+prov_head_model: 🧠 Model Seçimi
+prov_test_ok: ✅ Test Başarılı
+prov_testing: 🔄 Test ediliyor…
+prov_status_configured: 🟢 Yapılandırıldı
+prov_documentation: Belgeler
+prov_pricing_short: Fiyatlandırma
+
+# Provider Screens (rows)
+prov_no_models: ⚠️ Model Bulunamadı
+prov_bad_key: ❌ Geçersiz API Anahtarı
+prov_translation_failed: ❌ Çeviri Başarısız
+prov_api_error: ❌ API Hatası
+prov_head_test: 🔧 Test ve Hata Ayıklama
+prov_test_prompt: Şunu Türkçeye çevir: Hello
+prov_test_result: Özgün: Hello\n\nÇeviri:\n
+gemini_get_key: ÜCRETSİZ API Anahtarı Al
+gemini_model_hint: örn. gemini-2.0-flash-exp
+gemini_limits: Günde 2000 istek (Flash) | günde 100 istek (Pro) - tamamen ücretsiz
+gemini_refresh_summary: En güncel Gemini modellerini Google API üzerinden getir
+gemini_key_summary: Ücretsiz API anahtarınızı aistudio.google.com/app/apikey adresinden alın
+gemini_get_key_summary: Ücretsiz anahtar oluşturmak için Google AI Studio’yu aç
+gemini_docs_summary: Gemini API belgelerini ve fiyatlandırmasını görüntüle
+gemini_need_key: Önce Gemini API anahtarınızı girin.
+prov_warning: ⚠️ Uyarı
+prov_bad_key_format: ❌ Geçersiz Anahtar Biçimi
+prov_unexpected: ❌ Beklenmeyen Yanıt
+prov_testing_connection: API bağlantısı sınanıyor...
+openai_model_hint: örn. gpt-5.3-nano
+openai_refresh_summary: Kullanılabilir tüm Chat Completions modellerini getir
+openai_pricing: GPT-4o: 1M girdi jetonu $2.50 | GPT-4o Mini: 1M jeton $0.15 - kullandıkça öde
+openai_key_summary: API anahtarınızı platform.openai.com/api-keys adresinden alın
+openai_get_key_summary: API anahtarlarını yönetmek için OpenAI Platform’u aç
+openai_docs_summary: OpenAI API belgelerini ve fiyatlandırmasını görüntüle
+openai_need_key: Önce OpenAI API anahtarınızı girin.
+prov_model_unavailable: ❌ Model Kullanılamıyor
+prov_translating: Çevriliyor...
+claude_model_hint: örn. claude-opus-5-latest
+claude_refresh_summary: En güncel Claude modellerini Anthropic API üzerinden getir
+claude_pricing: Sonnet: 1M girdi jetonu $3 | Haiku: 1M jeton $0.25 - kullandıkça öde
+claude_key_summary: API anahtarınızı console.anthropic.com/settings/keys adresinden alın
+claude_get_key_summary: API anahtarlarını yönetmek için Anthropic Console’u aç
+claude_docs_summary: Claude API belgelerini ve fiyatlandırmasını görüntüle
+claude_need_key: Önce Claude API anahtarınızı girin.
+openrouter_key_summary: API anahtarınızı openrouter.ai/keys adresinden alın
+openrouter_test_summary: Anahtarı doğrulamak için tek kelimelik bir istek gönder
+openrouter_get_key_summary: API anahtarlarını yönetmek için OpenRouter’ı aç
+openrouter_refresh_summary: Güncel kataloğu getir, API anahtarı gerekmez
+openrouter_custom_summary: Doldurulduğunda yukarıdaki modeli geçersiz kılar. Tam OpenRouter kimliğini yazın.
+openrouter_pricing: Model başına, kullandıkça öde. Bazı modeller ücretsiz. Fiyatlar katalogda görünür.
+openrouter_docs_summary: OpenRouter API belgelerini görüntüle
+openrouter_need_key: Önce OpenRouter API anahtarınızı girin.
+custom_head: 🔌 Özel Uç Noktalar
+custom_add: ➕ Uç Nokta Ekle
+custom_add_summary: Ad, temel URL, API anahtarı ve model
+custom_none: Henüz uç nokta yok
+custom_none_summary: OpenAI uyumlu herhangi bir servisi kullanmak için aşağıdan ekleyin
+custom_supported: ℹ️ Desteklenen Servisler

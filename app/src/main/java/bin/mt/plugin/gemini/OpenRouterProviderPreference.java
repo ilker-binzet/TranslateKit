@@ -34,32 +34,37 @@ public class OpenRouterProviderPreference implements PluginPreference {
     private SharedPreferences preferences;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
+    /** Localized text for {@code key}; the language packs live in assets. */
+    private String str(String key) {
+        return context.getString(key);
+    }
+
     @Override
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
         this.preferences = context.getPreferences();
 
         // ==================== API Configuration ====================
-        builder.addText("🔑 API Configuration").summary("");
+        builder.addText(str("{prov_head_api}")).summary("");
 
-        builder.addInput("API Key", GeminiConstants.PREF_OPENROUTER_API_KEY)
+        builder.addInput(str("{prov_api_key}"), GeminiConstants.PREF_OPENROUTER_API_KEY)
                 .defaultValue(GeminiConstants.DEFAULT_API_KEY)
-                .summary("Get your API key at openrouter.ai/keys")
+                .summary(str("{openrouter_key_summary}"))
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
-        builder.addText("API Key Status", KEY_STATUS_ROW).summary(getKeyStatus());
+        builder.addText(str("{prov_api_key_status}"), KEY_STATUS_ROW).summary(getKeyStatus());
 
-        builder.addText("Test API Key")
-                .summary("Send a one-word request to verify the key")
+        builder.addText(str("{prov_test_key}"))
+                .summary(str("{openrouter_test_summary}"))
                 .onClick((pluginUI, item) -> runQuickTest(pluginUI));
 
-        builder.addText("Get API Key")
-                .summary("Open OpenRouter to manage API keys")
+        builder.addText(str("{prov_get_key}"))
+                .summary(str("{openrouter_get_key_summary}"))
                 .url(GeminiConstants.URL_OPENROUTER_KEYS);
 
         // ==================== Model Selection ====================
-        builder.addText("🧠 Model Selection").summary("");
+        builder.addText(str("{prov_head_model}")).summary("");
 
         String customKey = ProviderCatalogRefresher.customPrefKeyFor(GeminiConstants.PREF_OPENROUTER_MODEL);
         String effectiveModel = ProviderCatalogRefresher.resolveSelectedModel(
@@ -67,22 +72,22 @@ public class OpenRouterProviderPreference implements PluginPreference {
                 GeminiConstants.DEFAULT_OPENROUTER_MODEL);
         boolean isCustom = !TextUtils.isEmpty(preferences.getString(customKey, ""));
 
-        builder.addText("Model")
-                .summary(isCustom ? effectiveModel + "  (custom override)"
-                                  : effectiveModel + "  (default)");
+        builder.addText(str("{prov_model}"))
+                .summary(isCustom ? effectiveModel + str("{prov_custom_override}")
+                                  : effectiveModel + str("{prov_default}"));
 
-        builder.addText("Model Catalog")
+        builder.addText(str("{prov_model_catalog}"))
                 .summary(ModelCatalogManager.formatLastRefreshed(
                         preferences, GeminiConstants.PREF_CACHE_OPENROUTER_MODELS))
                 .onClick((pluginUI, item) -> showModelCatalog(pluginUI));
 
-        builder.addText("Refresh Model List")
-                .summary("Fetch the current catalogue — no API key required")
+        builder.addText(str("{prov_refresh_models}"))
+                .summary(str("{openrouter_refresh_summary}"))
                 .onClick((pluginUI, item) -> refreshModels(pluginUI));
 
-        builder.addInput("Custom Model (optional)", customKey)
+        builder.addInput(str("{prov_custom_model}"), customKey)
                 .defaultValue("")
-                .summary("Overrides the model above when non-empty. Use the full OpenRouter id.")
+                .summary(str("{openrouter_custom_summary}"))
                 .hint("e.g. anthropic/claude-opus-4.6")
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_TEXT);
@@ -95,14 +100,14 @@ public class OpenRouterProviderPreference implements PluginPreference {
                 ModelCatalogManager.Provider.OPENROUTER);
 
         // ==================== Usage & Limits ====================
-        builder.addText("📊 Usage & Limits").summary("");
+        builder.addText(str("{prov_head_usage}")).summary("");
 
-        builder.addText("Pricing")
-                .summary("Per-model, pay as you go. Some models are free. Prices show in the catalogue.")
+        builder.addText(str("{prov_pricing_short}"))
+                .summary(str("{openrouter_pricing}"))
                 .url(GeminiConstants.URL_OPENROUTER_PRICING);
 
-        builder.addText("Documentation")
-                .summary("View the OpenRouter API documentation")
+        builder.addText(str("{prov_documentation}"))
+                .summary(str("{openrouter_docs_summary}"))
                 .url(GeminiConstants.URL_OPENROUTER_DOCS);
 
         // onBuild has no PluginUI, so the theme is only known here.
@@ -111,7 +116,7 @@ public class OpenRouterProviderPreference implements PluginPreference {
 
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
             if (GeminiConstants.PREF_OPENROUTER_API_KEY.equals(preferenceItem.getKey())) {
-                context.showToast("API key updated. Re-open settings to refresh status.");
+                context.showToast(str("{prov_key_updated}"));
             }
         });
     }
@@ -124,7 +129,7 @@ public class OpenRouterProviderPreference implements PluginPreference {
         if (!apiKey.matches(GeminiConstants.OPENROUTER_API_KEY_PATTERN)) {
             return "🔴 Invalid Format — OpenRouter keys start with 'sk-or-v1-'";
         }
-        return "🟢 Configured";
+        return str("{prov_status_configured}");
     }
 
     private void showModelCatalog(PluginUI pluginUI) {
@@ -136,7 +141,7 @@ public class OpenRouterProviderPreference implements PluginPreference {
 
         if (models.isEmpty()) {
             pluginUI.buildDialog()
-                    .setTitle("Model Catalog")
+                    .setTitle(str("{prov_model_catalog}"))
                     .setMessage("No models cached yet. Tap \"Refresh Model List\" first.")
                     .setPositiveButton("{ok}", null)
                     .show();
@@ -181,7 +186,7 @@ public class OpenRouterProviderPreference implements PluginPreference {
                 (models, error) -> mainHandler.post(() -> {
                     if (error != null) {
                         pluginUI.buildDialog()
-                                .setTitle("❌ Refresh Failed")
+                                .setTitle(str("{prov_refresh_failed}"))
                                 .setMessage(error.getMessage())
                                 .setPositiveButton("{ok}", null)
                                 .show();
@@ -196,18 +201,18 @@ public class OpenRouterProviderPreference implements PluginPreference {
 
         if (provider.apiKey.isEmpty()) {
             pluginUI.buildDialog()
-                    .setTitle("❌ No API Key")
-                    .setMessage("Configure your OpenRouter API key first.")
+                    .setTitle(str("{prov_no_key}"))
+                    .setMessage(str("{openrouter_need_key}"))
                     .setPositiveButton("{ok}", null)
                     .show();
             return;
         }
 
-        context.showToast("🔄 Testing…");
+        context.showToast(str("{prov_testing}"));
         new Thread(() -> {
             try {
                 bin.mt.json.JSONObject request = ProviderClient.buildRequest(
-                        provider, "Translate to Turkish: Hello",
+                        provider, str("{prov_test_prompt}"),
                         "You are a translator. Return only the translation.");
                 bin.mt.json.JSONObject response = bin.mt.plugin.common.HttpUtils.postJson(
                         provider.url(), provider.headers(), request.toString(),
@@ -215,16 +220,16 @@ public class OpenRouterProviderPreference implements PluginPreference {
 
                 bin.mt.json.JSONObject apiError = ProviderClient.errorOf(response);
                 if (apiError != null) {
-                    showResult(pluginUI, "❌ Test Failed",
-                            bin.mt.plugin.common.JSONCompat.optString(apiError, "message", "Unknown error"));
+                    showResult(pluginUI, str("{prov_test_failed}"),
+                            bin.mt.plugin.common.JSONCompat.optString(apiError, "message", str("{prov_unknown_error}")));
                     return;
                 }
                 String result = ProviderClient.parseResponse(provider, response);
-                showResult(pluginUI, "✅ Test Successful",
+                showResult(pluginUI, str("{prov_test_ok}"),
                         "Model: " + provider.model + "\n\nOriginal: Hello\nTranslation: " + result);
             } catch (Throwable e) {
                 // Throwable: an Error escaping this thread would crash MT Manager.
-                showResult(pluginUI, "❌ Test Failed", String.valueOf(e.getMessage()));
+                showResult(pluginUI, str("{prov_test_failed}"), String.valueOf(e.getMessage()));
             }
         }).start();
     }

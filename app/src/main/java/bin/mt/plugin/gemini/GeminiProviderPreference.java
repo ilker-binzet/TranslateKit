@@ -25,36 +25,41 @@ public class GeminiProviderPreference implements PluginPreference {
     private SharedPreferences preferences;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
+    /** Localized text for {@code key}; the language packs live in assets. */
+    private String str(String key) {
+        return context.getString(key);
+    }
+
     @Override
     public void onBuild(PluginContext context, Builder builder) {
         this.context = context;
         this.preferences = context.getPreferences();
 
         // ==================== API Configuration ====================
-        builder.addText("🔑 API Configuration")
+        builder.addText(str("{prov_head_api}"))
                 .summary("");
 
-        builder.addInput("API Key", GeminiConstants.PREF_API_KEY)
+        builder.addInput(str("{prov_api_key}"), GeminiConstants.PREF_API_KEY)
                 .defaultValue(GeminiConstants.DEFAULT_API_KEY)
-                .summary("Get your FREE API key at aistudio.google.com/app/apikey")
+                .summary(str("{gemini_key_summary}"))
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
-        builder.addText("API Key Status", KEY_STATUS_ROW)
+        builder.addText(str("{prov_api_key_status}"), KEY_STATUS_ROW)
                 .summary(getKeyStatus());
 
-        builder.addText("Test API Key")
-                .summary("Verify your API key is working")
+        builder.addText(str("{prov_test_key}"))
+                .summary(str("{prov_test_key_summary}"))
                 .onClick((pluginUI, item) -> {
                     testApiKey(pluginUI, item);
                 });
 
-        builder.addText("Get FREE API Key")
-                .summary("Open Google AI Studio to create a free API key")
+        builder.addText(str("{gemini_get_key}"))
+                .summary(str("{gemini_get_key_summary}"))
                 .url(GeminiConstants.URL_GET_API_KEY);
 
         // ==================== Model Selection ====================
-        builder.addText("✨ Model Selection")
+        builder.addText(str("{prov_head_model}"))
                 .summary("");
 
         // The model choice is now an implementation detail. The default is the
@@ -66,28 +71,28 @@ public class GeminiProviderPreference implements PluginPreference {
                 preferences, GeminiConstants.PREF_MODEL_NAME, GeminiConstants.DEFAULT_MODEL);
         boolean isCustomGemini = !TextUtils.isEmpty(preferences.getString(customGeminiKey, ""));
 
-        builder.addText("Provider")
+        builder.addText(str("{prov_provider}"))
                 .summary("Gemini");
-        builder.addText("Model")
+        builder.addText(str("{prov_model}"))
                 .summary(isCustomGemini
-                        ? effectiveGeminiModel + "  (custom override)"
-                        : effectiveGeminiModel + "  (default)");
+                        ? effectiveGeminiModel + str("{prov_custom_override}")
+                        : effectiveGeminiModel + str("{prov_default}"));
 
         // Catalog viewer + manual refresh
-        builder.addText("Model Catalog")
+        builder.addText(str("{prov_model_catalog}"))
                 .summary(ModelCatalogManager.formatLastRefreshed(
                         preferences, GeminiConstants.PREF_CACHE_GEMINI_MODELS))
                 .onClick((pluginUI, item) -> showModelCatalog(pluginUI));
 
-        builder.addText("Refresh Model List")
-                .summary("Fetch the latest Gemini models from Google API")
+        builder.addText(str("{prov_refresh_models}"))
+                .summary(str("{gemini_refresh_summary}"))
                 .onClick((pluginUI, item) -> refreshGeminiModels(pluginUI));
 
         // Custom model name (forward-compat for any model name)
-        builder.addInput("Custom Model (optional)", customGeminiKey)
+        builder.addInput(str("{prov_custom_model}"), customGeminiKey)
                 .defaultValue("")
-                .summary("Overrides the default model above when non-empty. Use for any model name.")
-                .hint("e.g. gemini-2.0-flash-exp")
+                .summary(str("{prov_custom_model_summary}"))
+                .hint(str("{gemini_model_hint}"))
                 .valueAsSummary()
                 .inputType(InputType.TYPE_CLASS_TEXT);
 
@@ -99,26 +104,26 @@ public class GeminiProviderPreference implements PluginPreference {
                 ModelCatalogManager.Provider.GEMINI);
 
         // ==================== Usage & Limits ====================
-        builder.addText("📊 Usage & Limits")
+        builder.addText(str("{prov_head_usage}"))
                 .summary("");
 
-        builder.addText("Free Tier Limits")
-                .summary("2000 requests/day (Flash) | 100 requests/day (Pro) - Completely FREE!");
+        builder.addText(str("{prov_free_limits}"))
+                .summary(str("{gemini_limits}"));
 
-        builder.addText("API Documentation")
-                .summary("View Gemini API documentation and pricing")
+        builder.addText(str("{prov_api_docs}"))
+                .summary(str("{gemini_docs_summary}"))
                 .url(GeminiConstants.URL_API_DOCS);
 
         // ==================== Test & Debug ====================
-        builder.addText("🔧 Test & Debug")
+        builder.addText(str("{prov_head_test}"))
                 .summary("");
 
-        builder.addText("Quick Test")
-                .summary("Test translation with a simple phrase")
+        builder.addText(str("{prov_quick_test}"))
+                .summary(str("{prov_quick_test_summary}"))
                 .onClick((pluginUI, item) -> runQuickTranslationTest(pluginUI));
 
-        builder.addText("View Logs")
-                .summary("Open MT Manager log viewer")
+        builder.addText(str("{prov_view_logs}"))
+                .summary(str("{prov_view_logs_summary}"))
                 .onClick((pluginUI, item) -> context.openLogViewer());
 
         // SDK Beta2+ callbacks enabled (minMTVersion >= 26020300)
@@ -129,7 +134,7 @@ public class GeminiProviderPreference implements PluginPreference {
         builder.onPreferenceChange((pluginUI, preferenceItem, newValue) -> {
             String key = preferenceItem.getKey();
             if (GeminiConstants.PREF_API_KEY.equals(key)) {
-                context.showToast("API key updated. Re-open settings to refresh status.");
+                context.showToast(str("{prov_key_updated}"));
             }
         });
     }
@@ -153,8 +158,8 @@ public class GeminiProviderPreference implements PluginPreference {
 
         if (apiKey.isEmpty()) {
             pluginUI.buildDialog()
-                    .setTitle("❌ No API Key")
-                    .setMessage("Please configure your Gemini API key first.")
+                    .setTitle(str("{prov_no_key}"))
+                    .setMessage(str("{gemini_need_key}"))
                     .setPositiveButton("{ok}", null)
                     .show();
             return;
@@ -191,19 +196,19 @@ public class GeminiProviderPreference implements PluginPreference {
 
                     runOnMainThread(() -> pluginUI.buildDialog()
                             .setTitle(GeminiColorTokens.success(pluginUI, "✅ Translation Successful"))
-                            .setMessage("Original: Hello\n\nTranslation (Turkish):\n" + result)
+                            .setMessage(str("{prov_test_result}") + result)
                             .setPositiveButton("{ok}", null)
                             .show());
                 } else {
                     runOnMainThread(() -> pluginUI.buildDialog()
-                            .setTitle("❌ Translation Failed")
-                            .setMessage("Received unexpected response format.")
+                            .setTitle(str("{prov_translation_failed}"))
+                            .setMessage(str("{prov_bad_response}"))
                             .setPositiveButton("{ok}", null)
                             .show());
                 }
             } catch (Throwable e) { // Throwable: an Error escaping this thread would crash MT Manager
                 runOnMainThread(() -> pluginUI.buildDialog()
-                        .setTitle("❌ Test Failed")
+                        .setTitle(str("{prov_test_failed}"))
                         .setMessage("Error: " + e.getMessage())
                         .setPositiveButton("{ok}", null)
                         .show());
@@ -218,8 +223,8 @@ public class GeminiProviderPreference implements PluginPreference {
 
         if (apiKey.isEmpty()) {
             pluginUI.buildDialog()
-                    .setTitle("❌ No API Key")
-                    .setMessage("Please configure your Gemini API key first.")
+                    .setTitle(str("{prov_no_key}"))
+                    .setMessage(str("{gemini_need_key}"))
                     .setPositiveButton("{ok}", null)
                     .show();
             return;
@@ -236,7 +241,7 @@ public class GeminiProviderPreference implements PluginPreference {
                 bin.mt.json.JSONObject content = new bin.mt.json.JSONObject();
                 bin.mt.json.JSONArray parts = new bin.mt.json.JSONArray();
                 bin.mt.json.JSONObject part = new bin.mt.json.JSONObject();
-                part.put("text", "Translate to Turkish: Hello");
+                part.put("text", str("{prov_test_prompt}"));
                 parts.add(part);
                 content.put("parts", parts);
                 contents.add(content);
@@ -250,22 +255,22 @@ public class GeminiProviderPreference implements PluginPreference {
 
                 if (response.contains("candidates")) {
                     runOnMainThread(() -> pluginUI.buildDialog()
-                            .setTitle(GeminiColorTokens.success(pluginUI, "✅ API Key Valid"))
+                            .setTitle(GeminiColorTokens.success(pluginUI, str("{prov_key_valid}")))
                             .setMessage("Your Gemini API key is working correctly!\n\nModel: " + model)
                             .setPositiveButton("{ok}", null)
                             .show());
                 } else if (response.contains("error")) {
                     bin.mt.json.JSONObject error = response.getJSONObject("error");
-                    String errorMsg = bin.mt.plugin.common.JSONCompat.optString(error, "message", "Unknown error");
+                    String errorMsg = bin.mt.plugin.common.JSONCompat.optString(error, "message", str("{prov_unknown_error}"));
 
                     runOnMainThread(() -> pluginUI.buildDialog()
-                            .setTitle("❌ API Error")
+                            .setTitle(str("{prov_api_error}"))
                             .setMessage("Error: " + errorMsg)
                             .setPositiveButton("{ok}", null)
                             .show());
                 } else {
                     runOnMainThread(() -> pluginUI.buildDialog()
-                            .setTitle("❌ Invalid API Key")
+                            .setTitle(str("{prov_bad_key}"))
                             .setMessage(
                                     "Your API key appears to be invalid.\n\nPlease check your key at:\naistudio.google.com/app/apikey")
                             .setPositiveButton("{ok}", null)
@@ -274,7 +279,7 @@ public class GeminiProviderPreference implements PluginPreference {
 
             } catch (Throwable e) { // Throwable: an Error escaping this thread would crash MT Manager
                 runOnMainThread(() -> pluginUI.buildDialog()
-                        .setTitle("❌ Test Failed")
+                        .setTitle(str("{prov_test_failed}"))
                         .setMessage("Error: " + e.getMessage())
                         .setPositiveButton("{ok}", null)
                         .show());
@@ -324,7 +329,7 @@ public class GeminiProviderPreference implements PluginPreference {
         String apiKey = preferences.getString(GeminiConstants.PREF_API_KEY, "");
         if (TextUtils.isEmpty(apiKey)) {
             pluginUI.buildDialog()
-                    .setTitle("⚠️ No API Key")
+                    .setTitle(str("{prov_no_key_warn}"))
                     .setMessage("Add your Gemini API key first, then refresh.")
                     .setPositiveButton("{ok}", null)
                     .show();
@@ -344,7 +349,7 @@ public class GeminiProviderPreference implements PluginPreference {
                     loadingDialog.dismiss();
                     if (error != null) {
                         pluginUI.buildDialog()
-                                .setTitle("❌ Refresh Failed")
+                                .setTitle(str("{prov_refresh_failed}"))
                                 .setMessage("Could not fetch Gemini models:\n" + error.getMessage())
                                 .setPositiveButton("{ok}", null)
                                 .show();
@@ -352,7 +357,7 @@ public class GeminiProviderPreference implements PluginPreference {
                     }
                     if (models == null || models.isEmpty()) {
                         pluginUI.buildDialog()
-                                .setTitle("⚠️ No Models Found")
+                                .setTitle(str("{prov_no_models}"))
                                 .setMessage("Google API did not return any eligible Gemini models. " +
                                         "Check your API key permissions or try again later.")
                                 .setPositiveButton("{ok}", null)
