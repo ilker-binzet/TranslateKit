@@ -92,7 +92,15 @@ public class GeminiTranslatePreference implements PluginPreference {
                 .summary(str("{nav_tools_summary}"))
                 .onClick((pluginUI, item) -> context.openPreference(ToolsSubPreference.class));
 
-        // ==================== 5. About ====================
+        // ==================== 5. Translate This Plugin ====================
+        // The plugin ships English, Turkish and Simplified Chinese. Anyone who
+        // wants their own language has to be able to find out how from inside
+        // the plugin, or they never will.
+        builder.addText(str("{nav_translate_plugin}"))
+                .summary(str("{nav_translate_plugin_summary}"))
+                .url(GeminiConstants.URL_TRANSLATE_GUIDE);
+
+        // ==================== 6. About ====================
         builder.addText(str("{nav_about}"))
                 .summary("TranslateKit v" + GeminiConstants.PLUGIN_VERSION_NAME + " • by Ilker Binzet")
                 .url(GeminiConstants.DEVELOPER_GITHUB);

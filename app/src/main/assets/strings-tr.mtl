@@ -381,3 +381,7 @@ custom_add_summary: Ad, temel URL, API anahtarı ve model
 custom_none: Henüz uç nokta yok
 custom_none_summary: OpenAI uyumlu herhangi bir servisi kullanmak için aşağıdan ekleyin
 custom_supported: ℹ️ Desteklenen Servisler
+
+# Translation Contributions
+nav_translate_plugin: Bu Eklentiyi Çevir
+nav_translate_plugin_summary: TranslateKit’i kendi dilinize çevirmeye yardım edin

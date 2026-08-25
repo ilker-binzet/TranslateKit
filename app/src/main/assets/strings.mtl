@@ -380,3 +380,7 @@ custom_add_summary: Name, base URL, API key and model
 custom_none: No endpoints yet
 custom_none_summary: Add one below to use any OpenAI-compatible service
 custom_supported: ℹ️ Supported Services
+
+# Translation Contributions
+nav_translate_plugin: Translate This Plugin
+nav_translate_plugin_summary: Help translate TranslateKit into your language

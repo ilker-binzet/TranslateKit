@@ -154,6 +154,10 @@ public class GeminiConstants {
     public static final String OPENROUTER_API_KEY_PATTERN = "^sk-or-v1-[A-Za-z0-9]{16,}$";
     public static final String DEFAULT_OPENROUTER_MODEL = "google/gemini-2.5-flash";
 
+    /** Where a volunteer finds the language packs and how to add one. */
+    public static final String URL_TRANSLATE_GUIDE =
+            "https://github.com/ilker-binzet/TranslateKit/blob/main/docs/TRANSLATING.md";
+
     public static final String URL_OPENROUTER_KEYS = "https://openrouter.ai/keys";
     public static final String URL_OPENROUTER_DOCS = "https://openrouter.ai/docs";
     public static final String URL_OPENROUTER_PRICING = "https://openrouter.ai/models";
