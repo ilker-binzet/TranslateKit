@@ -247,12 +247,20 @@ tools_view_logs: View Logs
 tools_view_logs_summary: Open MT Manager log viewer
 tools_debug_logging: Debug Logging
 tools_debug_logging_summary: Record detailed request info to MT Manager logs
+tools_export_log: Export Debug Log
+tools_export_log_summary: Save the debug log as a file in Downloads
+tools_copy_log: Copy Debug Log
+tools_copy_log_summary: Copy the whole debug log to the clipboard
 tools_export: Export Settings
 tools_export_summary: Copy all settings as JSON to share
 tools_import: Import Settings
 tools_import_summary: Restore settings from JSON preset
 tools_plugin_version: Plugin Version
 msg_debug_enabled: Debug logging enabled - check MT Manager logs for details
+msg_log_exported: Debug log saved:
+msg_log_copied: Debug log copied to clipboard
+msg_log_empty: No debug log yet - enable Debug Logging and run a translation
+msg_log_export_failed_copied: Could not write to Downloads, log copied to clipboard instead
 msg_settings_copied: settings copied to clipboard
 msg_clipboard_failed: Clipboard copy failed, please copy from the dialog
 tools_export_hint: Copied to clipboard. You can also long-press the text below:

@@ -1,8 +1,12 @@
 package bin.mt.plugin.gemini;
 
 import android.content.SharedPreferences;
+import android.os.Environment;
 import android.os.SystemClock;
 import android.text.format.DateFormat;
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -97,6 +101,15 @@ public class ToolsSubPreference implements PluginPreference {
                 .defaultValue(GeminiConstants.DEFAULT_ENABLE_DEBUG)
                 .summary(str("{tools_debug_logging_summary}"));
 
+        // ==================== Export / Copy Debug Log ====================
+        builder.addText(str("{tools_export_log}"))
+                .summary(str("{tools_export_log_summary}"))
+                .onClick((pluginUI, item) -> exportDebugLog());
+
+        builder.addText(str("{tools_copy_log}"))
+                .summary(str("{tools_copy_log_summary}"))
+                .onClick((pluginUI, item) -> copyDebugLog());
+
         // ==================== Export Settings ====================
         builder.addText(str("{tools_export}"))
                 .summary(str("{tools_export_summary}"))
@@ -126,6 +139,49 @@ public class ToolsSubPreference implements PluginPreference {
     /** Localized text for {@code key}; the language packs live in assets. */
     private String str(String key) {
         return context.getString(key);
+    }
+
+    // ==================== Debug Log Export ====================
+
+    /**
+     * Copies the mirrored debug log into the public Downloads folder. The
+     * plugin runs inside MT Manager, a file manager with all-files access, so
+     * the plain File API reaches it; when it does not, the clipboard is the
+     * fallback rather than an error.
+     */
+    private void exportDebugLog() {
+        String log = TranslationDebugLogger.readLog(context);
+        if (log.isEmpty()) {
+            context.showToast(str("{msg_log_empty}"));
+            return;
+        }
+        try {
+            File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            //noinspection ResultOfMethodCallIgnored
+            dir.mkdirs();
+            String stamp = DateFormat.format("yyyyMMdd-HHmm", System.currentTimeMillis()).toString();
+            File out = new File(dir, "TranslateKit-" + stamp + ".log");
+            Files.write(out.toPath(), log.getBytes(StandardCharsets.UTF_8));
+            context.showToastL(str("{msg_log_exported}") + " " + out.getAbsolutePath());
+        } catch (Exception e) {
+            context.log("[TranslateKit] Log export failed: " + e.getMessage());
+            if (context.setClipboardText(log)) {
+                context.showToast(str("{msg_log_export_failed_copied}"));
+            } else {
+                context.showToast(str("{msg_clipboard_failed}"));
+            }
+        }
+    }
+
+    private void copyDebugLog() {
+        String log = TranslationDebugLogger.readLog(context);
+        if (log.isEmpty()) {
+            context.showToast(str("{msg_log_empty}"));
+        } else if (context.setClipboardText(log)) {
+            context.showToast(str("{msg_log_copied}"));
+        } else {
+            context.showToast(str("{msg_clipboard_failed}"));
+        }
     }
 
     // ==================== Exportable Preference Keys ====================

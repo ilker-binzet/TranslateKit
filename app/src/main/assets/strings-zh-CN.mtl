@@ -250,12 +250,20 @@ tools_view_logs: 查看日志
 tools_view_logs_summary: 打开 MT 管理器日志查看器
 tools_debug_logging: 调试日志
 tools_debug_logging_summary: 将详细请求信息记录到 MT 管理器日志
+tools_export_log: 导出调试日志
+tools_export_log_summary: 将调试日志保存为文件到下载文件夹
+tools_copy_log: 复制调试日志
+tools_copy_log_summary: 将完整调试日志复制到剪贴板
 tools_export: 导出设置
 tools_export_summary: 将所有设置复制为 JSON 以便分享
 tools_import: 导入设置
 tools_import_summary: 从 JSON 预设恢复设置
 tools_plugin_version: 插件版本
 msg_debug_enabled: 调试日志已启用 - 详情见 MT 管理器日志
+msg_log_exported: 调试日志已保存：
+msg_log_copied: 调试日志已复制到剪贴板
+msg_log_empty: 尚无调试日志 - 请开启调试日志并运行一次翻译
+msg_log_export_failed_copied: 无法写入下载文件夹，已改为复制到剪贴板
 msg_settings_copied: 项设置已复制到剪贴板
 msg_clipboard_failed: 复制到剪贴板失败，请从对话框中复制
 tools_export_hint: 已复制到剪贴板。也可以长按下方文本复制：

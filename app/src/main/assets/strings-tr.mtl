@@ -248,12 +248,20 @@ tools_view_logs: Kayıtları Görüntüle
 tools_view_logs_summary: MT Manager kayıt görüntüleyicisini aç
 tools_debug_logging: Hata Ayıklama Kaydı
 tools_debug_logging_summary: Ayrıntılı istek bilgisini MT Manager kayıtlarına yaz
+tools_export_log: Hata Ayıklama Kaydını Dışa Aktar
+tools_export_log_summary: Kaydı İndirilenler klasörüne dosya olarak kaydet
+tools_copy_log: Hata Ayıklama Kaydını Kopyala
+tools_copy_log_summary: Kaydın tamamını panoya kopyala
 tools_export: Ayarları Dışa Aktar
 tools_export_summary: Tüm ayarları paylaşmak için JSON olarak kopyala
 tools_import: Ayarları İçe Aktar
 tools_import_summary: Ayarları JSON ön ayarından geri yükle
 tools_plugin_version: Eklenti Sürümü
 msg_debug_enabled: Hata ayıklama kaydı açık - ayrıntılar MT Manager kayıtlarında
+msg_log_exported: Kayıt kaydedildi:
+msg_log_copied: Kayıt panoya kopyalandı
+msg_log_empty: Henüz kayıt yok - Hata Ayıklama Kaydını açıp bir çeviri yapın
+msg_log_export_failed_copied: İndirilenler klasörüne yazılamadı, kayıt panoya kopyalandı
 msg_settings_copied: ayar panoya kopyalandı
 msg_clipboard_failed: Panoya kopyalanamadı, lütfen pencereden kopyalayın
 tools_export_hint: Panoya kopyalandı. Aşağıdaki metne uzun basarak da kopyalayabilirsiniz:

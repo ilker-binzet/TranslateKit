@@ -5,6 +5,46 @@ All notable changes to TranslateKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Export Debug Log / Copy Debug Log** under *Tools*, below the Debug
+  Logging switch. While debug logging is on, every line also goes to a file
+  the plugin keeps, and these two rows save that file to `Download/` or put
+  it on the clipboard — no more selecting hundreds of lines in MT's log
+  viewer. The file starts over once it passes 1 MB.
+
+### Fixed
+- **Batch translation stalling around the 250th string.** A 50-item batch of
+  Chinese UI strings came back with only 8 items, twice in a row: Gemini 3
+  thinks before it answers, the thinking is billed from `maxOutputTokens`,
+  and it ate the budget before the list was done. Thinking is now set to
+  `low` on Gemini 3.x and off on 2.5 Flash; the same batch returns 50/50 and
+  385 strings finish in about 20 seconds instead of stalling. The candidate's
+  `finishReason` is logged whenever it is not `STOP`, so a truncated answer
+  shows up as such rather than as an unexplained parse mismatch.
+- **An incomplete or failed batch fell back to one request per string** —
+  42 sequential calls, each with its own retries, which read as a hang. The
+  missing items are now split in two and retried as smaller batches, down to
+  single strings only at the bottom.
+- **The request timeout did not scale with the batch.** With the batch size
+  raised to 50, OpenRouter was cut off at exactly 30 s three times running
+  and the whole batch dropped to single requests. The timeout setting is
+  now per ten items, so 30 s becomes 150 s for a batch of 50.
+- **Cancel waited for the in-flight request.** OkHttp's blocking call ignores
+  the interrupt MT sends; the call now runs on the dispatcher and is
+  cancelled at once.
+- **Line breaks inside a string were lost in batch mode.** The batch prompt
+  is one item per line, so a string's own newlines were flattened to spaces
+  and never restored. They travel as placeholders now and come back
+  verbatim, so a multi-line template keeps its layout.
+- **OpenRouter's "Response was empty".** Hybrid models such as DeepSeek reason
+  by default there and spend `max_tokens` on it first. Requests now ask for
+  reasoning off, or `low` where the model cannot switch it off.
+- **OpenAI reasoning models (gpt-5.x, o-series)** reject `max_tokens` and any
+  non-default temperature. They now get `max_completion_tokens` and
+  `reasoning_effort: low`; gpt-4.1 and gpt-4o are unchanged.
+
 ## [0.6.0] - 2026-08-25
 
 ### Added

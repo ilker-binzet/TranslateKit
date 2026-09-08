@@ -2,6 +2,14 @@ package bin.mt.plugin.gemini;
 
 import androidx.annotation.Nullable;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -13,14 +21,47 @@ import bin.mt.plugin.api.PluginContext;
  */
 public class TranslationDebugLogger {
 
+    /** Mirror of every emitted line, so the log can be exported instead of copied out of MT's viewer. */
+    static final String LOG_FILE_NAME = "translatekit-debug.log";
+    /** Start over once the mirror grows past this; a few runs' worth is what anyone shares. */
+    private static final long MAX_LOG_BYTES = 1024 * 1024;
+
     private final PluginContext pluginContext;
     private final boolean enabled;
     private final String sessionId;
+    private final File logFile;
 
     public TranslationDebugLogger(@Nullable PluginContext pluginContext, boolean enabled) {
         this.pluginContext = pluginContext;
         this.enabled = enabled && pluginContext != null;
         this.sessionId = UUID.randomUUID().toString().substring(0, 8);
+        this.logFile = this.enabled ? logFile(pluginContext) : null;
+        if (logFile != null && logFile.length() > MAX_LOG_BYTES) {
+            //noinspection ResultOfMethodCallIgnored
+            logFile.delete();
+        }
+    }
+
+    /** Where the mirror lives; null when the host offers no files dir. */
+    @Nullable
+    static File logFile(@Nullable PluginContext context) {
+        try {
+            File dir = context == null ? null : context.getFilesDir();
+            return dir == null ? null : new File(dir, LOG_FILE_NAME);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** The whole mirror, or empty when there is none. */
+    static String readLog(@Nullable PluginContext context) {
+        File file = logFile(context);
+        if (file == null || !file.isFile()) return "";
+        try {
+            return new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return "";
+        }
     }
 
     public boolean isEnabled() {
@@ -66,10 +107,20 @@ public class TranslationDebugLogger {
     }
 
     private void emit(String line) {
+        String full = line + " | session=" + sessionId;
         if (pluginContext != null) {
-            pluginContext.log(line + " | session=" + sessionId);
+            pluginContext.log(full);
         } else {
-            System.out.println(line + " | session=" + sessionId);
+            System.out.println(full);
+        }
+        if (logFile != null) {
+            // ponytail: open/append/close per line, a few hundred lines per run
+            String stamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(new Date());
+            try (Writer w = new FileWriter(logFile, true)) {
+                w.write(stamp + " " + full + System.lineSeparator());
+            } catch (IOException ignored) {
+                // The MT log still has the line; the mirror is a convenience.
+            }
         }
     }
 
