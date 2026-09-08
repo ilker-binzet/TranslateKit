@@ -1,6 +1,7 @@
 package bin.mt.plugin.provider;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -103,6 +104,46 @@ public class ProviderClientTest {
                 ProviderClient.parseResponse(provider(Provider.WIRE_ANTHROPIC), response));
     }
 
+    @Test
+    public void openRouterAsksForNoReasoning() throws IOException {
+        // Hybrid models reason by default there and spend max_tokens on it
+        // first; the log showed "Response was empty" from deepseek.
+        Provider or = new Provider(Providers.ID_OPENROUTER, "OpenRouter", Provider.WIRE_OPENAI,
+                "https://openrouter.ai/api/v1", "KEY", "deepseek/deepseek-v4-flash", null, null, null);
+        JSONObject body = ProviderClient.buildRequest(or, PROMPT, SYSTEM);
+        JSONObject reasoning = JSONCompat.optJSONObject(body, "reasoning");
+        assertNotNull(reasoning);
+        assertFalse(reasoning.getBoolean("enabled"));
+        assertEquals("low", JSONCompat.optString(reasoning, "effort", null));
+        assertTrue("budget still travels as max_tokens", JSONCompat.optInt(body, "max_tokens", 0) >= 2048);
+
+        // A custom OpenAI-compatible endpoint may reject unknown fields.
+        assertNull(JSONCompat.optJSONObject(
+                ProviderClient.buildRequest(provider(Provider.WIRE_OPENAI), PROMPT, SYSTEM), "reasoning"));
+    }
+
+    @Test
+    public void openAiReasoningModelsGetTheParametersTheyAccept() throws IOException {
+        assertTrue(ProviderClient.isOpenAiReasoningModel("gpt-5.2"));
+        assertTrue(ProviderClient.isOpenAiReasoningModel("o4-mini"));
+        assertFalse(ProviderClient.isOpenAiReasoningModel("gpt-4.1-mini"));
+        assertFalse(ProviderClient.isOpenAiReasoningModel("gpt-4o"));
+
+        Provider five = new Provider(Providers.ID_OPENAI, "OpenAI", Provider.WIRE_OPENAI,
+                "https://api.openai.com/v1", "KEY", "gpt-5.2", null, null, null);
+        JSONObject body = ProviderClient.buildRequest(five, PROMPT, SYSTEM);
+        assertTrue(JSONCompat.optInt(body, "max_completion_tokens", 0) >= 2048);
+        assertEquals("low", JSONCompat.optString(body, "reasoning_effort", null));
+        assertNull("max_tokens is a 400 on gpt-5", JSONCompat.optString(body, "max_tokens", null));
+        assertNull("only the default temperature is accepted", JSONCompat.optString(body, "temperature", null));
+
+        Provider four = new Provider(Providers.ID_OPENAI, "OpenAI", Provider.WIRE_OPENAI,
+                "https://api.openai.com/v1", "KEY", "gpt-4.1-mini", null, null, null);
+        JSONObject legacy = ProviderClient.buildRequest(four, PROMPT, SYSTEM);
+        assertTrue(JSONCompat.optInt(legacy, "max_tokens", 0) >= 2048);
+        assertNull(JSONCompat.optString(legacy, "reasoning_effort", null));
+    }
+
     // ── Gemini wire ───────────────────────────────────────────────────────────
 
     @Test
@@ -117,6 +158,36 @@ public class ProviderClientTest {
         JSONObject cfg = JSONCompat.optJSONObject(body, "generationConfig");
         assertNotNull("generationConfig carries the output budget", cfg);
         assertTrue(JSONCompat.optInt(cfg, "maxOutputTokens", 0) >= 4096);
+    }
+
+    @Test
+    public void geminiThinkingIsKeptOutOfTheOutputBudget() throws IOException {
+        // Reasoning tokens are charged against maxOutputTokens; a 50-item
+        // batch got cut after 8 items once the model thought for the rest.
+        JSONObject v3 = ProviderClient.thinkingConfig("gemini-3.8-flash");
+        assertEquals("low", JSONCompat.optString(v3, "thinkingLevel", null));
+        assertNull("both fields in one request is a 400", JSONCompat.optString(v3, "thinkingBudget", null));
+
+        JSONObject v25 = ProviderClient.thinkingConfig("gemini-2.5-flash");
+        assertEquals(0, JSONCompat.optInt(v25, "thinkingBudget", -1));
+
+        assertNull("2.5 Pro cannot switch thinking off", ProviderClient.thinkingConfig("gemini-2.5-pro"));
+        assertNull(ProviderClient.thinkingConfig("gemini-2.0-flash"));
+
+        JSONObject body = ProviderClient.buildRequest(
+                new Provider("g", "G", Provider.WIRE_GEMINI, "https://example.invalid",
+                        "KEY", "gemini-3-flash-preview", null, null, null), PROMPT, SYSTEM);
+        JSONObject cfg = JSONCompat.optJSONObject(body, "generationConfig");
+        assertNotNull(JSONCompat.optJSONObject(cfg, "thinkingConfig"));
+    }
+
+    @Test
+    public void truncatedResponsesReportTheirFinishReason() {
+        assertEquals("MAX_TOKENS", ProviderClient.finishReasonOf(new JSONObject(
+                "{\"candidates\":[{\"finishReason\":\"MAX_TOKENS\",\"content\":{\"parts\":[{\"text\":\"[1] a\"}]}}]}")));
+        assertEquals("length", ProviderClient.finishReasonOf(new JSONObject(
+                "{\"choices\":[{\"finish_reason\":\"length\",\"message\":{\"content\":\"[1] a\"}}]}")));
+        assertNull(ProviderClient.finishReasonOf(new JSONObject("{}")));
     }
 
     @Test

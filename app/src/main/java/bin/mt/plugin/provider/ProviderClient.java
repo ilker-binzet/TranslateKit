@@ -42,7 +42,7 @@ public final class ProviderClient {
                 return anthropicBody(p, prompt, systemPrompt);
             }
             if (Provider.WIRE_GEMINI.equals(p.wire)) {
-                return geminiBody(prompt);
+                return geminiBody(p, prompt);
             }
             return openAiBody(p, prompt, systemPrompt);
         } catch (Exception e) {
@@ -66,10 +66,33 @@ public final class ProviderClient {
         JSONCompat.put(messages, user);
 
         request.put("messages", messages);
-        request.put("temperature", 0.1);
         // Scale with input size — a fixed cap truncates large batches.
-        request.put("max_tokens", clampTokens(prompt.length() / 2, 2048, 8192));
+        int budget = clampTokens(prompt.length() / 2, 2048, 8192);
+        if (Providers.ID_OPENAI.equals(p.id) && isOpenAiReasoningModel(p.model)) {
+            // gpt-5 / o-series reject max_tokens and any temperature but the
+            // default; reasoning is billed from max_completion_tokens, so keep
+            // it low or a 50-item batch comes back empty.
+            request.put("max_completion_tokens", budget);
+            request.put("reasoning_effort", "low");
+            return request;
+        }
+        request.put("temperature", 0.1);
+        request.put("max_tokens", budget);
+        if (Providers.ID_OPENROUTER.equals(p.id)) {
+            // Hybrid models (DeepSeek, Gemini, Claude) reason by default on
+            // OpenRouter and spend max_tokens on it first — "Response was
+            // empty" in the log. Off where allowed, "low" where mandatory.
+            JSONObject reasoning = new JSONObject();
+            reasoning.put("enabled", false);
+            reasoning.put("effort", "low");
+            request.put("reasoning", reasoning);
+        }
         return request;
+    }
+
+    static boolean isOpenAiReasoningModel(String model) {
+        String m = model == null ? "" : model.toLowerCase();
+        return m.startsWith("gpt-5") || m.matches("o\\d.*");
     }
 
     private static JSONObject anthropicBody(Provider p, String prompt, String systemPrompt) {
@@ -95,7 +118,7 @@ public final class ProviderClient {
         return request;
     }
 
-    private static JSONObject geminiBody(String prompt) {
+    private static JSONObject geminiBody(Provider p, String prompt) {
         JSONObject request = new JSONObject();
 
         JSONObject part = new JSONObject();
@@ -119,8 +142,36 @@ public final class ProviderClient {
         generationConfig.put("maxOutputTokens", clampTokens(prompt.length(), 4096, 32768));
         generationConfig.put("topP", 0.8);
         generationConfig.put("topK", 10);
+        JSONObject thinking = thinkingConfig(p.model);
+        if (thinking != null) {
+            generationConfig.put("thinkingConfig", thinking);
+        }
         request.put("generationConfig", generationConfig);
         return request;
+    }
+
+    /**
+     * Keeps reasoning out of the output budget. Thinking models spend their
+     * hidden reasoning tokens from {@code maxOutputTokens} first; on a batch
+     * of 50 UI strings that ate the budget and cut the numbered list after a
+     * handful of items. Translation needs no deep reasoning.
+     *
+     * <p>Gemini 3.x takes {@code thinkingLevel} ("minimal" is not on every
+     * 3.x model, "low" is); 2.5 Flash takes {@code thinkingBudget: 0}. 2.5
+     * Pro cannot switch thinking off, and sending both fields is a 400.
+     */
+    static JSONObject thinkingConfig(String model) {
+        String m = model == null ? "" : model.toLowerCase();
+        JSONObject cfg = new JSONObject();
+        if (m.startsWith("gemini-3")) {
+            cfg.put("thinkingLevel", "low");
+            return cfg;
+        }
+        if (m.startsWith("gemini-2.5") && m.contains("flash")) {
+            cfg.put("thinkingBudget", 0);
+            return cfg;
+        }
+        return null;
     }
 
     static int clampTokens(int value, int min, int max) {
@@ -136,6 +187,23 @@ public final class ProviderClient {
      */
     public static JSONObject errorOf(JSONObject response) {
         return response == null ? null : JSONCompat.optJSONObject(response, "error");
+    }
+
+    /**
+     * The candidate's {@code finishReason} (Gemini wire) or {@code finish_reason}
+     * (OpenAI wire), or null. "MAX_TOKENS"/"length" means the text was cut
+     * mid-answer; callers log it so a truncated batch is visible as such
+     * rather than as an unexplained parse mismatch.
+     */
+    public static String finishReasonOf(JSONObject response) {
+        if (response == null) return null;
+        JSONArray candidates = JSONCompat.optJSONArray(response, "candidates");
+        if (candidates == null) candidates = JSONCompat.optJSONArray(response, "choices");
+        if (candidates == null || JSONCompat.size(candidates) == 0) return null;
+        JSONObject first = JSONCompat.optJSONObject(candidates, 0);
+        if (first == null) return null;
+        String reason = JSONCompat.optString(first, "finishReason", null);
+        return reason != null ? reason : JSONCompat.optString(first, "finish_reason", null);
     }
 
     /** Reads the translated text out of a successful response. */

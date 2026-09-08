@@ -55,9 +55,19 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         "|(&(?:#\\d+|#x[0-9a-fA-F]+|[a-zA-Z]+);)"
     );
 
+    /**
+     * The batch prompt is one item per line, so a string's own line breaks
+     * cannot travel raw. They become placeholders like everything else and
+     * come back verbatim on restore — the screenshot showed two headings on
+     * separate lines flattened into one line.
+     */
+    static final Pattern BATCH_PLACEHOLDER_PATTERN = Pattern.compile(
+        "(\\r\\n|\\n|\\r)|" + PLACEHOLDER_PATTERN.pattern()
+    );
+
     /** Pattern for non-translatable strings (only symbols, numbers, whitespace) */
     private static final Pattern NON_TRANSLATABLE_PATTERN = Pattern.compile(
-        "^[\\p{Punct}\\p{Symbol}\\d\\s]*$"
+        "^[\\p{Punct}\\p{S}\\d\\s]*$"
     );
 
     private String apiKey;
@@ -294,7 +304,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         logInfo("Translate request via " + selectedEngine + " | src=" + sourceLanguage + " -> "
                 + targetLanguage + " | chars=" + text.length());
 
-        String result = translateVia(prompt, sourceLanguage, targetLanguage, inputChars, preview);
+        String result = translateVia(prompt, sourceLanguage, targetLanguage, inputChars, preview, requestTimeout);
 
         // Restore placeholders and validate integrity
         if (phResult.hasPlaceholders()) {
@@ -348,7 +358,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
                 needsTranslation[i] = false;
             } else {
                 needsTranslation[i] = true;
-                phResults[i] = tokenizePlaceholders(texts[i]);
+                phResults[i] = tokenizePlaceholders(texts[i], BATCH_PLACEHOLDER_PATTERN);
                 translatableIndices.add(i);
             }
         }
@@ -358,104 +368,129 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
             return results;
         }
 
-        // Build tokenized texts array for batch (only translatable items)
-        String[] tokenizedTexts = new String[translatableIndices.size()];
-        int totalChars = 0;
-        for (int j = 0; j < translatableIndices.size(); j++) {
-            int idx = translatableIndices.get(j);
-            tokenizedTexts[j] = phResults[idx].tokenizedText;
-            if (tokenizedTexts[j] != null) totalChars += tokenizedTexts[j].length();
-        }
-
         // Create batch span for structured debug logging
+        int totalChars = 0;
+        for (int idx : translatableIndices) {
+            String t = phResults[idx].tokenizedText;
+            if (t != null) totalChars += t.length();
+        }
         TranslationDebugLogger.BatchSpan batchSpan = debugLogger.newBatchSpan(
                 selectedEngine, modelName,
                 sourceLanguage, targetLanguage,
                 count, translatableIndices.size(), totalChars);
         batchSpan.logPreprocess(count - translatableIndices.size());
 
-        try {
-            // Build batch prompt with tokenized texts
-            String prompt = buildBatchTranslationPrompt(tokenizedTexts, sourceLanguage, targetLanguage);
-            String preview = "[batch:" + tokenizedTexts.length + "] " + totalChars + " chars";
+        int firstPass = translateGroup(translatableIndices, texts, phResults, results,
+                sourceLanguage, targetLanguage, batchSpan);
 
-            logInfo("Batch translate via " + selectedEngine + " | count=" + tokenizedTexts.length
+        batchSpan.markSuccess(firstPass);
+        logSuccess("Batch translate complete: " + texts.length + " texts ("
+                + (translatableIndices.size() - firstPass) + " retried in smaller groups)");
+        return results;
+    }
+
+    /**
+     * Translates {@code indices} as one batch call and writes into
+     * {@code results}. Whatever comes back missing, broken or not at all is
+     * split in two and retried, down to single items — so a 50-item batch
+     * that fails or gets truncated costs a handful of calls, not 50 sequential
+     * ones.
+     *
+     * @return how many items this level's own batch call resolved
+     */
+    // ponytail: a dead endpoint still walks the whole tree (≈2N calls, each
+    // failing fast); cancel is now honoured mid-walk, which is the escape hatch.
+    private int translateGroup(List<Integer> indices,
+                               String[] texts,
+                               PlaceholderResult[] phResults,
+                               String[] results,
+                               String sourceLanguage,
+                               String targetLanguage,
+                               TranslationDebugLogger.BatchSpan batchSpan) throws IOException {
+        if (Thread.currentThread().isInterrupted()) {
+            throw new IOException("Translation cancelled");
+        }
+        if (indices.size() == 1) {
+            int idx = indices.get(0);
+            try {
+                results[idx] = translateSingle(texts[idx], sourceLanguage, targetLanguage);
+            } catch (IOException e) {
+                logError("Individual retry failed, keeping original: "
+                        + TranslationDebugLogger.sanitizePreview(texts[idx])
+                        + " | " + e.getMessage());
+            }
+            return 0;
+        }
+
+        int n = indices.size();
+        List<Integer> missing = new ArrayList<>();
+        try {
+            String[] tokenizedTexts = new String[n];
+            int totalChars = 0;
+            for (int j = 0; j < n; j++) {
+                tokenizedTexts[j] = phResults[indices.get(j)].tokenizedText;
+                if (tokenizedTexts[j] != null) totalChars += tokenizedTexts[j].length();
+            }
+
+            String prompt = buildBatchTranslationPrompt(tokenizedTexts, sourceLanguage, targetLanguage);
+            String preview = "[batch:" + n + "] " + totalChars + " chars";
+            logInfo("Batch translate via " + selectedEngine + " | count=" + n
                     + " | src=" + sourceLanguage + " -> " + targetLanguage
                     + " | totalChars=" + totalChars);
             batchSpan.logApiCall(prompt.length());
 
-            String rawResponse = translateVia(prompt, sourceLanguage, targetLanguage, totalChars, preview);
-
+            String rawResponse = translateVia(prompt, sourceLanguage, targetLanguage,
+                    totalChars, preview, batchTimeoutMs(n));
             String[] batchResults = parseBatchResponse(rawResponse, tokenizedTexts, batchSpan);
 
-            // Map batch results back to original indices and restore placeholders.
-            // Items the model dropped (null) or whose placeholders failed
-            // validation are RETRIED INDIVIDUALLY — never silently kept as
-            // originals, which the user perceives as "skipped strings".
-            List<Integer> retryIndices = new ArrayList<>();
-            for (int j = 0; j < translatableIndices.size(); j++) {
-                int idx = translatableIndices.get(j);
+            for (int j = 0; j < n; j++) {
+                int idx = indices.get(j);
                 String translated = batchResults[j];
-
                 if (translated == null || translated.isEmpty()) {
-                    retryIndices.add(idx);
+                    missing.add(idx);
                     continue;
                 }
-
-                // Restore placeholders
                 if (phResults[idx].hasPlaceholders()) {
                     translated = restorePlaceholders(translated, phResults[idx].placeholders);
-                    boolean valid = validatePlaceholders(texts[idx], translated);
-                    batchSpan.logPlaceholderRestore(j + 1, valid, valid ? null : "validation failed, retrying individually");
+                    boolean valid = validatePlaceholders(texts[idx], translated, BATCH_PLACEHOLDER_PATTERN);
+                    batchSpan.logPlaceholderRestore(j + 1, valid, valid ? null : "validation failed, retrying in a smaller group");
                     if (!valid) {
-                        logWarn("Placeholder validation failed for batch item " + (j + 1) + ", retrying individually");
-                        retryIndices.add(idx);
+                        logWarn("Placeholder validation failed for batch item " + (j + 1) + ", retrying in a smaller group");
+                        missing.add(idx);
                         continue;
                     }
                 }
-
                 results[idx] = translated;
             }
-
-            if (!retryIndices.isEmpty()) {
-                logWarn("Batch incomplete: " + retryIndices.size() + "/" + translatableIndices.size()
-                        + " items missing or invalid — retrying each individually");
-                for (int i = 0; i < retryIndices.size(); i++) {
-                    int idx = retryIndices.get(i);
-                    logInfo("Individual retry " + (i + 1) + "/" + retryIndices.size());
-                    try {
-                        results[idx] = translateSingle(texts[idx], sourceLanguage, targetLanguage);
-                    } catch (IOException singleError) {
-                        logError("Individual retry failed, keeping original: "
-                                + TranslationDebugLogger.sanitizePreview(texts[idx])
-                                + " | " + singleError.getMessage());
-                        results[idx] = texts[idx]; // keep original
-                    }
-                }
-            }
-
-            batchSpan.markSuccess(translatableIndices.size() - retryIndices.size());
-            logSuccess("Batch translate complete: " + texts.length + " texts ("
-                    + retryIndices.size() + " retried individually)");
-            return results;
-
         } catch (IOException e) {
-            // Batch failed entirely — fall back to translating each text individually
-            batchSpan.markFailure(e.getMessage());
             batchSpan.logFallbackToIndividual(e.getMessage());
-            logWarn("Batch translation failed (" + e.getMessage() + "), falling back to individual translation");
-
-            for (int idx : translatableIndices) {
-                try {
-                    results[idx] = translateSingle(texts[idx], sourceLanguage, targetLanguage);
-                } catch (IOException singleError) {
-                    logWarn("Individual fallback failed for item " + (idx + 1) + ": " + singleError.getMessage());
-                    results[idx] = texts[idx]; // keep original
-                }
-            }
-
-            return results;
+            logWarn("Batch of " + n + " failed (" + e.getMessage() + "), splitting in two");
+            missing = new ArrayList<>(indices);
         }
+
+        int resolved = n - missing.size();
+        if (missing.isEmpty()) {
+            return resolved;
+        }
+        if (missing.size() < n) {
+            logWarn("Batch incomplete: " + missing.size() + "/" + n + " items missing or invalid, retrying in smaller groups");
+        }
+        int mid = missing.size() / 2;
+        if (mid == 0) {
+            translateGroup(missing, texts, phResults, results, sourceLanguage, targetLanguage, batchSpan);
+        } else {
+            translateGroup(missing.subList(0, mid), texts, phResults, results, sourceLanguage, targetLanguage, batchSpan);
+            translateGroup(missing.subList(mid, missing.size()), texts, phResults, results, sourceLanguage, targetLanguage, batchSpan);
+        }
+        return resolved;
+    }
+
+    /**
+     * A batch of 50 needs more wall-clock than one string: the user's
+     * Request Timeout is per ten items, so 30 s becomes 150 s for 50.
+     */
+    private int batchTimeoutMs(int items) {
+        return requestTimeout * Math.max(1, (items + 9) / 10);
     }
 
     /**
@@ -530,7 +565,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
 
         for (int i = 0; i < texts.length; i++) {
             prompt.append('[').append(i + 1).append("] ");
-            prompt.append(escapeForBatchPrompt(texts[i] != null ? texts[i] : ""));
+            prompt.append(texts[i] != null ? texts[i] : "");
             prompt.append('\n');
         }
 
@@ -693,7 +728,8 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
                                 String sourceLanguage,
                                 String targetLanguage,
                                 int inputChars,
-                                String preview) throws IOException {
+                                String preview,
+                                int timeoutMs) throws IOException {
         boolean retriedWithFallback = false;
         while (true) {
             try {
@@ -702,7 +738,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
                     String systemPrompt = buildSystemPrompt(sourceLanguage, targetLanguage);
                     JSONObject request = ProviderClient.buildRequest(provider, prompt, systemPrompt);
                     JSONObject response = HttpUtils.postJson(provider.url(), provider.headers(),
-                            request.toString(), requestTimeout);
+                            request.toString(), timeoutMs);
 
                     // Localise the API's own error before trying to read a
                     // translation out of a response that has none.
@@ -714,6 +750,11 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
                     }
 
                     String translation = ProviderClient.parseResponse(provider, response);
+                    String finishReason = ProviderClient.finishReasonOf(response);
+                    if (finishReason != null && !"STOP".equalsIgnoreCase(finishReason)) {
+                        logWarn(provider.displayName + " finishReason=" + finishReason
+                                + " — output may be truncated");
+                    }
                     logSuccess(provider.displayName + " response parsed, chars=" + translation.length());
                     return translation;
                 });
@@ -869,7 +910,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
      * Holds text with placeholders replaced by safe tokens, and the original placeholders
      * for later restoration.
      */
-    private static class PlaceholderResult {
+    static class PlaceholderResult {
         final String tokenizedText;
         final List<String> placeholders;
 
@@ -888,8 +929,12 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
      * does not modify, reorder, or remove them during translation.
      */
     private PlaceholderResult tokenizePlaceholders(String text) {
+        return tokenizePlaceholders(text, PLACEHOLDER_PATTERN);
+    }
+
+    static PlaceholderResult tokenizePlaceholders(String text, Pattern pattern) {
         List<String> placeholders = new ArrayList<>();
-        Matcher matcher = PLACEHOLDER_PATTERN.matcher(text);
+        Matcher matcher = pattern.matcher(text);
         StringBuffer sb = new StringBuffer();
         int index = 0;
         while (matcher.find()) {
@@ -906,7 +951,7 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
      * placeholder strings captured during tokenization.
      * Uses case-insensitive matching to handle AI models that may alter token casing.
      */
-    private String restorePlaceholders(String translatedText, List<String> placeholders) {
+    static String restorePlaceholders(String translatedText, List<String> placeholders) {
         String result = translatedText;
         for (int i = 0; i < placeholders.size(); i++) {
             String token = "__PH" + i + "__";
@@ -929,7 +974,11 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
      * @return true if every placeholder from the original appears in the translation
      */
     private boolean validatePlaceholders(String original, String translated) {
-        Matcher matcher = PLACEHOLDER_PATTERN.matcher(original);
+        return validatePlaceholders(original, translated, PLACEHOLDER_PATTERN);
+    }
+
+    private boolean validatePlaceholders(String original, String translated, Pattern pattern) {
+        Matcher matcher = pattern.matcher(original);
         // Collect unique placeholders with their expected counts
         Map<String, Integer> sourceCounts = new LinkedHashMap<>();
         while (matcher.find()) {
@@ -974,15 +1023,6 @@ public class GeminiTranslationEngine extends BaseBatchTranslationEngine {
         return NON_TRANSLATABLE_PATTERN.matcher(text).matches();
     }
 
-    /**
-     * Escape text for safe embedding in the [N] batch prompt format.
-     * Replaces literal newlines with a single space to prevent breaking
-     * the numbered-line structure that the AI model expects.
-     */
-    private String escapeForBatchPrompt(String text) {
-        if (text == null) return "";
-        return text.replace("\r\n", " ").replace("\n", " ").replace("\r", " ");
-    }
 
     @FunctionalInterface
     private interface TranslationCallable {

@@ -2,8 +2,11 @@ package bin.mt.plugin.common;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -128,7 +131,7 @@ public final class HttpUtils {
                     .writeTimeout(timeoutMs, TimeUnit.MILLISECONDS)
                     .build();
         }
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = executeInterruptibly(client.newCall(request))) {
             ResponseBody body = response.body();
             String bodyText = body == null ? "" : body.string();
             int code = response.code();
@@ -147,6 +150,31 @@ public final class HttpUtils {
             }
             return new JSONObject(bodyText);
         }
+    }
+
+    /**
+     * {@link Call#execute()} ignores {@link Thread#interrupt()}: MT's cancel
+     * button had to wait for the in-flight request (up to the whole timeout)
+     * before the engine noticed. Run the call on OkHttp's dispatcher and wait
+     * on a latch instead, so an interrupt cancels the call at once.
+     */
+    private static Response executeInterruptibly(Call call) throws IOException {
+        final Object[] outcome = new Object[1];
+        final CountDownLatch done = new CountDownLatch(1);
+        call.enqueue(new Callback() {
+            @Override public void onFailure(Call c, IOException e) { outcome[0] = e; done.countDown(); }
+            @Override public void onResponse(Call c, Response r) { outcome[0] = r; done.countDown(); }
+        });
+        try {
+            done.await();
+        } catch (InterruptedException ie) {
+            call.cancel();
+            if (outcome[0] instanceof Response) ((Response) outcome[0]).close();
+            Thread.currentThread().interrupt();
+            throw new IOException("Translation cancelled", ie);
+        }
+        if (outcome[0] instanceof IOException) throw (IOException) outcome[0];
+        return (Response) outcome[0];
     }
 
     /** Plain-text GET for endpoints that don't return JSON. */

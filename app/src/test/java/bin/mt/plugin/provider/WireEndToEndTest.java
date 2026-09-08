@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -48,6 +49,8 @@ public class WireEndToEndTest {
     /** What the mock answers with. */
     private String cannedResponse = "{}";
     private int cannedStatus = 200;
+    /** How long the mock sits on a request before answering. */
+    private long hangMs = 0;
 
     @Before
     public void startServer() throws IOException {
@@ -112,6 +115,9 @@ public class WireEndToEndTest {
         }
         capturedBody = new String(body, StandardCharsets.UTF_8);
 
+        if (hangMs > 0) {
+            try { Thread.sleep(hangMs); } catch (InterruptedException ignored) { }
+        }
         byte[] payload = cannedResponse.getBytes(StandardCharsets.UTF_8);
         OutputStream out = socket.getOutputStream();
         out.write(("HTTP/1.1 " + cannedStatus + " X\r\n"
@@ -136,6 +142,35 @@ public class WireEndToEndTest {
             throw new IOException("api error");
         }
         return ProviderClient.parseResponse(p, response);
+    }
+
+    // ── Cancellation ──────────────────────────────────────────────────────────
+
+    @Test
+    public void interruptCancelsAnInFlightRequestAtOnce() throws Exception {
+        // MT's cancel button interrupts the worker; the old blocking execute()
+        // sat on the socket until the timeout (30 s, longer on a sleeping
+        // phone) before the engine could notice.
+        hangMs = 10_000;
+        Provider p = new Provider("openai", "OpenAI", Provider.WIRE_OPENAI,
+                baseUrl + "/v1/chat/completions", "sk", "gpt-4.1-mini", null, null, null);
+
+        Thread worker = Thread.currentThread();
+        new Thread(() -> {
+            try { Thread.sleep(300); } catch (InterruptedException ignored) { }
+            worker.interrupt();
+        }).start();
+
+        long started = System.currentTimeMillis();
+        try {
+            send(p);
+            fail("the request must not complete after an interrupt");
+        } catch (IOException expected) {
+            assertTrue(expected.getMessage(), expected.getMessage().contains("cancelled"));
+        }
+        assertTrue("must return well before the 10 s hang and the 5 s timeout",
+                System.currentTimeMillis() - started < 3000);
+        assertTrue("interrupt flag is preserved for the caller", Thread.interrupted());
     }
 
     // ── OpenAI wire ───────────────────────────────────────────────────────────
